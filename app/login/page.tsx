@@ -96,13 +96,13 @@ export default function LoginPage() {
             
             <div className="space-y-4 w-full">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-noto">
-                CMS - SL Police
+                SOCO - SL Police
               </h1>
               
               <div className="space-y-2 text-gray-700 w-full">
                 <p className="text-xl font-semibold font-sinhala whitespace-nowrap">ශ්‍රී ලංකා පොලිස් පැමිණිලි කළමණාකරණ පද්ධතිය</p>
                 <p className="text-xl font-semibold font-tamil whitespace-nowrap">இலங்கை போலீசார் புகார் மேலாண்மை அமைப்பு</p>
-                <p className="text-xl font-semibold text-gray-700 font-noto whitespace-nowrap">Sri Lanka Police Complaints Management System</p>
+                <p className="text-xl font-semibold text-gray-700 font-noto whitespace-nowrap">Sri Lanka Police SOCO Internal System</p>
               </div>
             </div>
 
@@ -136,7 +136,7 @@ export default function LoginPage() {
                       />
                     </div>
                 <h1 className="text-2xl font-bold text-gray-900 font-noto mb-2">
-                  CMS - SL Police
+                  SOCO - SL Police
                 </h1>
               </div>
 
@@ -146,7 +146,7 @@ export default function LoginPage() {
                   Welcome Back
                 </h2>
                 <p className="text-gray-600 font-noto">
-                  Sign in to access your dashboard
+                  Sign in to access the SOCO internal dashboard
                 </p>
               </div>
 

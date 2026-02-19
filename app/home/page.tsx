@@ -9,7 +9,7 @@ import { FileText, LayoutDashboard, Settings, ArrowRight, Shield, BarChart3, Cog
 const sections = [
   {
     title: 'Complaint Management',
-    description: 'Lodge, view, and manage citizen complaints across stations and categories.',
+    description: 'Lodge, view, and manage SOCO internal cases across stations and categories.',
     href: '/complaints',
     icon: FileText,
     gradient: 'from-blue-500 to-cyan-500',
@@ -93,17 +93,17 @@ export default function HomePage() {
                   </div>
                   <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/10 text-blue-100 text-sm font-semibold backdrop-blur-md border border-white/20 shadow-lg shadow-black/10">
                     <Shield className="w-4 h-4 text-amber-300/90" />
-                    Complaints Management System
+                    SOCO Internal System
                   </div>
                 </div>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white tracking-tight mb-3 drop-shadow-lg">
-                  Welcome to CMS
+                  Welcome to SOCO
                 </h1>
                 <p className="text-xl sm:text-2xl lg:text-3xl text-blue-100/95 font-medium max-w-2xl mx-auto mb-2 tracking-tight">
                   Sri Lanka Police
                 </p>
                 <p className="text-blue-200/90 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-                  Manage complaints, view reports, and configure the system from one place.
+                  Manage internal case workflows, view reports, and configure the system from one place.
                 </p>
                 {/* Scroll cue */}
                 <div className="flex justify-center">
@@ -180,7 +180,7 @@ export default function HomePage() {
                 </p>
                 <div className="flex items-center gap-2 text-slate-500 text-sm">
                   <Cog className="w-4 h-4" />
-                  CMS - SL Police
+                  SOCO - SL Police
                 </div>
               </div>
             </div>
