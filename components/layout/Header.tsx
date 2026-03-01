@@ -28,6 +28,9 @@ const navLinkActive = 'bg-blue-600 text-white shadow-sm';
 function isComplaintsActive(pathname: string) {
   return pathname === '/complaints' || pathname.startsWith('/complaints/');
 }
+function isCrimeVisitActive(pathname: string) {
+  return pathname === '/crime-visit-registry' || pathname.startsWith('/crime-visit-registry/');
+}
 function isReportsActive(pathname: string) {
   return pathname === '/reports' || pathname.startsWith('/reports/');
 }
@@ -79,22 +82,20 @@ export default function Header({ userName = 'Sandun' }: HeaderProps) {
           <nav className="hidden md:flex items-center justify-center absolute left-1/2 -translate-x-1/2 gap-1">
             <Link
               href="/home"
-              className={`${navLinkBase} ${
-                pathname === '/home' ? navLinkActive : navLinkDefault
-              }`}
+              className={`${navLinkBase} ${pathname === '/home' ? navLinkActive : navLinkDefault
+                }`}
             >
               <Home className="w-4 h-4" />
               <span>Home</span>
             </Link>
 
             <Link
-              href="/complaints"
-              className={`${navLinkBase} ${
-                isComplaintsActive(pathname) ? navLinkActive : navLinkDefault
-              }`}
+              href="/crime-visit-registry"
+              className={`${navLinkBase} ${isCrimeVisitActive(pathname) ? navLinkActive : navLinkDefault
+                }`}
             >
               <FileText className="w-4 h-4" />
-              <span>Complaint Management</span>
+              <span>Crime Visit Registry</span>
             </Link>
 
             <Link
@@ -107,9 +108,8 @@ export default function Header({ userName = 'Sandun' }: HeaderProps) {
 
             <Link
               href="/config"
-              className={`${navLinkBase} ${
-                isConfigActive(pathname) ? navLinkActive : navLinkDefault
-              }`}
+              className={`${navLinkBase} ${isConfigActive(pathname) ? navLinkActive : navLinkDefault
+                }`}
             >
               <Settings className="w-4 h-4" />
               <span>Configuration</span>
@@ -127,9 +127,8 @@ export default function Header({ userName = 'Sandun' }: HeaderProps) {
               </div>
               <span className="text-sm">Hi | {userName}</span>
               <ChevronDown
-                className={`w-3 h-3 transition-transform duration-200 ${
-                  userMenuOpen ? 'rotate-180' : ''
-                }`}
+                className={`w-3 h-3 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''
+                  }`}
               />
             </button>
             {userMenuOpen && (
