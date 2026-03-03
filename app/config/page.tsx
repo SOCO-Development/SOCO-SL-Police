@@ -3,70 +3,14 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FeatureCard from '@/components/cards/FeatureCard';
-import {
-  Gear,
-  ClipboardText,
-  PencilSimple,
-  Users,
-  Lock,
-  MapPin,
-  AddressBook,
-  IdentificationCard,
-  Key,
-  Clock,
-} from 'phosphor-react';
+import { IdentificationCard } from 'phosphor-react';
 
 export default function ConfigPage() {
   const configurationCards = [
     {
-      title: 'Category Type Management',
-      icon: <Gear className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,
-      href: '/config/category-type',
-    },
-    {
-      title: 'Category Assignment',
-      icon: <ClipboardText className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
-      href: '/config/category-assignment',
-    },
-    {
-      title: 'Display Text Management',
-      icon: <PencilSimple className="w-12 h-12" weight="fill" style={{ color: '#f59e0b' }} />,
-      href: '/config/display-text',
-    },
-    {
-      title: 'After Hour Management',
-      icon: <Clock className="w-12 h-12" weight="fill" style={{ color: '#8b5cf6' }} />,
-      href: '/config/after-hour',
-    },
-    {
-      title: 'User Management',
-      icon: <Users className="w-12 h-12" weight="fill" style={{ color: '#06b6d4' }} />,
-      href: '/config/user',
-    },
-    {
-      title: 'Privilege Management',
-      icon: <Lock className="w-12 h-12" weight="fill" style={{ color: '#14b8a6' }} />,
-      href: '/config/privilege',
-    },
-    {
-      title: 'Location Management',
-      icon: <MapPin className="w-12 h-12" weight="fill" style={{ color: '#ec4899' }} />,
-      href: '/config/location',
-    },
-    {
-      title: 'Contact Management',
-      icon: <AddressBook className="w-12 h-12" weight="fill" style={{ color: '#ef4444' }} />,
-      href: '/config/contact',
-    },
-    {
-      title: 'Designation Management',
-      icon: <IdentificationCard className="w-12 h-12" weight="fill" style={{ color: '#dc2626' }} />,
-      href: '/config/designation',
-    },
-    {
-      title: 'Change my password',
-      icon: <Key className="w-12 h-12" weight="fill" style={{ color: '#f97316' }} />,
-      href: '/config/change-password',
+      title: 'Crime Officer Management',
+      icon: <IdentificationCard className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,
+      href: '/config/crime-officer',
     },
   ];
 
