@@ -3,20 +3,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import {
   FileText,
   LayoutDashboard,
   Settings,
   ArrowRight,
   Shield,
-  BarChart3,
   Activity,
-  Lock,
   Users,
   AlertCircle,
   CheckCircle2,
-  ChevronRight
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -329,67 +325,60 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── Modules Section ── */}
+          {/* ── Modules Section (List Style) ── */}
           <section className="relative z-10 w-full max-w-[1400px] mx-auto px-6 py-24 pb-32">
-            
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-slate-800/80 pb-6">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
               <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight mb-2">Module Access</h2>
-                <p className="text-slate-400">Select a secure operations module to proceed.</p>
+                <h2 className="text-2xl font-bold text-white tracking-tight mb-1">Module Access</h2>
+                <p className="text-sm text-slate-500">Choose a module to begin</p>
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-400 uppercase px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-800 backdrop-blur-sm">
-                <BarChart3 className="w-4 h-4 text-blue-500" />
-                3 Modules Online
+              <div className="flex items-center gap-2 text-[10px] font-semibold tracking-widest text-slate-500 uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                3 modules available
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-3">
               {sections.map((s, i) => {
                 const isBlue = s.accent === 'blue';
                 const isCyan = s.accent === 'cyan';
-                
-                // Styles mappings
-                const iconBg = isBlue ? 'bg-blue-500/10 text-blue-400' : isCyan ? 'bg-cyan-500/10 text-cyan-400' : 'bg-amber-500/10 text-amber-400';
-                const hoverBorder = isBlue ? 'group-hover:border-blue-500/40' : isCyan ? 'group-hover:border-cyan-500/40' : 'group-hover:border-amber-500/40';
-                const glowColor = isBlue ? 'from-blue-500/10' : isCyan ? 'from-cyan-500/10' : 'from-amber-500/10';
-                const textColor = isBlue ? 'text-blue-400' : isCyan ? 'text-cyan-400' : 'text-amber-400';
-                const accentLine = isBlue ? 'bg-blue-500' : isCyan ? 'bg-cyan-500' : 'bg-amber-500';
+                const accentBg = isBlue ? 'group-hover:bg-blue-500/15' : isCyan ? 'group-hover:bg-cyan-500/15' : 'group-hover:bg-amber-500/15';
+                const accentBorder = isBlue ? 'group-hover:border-blue-500/50' : isCyan ? 'group-hover:border-cyan-500/50' : 'group-hover:border-amber-500/50';
+                const accentText = isBlue ? 'text-blue-400' : isCyan ? 'text-cyan-400' : 'text-amber-400';
+                const accentIcon = isBlue ? 'text-blue-400' : isCyan ? 'text-cyan-400' : 'text-amber-400';
 
                 return (
                   <Link
                     key={s.href}
                     href={s.href}
-                    className={`group relative flex flex-col p-8 rounded-2xl bg-slate-900/40 border border-slate-800 transition-all duration-300 hover:bg-slate-800/60 hover:-translate-y-1 hover:shadow-2xl ${hoverBorder} overflow-hidden backdrop-blur-sm`}
+                    className={`group flex items-center gap-5 p-5 rounded-xl border border-slate-800/80 bg-slate-900/30 transition-all duration-300 hover:border-slate-700 ${accentBg} ${accentBorder}`}
                   >
-                    {/* Top Accent Line */}
-                    <div className={`absolute top-0 left-0 right-0 h-[2px] ${accentLine} opacity-0 group-hover:opacity-100 transition-opacity`} />
-                    
-                    {/* Hover Glow */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${glowColor} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
-                    
-                    {/* Tag */}
-                    <div className="flex items-center justify-between mb-8 relative z-10">
-                      <span className={`text-[10px] font-bold tracking-widest uppercase ${textColor}`}>
+                    {/* Left: Icon + Number */}
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-800/80 text-slate-500 font-mono text-sm font-bold group-hover:scale-105 transition-transform">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center border border-slate-700/80 ${accentIcon} group-hover:border-current/50 transition-colors`}>
+                        <s.icon className="w-6 h-6" />
+                      </div>
+                    </div>
+
+                    {/* Center: Title + Description */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-white group-hover:text-white truncate">{s.title}</h3>
+                      <p className="text-sm text-slate-500 group-hover:text-slate-400 mt-0.5 line-clamp-2">
+                        {s.description}
+                      </p>
+                    </div>
+
+                    {/* Right: Tag + Arrow */}
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className={`text-[10px] font-bold tracking-widest uppercase hidden sm:inline ${accentText}`}>
                         {s.tag}
                       </span>
-                      <Lock className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" />
-                    </div>
-
-                    {/* Icon */}
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 relative z-10 border border-white/5 ring-1 ring-inset ring-white/10 ${iconBg} group-hover:scale-110 transition-transform duration-300`}>
-                      <s.icon className="w-7 h-7" />
-                    </div>
-
-                    {/* Text */}
-                    <h3 className="text-xl font-bold text-white mb-3 relative z-10 tracking-tight group-hover:text-white transition-colors">{s.title}</h3>
-                    <p className="text-sm text-slate-400 leading-relaxed mb-8 flex-1 relative z-10 group-hover:text-slate-300 transition-colors">
-                      {s.description}
-                    </p>
-
-                    {/* Bottom CTA */}
-                    <div className={`flex items-center gap-2 text-sm font-semibold relative z-10 transition-colors ${textColor}`}>
-                      Launch Module
-                      <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center border border-slate-700/80 ${accentText} group-hover:bg-current/10 transition-colors`}>
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
                     </div>
                   </Link>
                 );
@@ -399,21 +388,12 @@ export default function HomePage() {
 
           {/* ── Footer Strip ── */}
           <div className="mt-auto border-t border-slate-800/60 bg-[#070b14]/90 backdrop-blur-xl py-6 relative z-20">
-            <div className="max-w-[1400px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <Lock className="w-4 h-4" />
-                <span>
-                  Need help? Visit <Link href="/config/crime-officer" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">Crime Officer Management</Link> for settings.
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-mono tracking-widest text-slate-500 uppercase">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                SOCO · SL Police · Secured
-              </div>
+            <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-center">
+              <p className="text-sm text-slate-400">
+                Powered by <span className="font-semibold text-amber-400/90">Sri Lanka Telecom</span> | © 2026 Sri Lanka Police
+              </p>
             </div>
           </div>
-
-          <Footer />
         </main>
       </div>
     </div>

@@ -173,7 +173,7 @@ function FieldLabel({ label, si }: { label: string; si?: string }) {
 }
 
 function GInput({
-    value, onChange, placeholder, maxLength, readOnly, type = 'text'
+    value, onChange, placeholder, maxLength, readOnly, type = 'text', min, max
 }: {
     value: string;
     onChange: (v: string) => void;
@@ -181,6 +181,8 @@ function GInput({
     maxLength?: number;
     readOnly?: boolean;
     type?: string;
+    min?: number;
+    max?: number;
 }) {
     return (
         <input
@@ -189,6 +191,8 @@ function GInput({
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             maxLength={maxLength}
+            min={min}
+            max={max}
             readOnly={readOnly}
             className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800
         focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500
@@ -307,6 +311,15 @@ export default function AddOfficerPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const invalidChild = form.children.find((c) => {
+            if (c.age === '') return false;
+            const n = parseInt(c.age, 10);
+            return isNaN(n) || n < 1 || n > 99;
+        });
+        if (invalidChild) {
+            alert('Child age must be between 1 and 99.');
+            return;
+        }
         setSubmitted(true);
         // Future: POST to API
         alert('Officer details saved successfully!');
@@ -495,7 +508,23 @@ export default function AddOfficerPage() {
                                                             <GInput value={child.name} onChange={(v) => updateChild(child.id, { name: v })} placeholder="Child name" />
                                                         </td>
                                                         <td className="px-2 py-1.5">
-                                                            <GInput value={child.age} onChange={(v) => updateChild(child.id, { age: v })} placeholder="Age" type="number" />
+                                                            <GInput
+                                                            value={child.age}
+                                                            onChange={(v) => {
+                                                                if (v === '') {
+                                                                    updateChild(child.id, { age: v });
+                                                                } else {
+                                                                    const n = parseInt(v, 10);
+                                                                    if (!isNaN(n) && n >= 1 && n <= 99) {
+                                                                        updateChild(child.id, { age: v });
+                                                                    }
+                                                                }
+                                                            }}
+                                                            placeholder="Age"
+                                                            type="number"
+                                                            min={1}
+                                                            max={99}
+                                                        />
                                                         </td>
                                                         <td className="px-2 py-1.5">
                                                             <GInput value={child.school} onChange={(v) => updateChild(child.id, { school: v })} placeholder="School / University" />
