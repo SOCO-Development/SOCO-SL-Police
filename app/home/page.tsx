@@ -24,10 +24,10 @@ import { useEffect, useRef, useState } from 'react';
 
 const sections = [
   {
-    title: 'Complaint Management',
+    title: 'Crime Visit Registry',
     description:
-      'Lodge, view, and manage SOCO internal cases across stations and categories with full audit trails.',
-    href: '/complaints',
+      'Create, manage, and track SOCO crime scene visit records across all divisions with complete documentation and history tracking.',
+    href: '/crime-visit-registry',
     icon: FileText,
     accent: 'blue',
     tag: 'Cases & Incidents',
