@@ -10,6 +10,9 @@ import type {
     DateTimeEntry,
     CrimeVisitFormData,
 } from '@/types/crimeVisit';
+import DatePicker from '@/components/forms/DatePicker';
+import TimePicker from '@/components/forms/TimePicker';
+import CustomSelect from '@/components/forms/CustomSelect';
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -42,6 +45,8 @@ const VISITED_SPECIALIST_OPTIONS = [
     'Foreign Investigation Officers',
     'Others',
 ] as const;
+
+const VISITED_SPECIALIST_SELECT_OPTIONS = VISITED_SPECIALIST_OPTIONS.map((s) => ({ value: s, label: s }));
 
 let supportOfficerRowSeed = 1;
 
@@ -115,7 +120,7 @@ interface FieldGroupProps { label: string; children: React.ReactNode; className?
 function FieldGroup({ label, children, className = '' }: FieldGroupProps) {
     return (
         <div className={`flex flex-col gap-1 ${className}`}>
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</label>
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{label}</label>
             {children}
         </div>
     );
@@ -129,7 +134,7 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
         <input
             {...props}
             readOnly={isReadOnly}
-            className={`w-full px-3 py-2 text-sm rounded-lg border ${isReadOnly
+            className={`w-full min-h-10 px-3 py-2 text-sm rounded-lg border ${isReadOnly
                 ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
                 : 'bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400'
                 } transition-colors ${className}`}
@@ -142,11 +147,13 @@ interface OfficerRowProps {
     value: OfficerInfo;
     isReadOnly?: boolean;
     onChange: (val: OfficerInfo) => void;
+    /** When true, omit the label column (e.g. when used inside a card with its own title) */
+    compact?: boolean;
 }
-function OfficerRow({ label, value, isReadOnly = false, onChange }: OfficerRowProps) {
+function OfficerRow({ label, value, isReadOnly = false, onChange, compact = false }: OfficerRowProps) {
     return (
-        <div className="grid grid-cols-[150px,1fr,1fr,2fr] gap-3 items-end">
-            <div className="text-sm font-medium text-gray-700 pb-2 leading-tight">{label}</div>
+        <div className={compact ? 'grid grid-cols-1 sm:grid-cols-3 gap-3 items-end' : 'grid grid-cols-[150px,1fr,1fr,2fr] gap-3 items-end'}>
+            {!compact && <div className="text-sm font-medium text-gray-700 pb-2 leading-tight">{label}</div>}
             <FieldGroup label="Rank">
                 <TextInput isReadOnly={isReadOnly} value={value.rank ?? ''} onChange={(e) => onChange({ ...value, rank: e.target.value })} placeholder="Rank" />
             </FieldGroup>
@@ -165,17 +172,42 @@ interface DateTimeRowProps {
     value: DateTimeEntry;
     isReadOnly?: boolean;
     onChange: (val: DateTimeEntry) => void;
+    /** 'row' = label | date | time in one row; 'stack' = label on top, date/time below (for multi-column cards) */
+    layout?: 'row' | 'stack';
 }
-function DateTimeRow({ label, value, isReadOnly = false, onChange }: DateTimeRowProps) {
+function DateTimeRow({ label, value, isReadOnly = false, onChange, layout = 'row' }: DateTimeRowProps) {
+    const fields = (
+        <>
+            <FieldGroup label="Date (DD/MM/YY)">
+                {isReadOnly ? (
+                    <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{value.date || '—'}</div>
+                ) : (
+                    <DatePicker value={value.date ?? ''} onChange={(date) => onChange({ ...value, date })} />
+                )}
+            </FieldGroup>
+            <FieldGroup label="Time">
+                {isReadOnly ? (
+                    <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{value.time || '—'}</div>
+                ) : (
+                    <TimePicker value={value.time ?? ''} onChange={(time) => onChange({ ...value, time })} />
+                )}
+            </FieldGroup>
+        </>
+    );
+    if (layout === 'stack') {
+        return (
+            <div className={label ? 'space-y-2' : ''}>
+                {label && <div className="text-sm font-medium text-gray-700">{label}</div>}
+                <div className="grid grid-cols-2 gap-2">
+                    {fields}
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="grid gap-3 items-end grid-cols-[150px,1fr,1fr]">
             <div className="text-sm font-medium text-gray-700 pb-2 leading-tight">{label}</div>
-            <FieldGroup label="Date (DD/MM/YY)">
-                <TextInput isReadOnly={isReadOnly} value={value.date ?? ''} onChange={(e) => onChange({ ...value, date: e.target.value })} placeholder="DD/MM/YY" />
-            </FieldGroup>
-            <FieldGroup label="Time">
-                <TextInput type="time" isReadOnly={isReadOnly} value={value.time ?? ''} onChange={(e) => onChange({ ...value, time: e.target.value })} />
-            </FieldGroup>
+            {fields}
         </div>
     );
 }
@@ -198,11 +230,11 @@ function ExpertsTable({ experts, isReadOnly = false, onChange }: ExpertsTablePro
             <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                            <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Visited Specialists</th>
-                            <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                            <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">In Time</th>
-                            <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Out Time</th>
+                        <tr className="bg-gray-100 border-b border-gray-200">
+                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-700 uppercase tracking-wide">Visited Specialists</th>
+                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-700 uppercase tracking-wide">Name</th>
+                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-700 uppercase tracking-wide">In Time</th>
+                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-700 uppercase tracking-wide">Out Time</th>
                             {!isReadOnly && <th className="w-10" />}
                         </tr>
                     </thead>
@@ -210,31 +242,33 @@ function ExpertsTable({ experts, isReadOnly = false, onChange }: ExpertsTablePro
                         {experts.map((exp, idx) => (
                             <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
                                 <td className="px-2 py-1.5">
-                                    <select
-                                        value={exp.annex ?? ''}
-                                        disabled={isReadOnly}
-                                        onChange={(e) => update(idx, 'annex', e.target.value)}
-                                        className={`w-full px-3 py-2 text-sm rounded-lg border ${isReadOnly
-                                            ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
-                                            : 'bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400'
-                                            } transition-colors`}
-                                    >
-                                        <option value="">Select specialist</option>
-                                        {VISITED_SPECIALIST_OPTIONS.map((option) => (
-                                            <option key={option} value={option}>
-                                                {option}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {isReadOnly ? (
+                                        <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{exp.annex || '—'}</div>
+                                    ) : (
+                                        <CustomSelect
+                                            value={exp.annex ?? ''}
+                                            onChange={(v) => update(idx, 'annex', v)}
+                                            options={VISITED_SPECIALIST_SELECT_OPTIONS}
+                                            placeholder="Select specialist"
+                                        />
+                                    )}
                                 </td>
                                 <td className="px-2 py-1.5">
                                     <TextInput isReadOnly={isReadOnly} value={exp.name ?? ''} onChange={(e) => update(idx, 'name', e.target.value)} placeholder="Expert name" />
                                 </td>
                                 <td className="px-2 py-1.5">
-                                    <TextInput type="time" isReadOnly={isReadOnly} value={exp.inTime ?? ''} onChange={(e) => update(idx, 'inTime', e.target.value)} />
+                                    {isReadOnly ? (
+                                        <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{exp.inTime ?? '—'}</div>
+                                    ) : (
+                                        <TimePicker value={exp.inTime ?? ''} onChange={(v) => update(idx, 'inTime', v)} />
+                                    )}
                                 </td>
                                 <td className="px-2 py-1.5">
-                                    <TextInput type="time" isReadOnly={isReadOnly} value={exp.outTime ?? ''} onChange={(e) => update(idx, 'outTime', e.target.value)} />
+                                    {isReadOnly ? (
+                                        <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{exp.outTime ?? '—'}</div>
+                                    ) : (
+                                        <TimePicker value={exp.outTime ?? ''} onChange={(v) => update(idx, 'outTime', v)} />
+                                    )}
                                 </td>
                                 {!isReadOnly && (
                                     <td className="px-2 py-1.5">
@@ -280,24 +314,18 @@ function SupportOfficersEditor({ rows, isReadOnly = false, onChange }: SupportOf
                 {rows.map((row) => (
                     <div key={row.id} className="grid grid-cols-[1.2fr,2fr,1.6fr,1.4fr,40px] gap-3 items-end">
                         <FieldGroup label="Role">
-                            <select
-                                value={row.role}
-                                disabled={isReadOnly}
-                                onChange={(e) => updateRow(row.id, { role: e.target.value as SupportRole })}
-                                className={`w-full px-3 py-2 text-sm rounded-lg border ${isReadOnly
-                                    ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
-                                    : 'bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400'
-                                    } transition-colors`}
-                            >
-                                {SUPPORT_ROLE_OPTIONS.map((option) => {
-                                    const alreadyUsedByAnotherRow = rows.some((r) => r.id !== row.id && r.role === option.value);
-                                    return (
-                                        <option key={option.value} value={option.value} disabled={alreadyUsedByAnotherRow}>
-                                            {option.label}
-                                        </option>
-                                    );
-                                })}
-                            </select>
+                            {isReadOnly ? (
+                                <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
+                                    {(SUPPORT_ROLE_OPTIONS.find((o) => o.value === row.role)?.label) ?? (row.role || '—')}
+                                </div>
+                            ) : (
+                                <CustomSelect
+                                    value={row.role}
+                                    onChange={(v) => updateRow(row.id, { role: v as SupportRole })}
+                                    options={SUPPORT_ROLE_OPTIONS.filter((opt) => opt.value === row.role || !rows.some((r) => r.id !== row.id && r.role === opt.value))}
+                                    placeholder="Select role"
+                                />
+                            )}
                         </FieldGroup>
                         <FieldGroup label="Name">
                             <TextInput
@@ -482,7 +510,7 @@ export default function CrimeVisitForm({
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col" style={{ minHeight: '520px' }}>
+        <div className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ minHeight: '520px' }}>
 
             {/* ── Tab Bar ─────────────────────────────────────────────────────── */}
             <div className="flex border-b border-gray-200 bg-gray-50/60 rounded-t-xl overflow-hidden flex-shrink-0">
@@ -500,7 +528,7 @@ export default function CrimeVisitForm({
                                 border-b-2
                                 ${active
                                     ? 'bg-white text-blue-700 border-blue-600 shadow-[inset_0_-1px_0_white]'
-                                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-white/60'
+                                    : 'text-gray-600 border-transparent hover:text-gray-800 hover:bg-white/60'
                                 }
                             `}
                         >
@@ -508,7 +536,7 @@ export default function CrimeVisitForm({
                             <span className={`
                                 flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full
                                 text-xs font-bold transition-colors
-                                ${active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}
+                                ${active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}
                             `}>
                                 {tab.id}
                             </span>
@@ -530,136 +558,215 @@ export default function CrimeVisitForm({
 
                 {/* ── PANEL 1: Crime Scene Details ─────────────────────────────── */}
                 {activeTab === 1 && (
-                    <div className="space-y-4 animate-fade-in">
-                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-widest pb-2 border-b border-gray-100">
+                    <div className="animate-fade-in">
+                        <h3 className="text-base font-semibold text-gray-700 uppercase tracking-widest pb-2 border-b border-gray-200 mb-4">
                             Details of Crime Scene Investigation
                         </h3>
 
-                        <DateTimeRow
-                            label="Reported to SOCO Lab"
-                            value={sA.reportedToSocoLab ?? emptyDatetime()}
-                            isReadOnly={locked}
-                            onChange={(v) => updateA('reportedToSocoLab', v)}
-                        />
-                        {errors['sectionA.date'] && <p className="text-xs text-red-500">{errors['sectionA.date']}</p>}
-                        {errors['sectionA.time'] && <p className="text-xs text-red-500">{errors['sectionA.time']}</p>}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+                                    Reported to SOCO Lab
+                                </h4>
+                                <DateTimeRow
+                                    label=""
+                                    value={sA.reportedToSocoLab ?? emptyDatetime()}
+                                    isReadOnly={locked}
+                                    onChange={(v) => updateA('reportedToSocoLab', v)}
+                                    layout="stack"
+                                />
+                                {errors['sectionA.date'] && <p className="text-xs text-red-600 font-medium">{errors['sectionA.date']}</p>}
+                                {errors['sectionA.time'] && <p className="text-xs text-red-600 font-medium">{errors['sectionA.time']}</p>}
+                            </div>
 
-                        <div className="pt-1 border-t border-gray-100" />
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
+                                    OUT & IN
+                                </h4>
+                                <DateTimeRow label="OUT" value={sA.out ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('out', v)} layout="stack" />
+                                <DateTimeRow label="IN" value={sA.in ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('in', v)} layout="stack" />
+                            </div>
 
-                        <DateTimeRow label="OUT" value={sA.out ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('out', v)} />
-                        <DateTimeRow label="IN" value={sA.in ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('in', v)} />
-
-                        <div className="pt-1 border-t border-gray-100" />
-
-                        <DateTimeRow label="Re-visit OUT" value={sA.revisitOut ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('revisitOut', v)} />
-                        <DateTimeRow label="Re-visit IN" value={sA.revisitIn ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('revisitIn', v)} />
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3 sm:col-span-2 xl:col-span-1">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
+                                    Re-visit OUT & IN
+                                </h4>
+                                <DateTimeRow label="Re-visit OUT" value={sA.revisitOut ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('revisitOut', v)} layout="stack" />
+                                <DateTimeRow label="Re-visit IN" value={sA.revisitIn ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('revisitIn', v)} layout="stack" />
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {/* ── PANEL 2: SOCO Officers & Experts ─────────────────────────── */}
                 {activeTab === 2 && (
-                    <div className="space-y-5 animate-fade-in">
-                        <div>
-                            <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-widest pb-2 border-b border-gray-100 mb-4 flex items-center gap-2">
-                                <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
-                                Officer in Charge
-                            </h4>
-                            <div className="grid grid-cols-3 gap-3 items-end">
-                                <FieldGroup label="Name">
-                                    <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.name ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), name: e.target.value })} placeholder="Full name" />
-                                </FieldGroup>
-                                <FieldGroup label="Reg. Number">
-                                    <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.regNo ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), regNo: e.target.value })} placeholder="Reg. No." />
-                                </FieldGroup>
-                                <FieldGroup label="Rank">
-                                    <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.rank ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), rank: e.target.value })} placeholder="Rank" />
-                                </FieldGroup>
-                            </div>
-                        </div>
+                    <div className="animate-fade-in">
+                        <h3 className="text-base font-semibold text-gray-700 uppercase tracking-widest pb-2 border-b border-gray-200 mb-4">
+                            Officers & Experts
+                        </h3>
 
-                        <div className="border-t border-gray-100 pt-4">
-                            <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-widest pb-2 mb-4 flex items-center gap-2">
-                                <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
-                                Support Officers
-                            </h4>
-                            <SupportOfficersEditor rows={supportRows} isReadOnly={locked} onChange={updateSupportRows} />
-                        </div>
-
-                        {errors['officer'] && <p className="text-xs text-red-500">{errors['officer']}</p>}
-
-                        <div className="border-t border-gray-100 pt-4">
-                            <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-widest pb-2 mb-4 flex items-center gap-2">
-                                <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
-                                Experts who visited / came to investigate
-                            </h4>
-                            <ExpertsTable experts={sB.experts ?? []} isReadOnly={locked} onChange={updateExperts} />
-
-                            {appendMode && (
-                                <div className="mt-5 pt-4 border-t border-amber-100">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="w-1.5 h-4 rounded-full bg-amber-400 inline-block flex-shrink-0" />
-                                        <p className="text-sm font-semibold text-amber-700">Add Additional Experts</p>
-                                    </div>
-                                    <ExpertsTable experts={appendExperts} isReadOnly={false} onChange={setAppendExperts} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+                                    Officer in Charge
+                                </h4>
+                                <div className="flex flex-col gap-3">
+                                    <FieldGroup label="Name">
+                                        <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.name ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), name: e.target.value })} placeholder="Full name" />
+                                    </FieldGroup>
+                                    <FieldGroup label="Reg. Number">
+                                        <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.regNo ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), regNo: e.target.value })} placeholder="Reg. No." />
+                                    </FieldGroup>
+                                    <FieldGroup label="Rank">
+                                        <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.rank ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), rank: e.target.value })} placeholder="Rank" />
+                                    </FieldGroup>
                                 </div>
-                            )}
+                            </div>
+
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
+                                    Support Officers
+                                </h4>
+                                <SupportOfficersEditor rows={supportRows} isReadOnly={locked} onChange={updateSupportRows} />
+                            </div>
+
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 md:col-span-2">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
+                                    Experts who visited / came to investigate
+                                </h4>
+                                {errors['officer'] && <p className="text-xs text-red-600 font-medium mb-2">{errors['officer']}</p>}
+                                <ExpertsTable experts={sB.experts ?? []} isReadOnly={locked} onChange={updateExperts} />
+
+                                {appendMode && (
+                                    <div className="mt-5 pt-4 border-t border-amber-200">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className="w-1.5 h-4 rounded-full bg-amber-400 inline-block flex-shrink-0" />
+                                            <p className="text-sm font-semibold text-amber-700">Add Additional Experts</p>
+                                        </div>
+                                        <ExpertsTable experts={appendExperts} isReadOnly={false} onChange={setAppendExperts} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {/* ── PANEL 3: Vehicle / Driver / Officers ─────────────────────── */}
                 {activeTab === 3 && (
-                    <div className="space-y-4 animate-fade-in">
-                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-widest pb-2 border-b border-gray-100">
+                    <div className="animate-fade-in">
+                        <h3 className="text-base font-semibold text-gray-700 uppercase tracking-widest pb-2 border-b border-gray-200 mb-4">
                             Vehicle / Driver / Times / Officers
                         </h3>
 
-                        {/* Vehicle No */}
-                        <div className="grid grid-cols-[150px,280px] gap-3 items-end">
-                            <div className="text-sm font-medium text-gray-700 pb-2">Vehicle No.</div>
-                            <FieldGroup label="Vehicle Number">
-                                <TextInput isReadOnly={ro} value={sC.vehicleNo ?? ''} onChange={(e) => updateC({ vehicleNo: e.target.value })} placeholder="e.g. CAB-1234" />
-                            </FieldGroup>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+                            {/* Vehicle & Driver */}
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
+                                    Vehicle & Driver
+                                </h4>
+                                <FieldGroup label="Vehicle Number">
+                                    <TextInput isReadOnly={ro} value={sC.vehicleNo ?? ''} onChange={(e) => updateC({ vehicleNo: e.target.value })} placeholder="e.g. CAB-1234" />
+                                </FieldGroup>
+                                <OfficerRow label="Driver" value={sC.driver ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ driver: v })} />
+                            </div>
+
+                            {/* Examined by SOCO officers */}
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+                                    Examined by SOCO officers
+                                </h4>
+                                <FieldGroup label="Date (DD/MM/YY)">
+                                    {ro ? (
+                                        <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.examinedBySocoOfficers?.date ?? '—'}</div>
+                                    ) : (
+                                        <DatePicker value={sC.examinedBySocoOfficers?.date ?? ''} onChange={(date) => updateC({ examinedBySocoOfficers: { ...sC.examinedBySocoOfficers, date } })} />
+                                    )}
+                                </FieldGroup>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <FieldGroup label="Time In">
+                                        {ro ? (
+                                            <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.examinedBySocoOfficers?.timeIn ?? '—'}</div>
+                                        ) : (
+                                            <TimePicker value={sC.examinedBySocoOfficers?.timeIn ?? ''} onChange={(timeIn) => updateC({ examinedBySocoOfficers: { ...sC.examinedBySocoOfficers, timeIn } })} />
+                                        )}
+                                    </FieldGroup>
+                                    <FieldGroup label="Time Out">
+                                        {ro ? (
+                                            <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.examinedBySocoOfficers?.timeOut ?? '—'}</div>
+                                        ) : (
+                                            <TimePicker value={sC.examinedBySocoOfficers?.timeOut ?? ''} onChange={(timeOut) => updateC({ examinedBySocoOfficers: { ...sC.examinedBySocoOfficers, timeOut } })} />
+                                        )}
+                                    </FieldGroup>
+                                </div>
+                            </div>
+
+                            {/* Re-examined by SOCO officers */}
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
+                                    Re-examined by SOCO officers
+                                </h4>
+                                <FieldGroup label="Date (DD/MM/YY)">
+                                    {ro ? (
+                                        <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.reExaminedBySocoOfficers?.date ?? '—'}</div>
+                                    ) : (
+                                        <DatePicker value={sC.reExaminedBySocoOfficers?.date ?? ''} onChange={(date) => updateC({ reExaminedBySocoOfficers: { ...sC.reExaminedBySocoOfficers, date } })} />
+                                    )}
+                                </FieldGroup>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <FieldGroup label="Time In">
+                                        {ro ? (
+                                            <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.reExaminedBySocoOfficers?.timeIn ?? '—'}</div>
+                                        ) : (
+                                            <TimePicker value={sC.reExaminedBySocoOfficers?.timeIn ?? ''} onChange={(timeIn) => updateC({ reExaminedBySocoOfficers: { ...sC.reExaminedBySocoOfficers, timeIn } })} />
+                                        )}
+                                    </FieldGroup>
+                                    <FieldGroup label="Time Out">
+                                        {ro ? (
+                                            <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.reExaminedBySocoOfficers?.timeOut ?? '—'}</div>
+                                        ) : (
+                                            <TimePicker value={sC.reExaminedBySocoOfficers?.timeOut ?? ''} onChange={(timeOut) => updateC({ reExaminedBySocoOfficers: { ...sC.reExaminedBySocoOfficers, timeOut } })} />
+                                        )}
+                                    </FieldGroup>
+                                </div>
+                            </div>
+
+                            {/* Investigation Officer */}
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
+                                    Investigation Officer
+                                </h4>
+                                <OfficerRow label="Investigation Officer" value={sC.investigationOfficer ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ investigationOfficer: v })} compact />
+                                {errors['officer'] && <p className="text-xs text-red-600 font-medium mt-2">{errors['officer']}</p>}
+                            </div>
+
+                            {/* Re-Assigned Case */}
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
+                                    Re-Assigned Case
+                                </h4>
+                                <OfficerRow label="Re-Assigned Case" value={sC.reAssignedCaseOfficer ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ reAssignedCaseOfficer: v })} compact />
+                            </div>
+
+                            {/* Scene Guard */}
+                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                                    <span className="w-1.5 h-4 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
+                                    Scene Guard
+                                </h4>
+                                <OfficerRow label="Scene Guard" value={sC.sceneGuard ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ sceneGuard: v })} compact />
+                            </div>
                         </div>
-
-                        <OfficerRow label="Driver" value={sC.driver ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ driver: v })} />
-
-                        <div className="pt-1 border-t border-gray-100" />
-
-                        {/* Examined */}
-                        <div className="grid grid-cols-[150px,1fr,1fr,1fr] gap-3 items-end">
-                            <div className="text-sm font-medium text-gray-700 pb-2 leading-tight">Examined by<br />SOCO officers</div>
-                            <FieldGroup label="Date (DD/MM/YY)">
-                                <TextInput isReadOnly={ro} value={sC.examinedBySocoOfficers?.date ?? ''} onChange={(e) => updateC({ examinedBySocoOfficers: { ...sC.examinedBySocoOfficers, date: e.target.value } })} placeholder="DD/MM/YY" />
-                            </FieldGroup>
-                            <FieldGroup label="Time In">
-                                <TextInput type="time" isReadOnly={ro} value={sC.examinedBySocoOfficers?.timeIn ?? ''} onChange={(e) => updateC({ examinedBySocoOfficers: { ...sC.examinedBySocoOfficers, timeIn: e.target.value } })} />
-                            </FieldGroup>
-                            <FieldGroup label="Time Out">
-                                <TextInput type="time" isReadOnly={ro} value={sC.examinedBySocoOfficers?.timeOut ?? ''} onChange={(e) => updateC({ examinedBySocoOfficers: { ...sC.examinedBySocoOfficers, timeOut: e.target.value } })} />
-                            </FieldGroup>
-                        </div>
-
-                        {/* Re-examined */}
-                        <div className="grid grid-cols-[150px,1fr,1fr,1fr] gap-3 items-end">
-                            <div className="text-sm font-medium text-gray-700 pb-2 leading-tight">Re-examined by<br />SOCO officers</div>
-                            <FieldGroup label="Date (DD/MM/YY)">
-                                <TextInput isReadOnly={ro} value={sC.reExaminedBySocoOfficers?.date ?? ''} onChange={(e) => updateC({ reExaminedBySocoOfficers: { ...sC.reExaminedBySocoOfficers, date: e.target.value } })} placeholder="DD/MM/YY" />
-                            </FieldGroup>
-                            <FieldGroup label="Time In">
-                                <TextInput type="time" isReadOnly={ro} value={sC.reExaminedBySocoOfficers?.timeIn ?? ''} onChange={(e) => updateC({ reExaminedBySocoOfficers: { ...sC.reExaminedBySocoOfficers, timeIn: e.target.value } })} />
-                            </FieldGroup>
-                            <FieldGroup label="Time Out">
-                                <TextInput type="time" isReadOnly={ro} value={sC.reExaminedBySocoOfficers?.timeOut ?? ''} onChange={(e) => updateC({ reExaminedBySocoOfficers: { ...sC.reExaminedBySocoOfficers, timeOut: e.target.value } })} />
-                            </FieldGroup>
-                        </div>
-
-                        <div className="pt-1 border-t border-gray-100" />
-
-                        <OfficerRow label="Investigation Officer" value={sC.investigationOfficer ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ investigationOfficer: v })} />
-                        {errors['officer'] && <p className="text-xs text-red-500">{errors['officer']}</p>}
-                        <OfficerRow label="Re-Assigned Case" value={sC.reAssignedCaseOfficer ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ reAssignedCaseOfficer: v })} />
-                        <OfficerRow label="Scene Guard" value={sC.sceneGuard ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ sceneGuard: v })} />
                     </div>
                 )}
             </div>
@@ -695,7 +802,7 @@ export default function CrimeVisitForm({
                                 type="button"
                                 disabled={submitting}
                                 onClick={handleSubmit}
-                                className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors shadow-sm"
+                                className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors"
                             >
                                 Submit
                             </button>

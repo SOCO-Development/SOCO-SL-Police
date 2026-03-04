@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { FaCalendarAlt, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 interface DatePickerProps {
@@ -44,7 +45,9 @@ export default function DatePicker({
     initialDate ? parseDate(initialDate) : new Date()
   );
   const [view, setView] = useState<'calendar' | 'month' | 'year'>('calendar');
+  const [popupStyle, setPopupStyle] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const portalId = useId().replace(/:/g, '');
 
   useEffect(() => {
     if (value !== undefined) {
@@ -57,9 +60,11 @@ export default function DatePicker({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = event.target as Node;
+      if (datePickerRef.current?.contains(target)) return;
+      const portalEl = document.getElementById(`date-picker-portal-${portalId}`);
+      if (portalEl?.contains(target)) return;
+      setIsOpen(false);
     };
 
     if (isOpen) {
@@ -68,6 +73,47 @@ export default function DatePicker({
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, portalId]);
+
+  const MIN_SPACE_BELOW = 320;
+  const updatePopupPosition = () => {
+    const btn = datePickerRef.current?.querySelector('button');
+    if (btn && typeof window !== 'undefined') {
+      const rect = btn.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 4;
+      if (spaceBelow >= MIN_SPACE_BELOW) {
+        setPopupStyle({ top: rect.bottom + 4, left: rect.left });
+      } else {
+        setPopupStyle({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const btn = datePickerRef.current?.querySelector('button');
+    if (!btn) return;
+    const getScrollableParents = (el: Element): Element[] => {
+      const parents: Element[] = [];
+      let current = el.parentElement;
+      while (current) {
+        const s = getComputedStyle(current);
+        const o = s.overflow + s.overflowY + s.overflowX;
+        if (o.includes('auto') || o.includes('scroll') || o.includes('overlay')) parents.push(current);
+        current = current.parentElement;
+      }
+      return parents;
+    };
+    const scrollParents = getScrollableParents(btn);
+    const handleScroll = () => updatePopupPosition();
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleScroll);
+    scrollParents.forEach((p) => p.addEventListener('scroll', handleScroll));
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleScroll);
+      scrollParents.forEach((p) => p.removeEventListener('scroll', handleScroll));
     };
   }, [isOpen]);
 
@@ -247,15 +293,23 @@ export default function DatePicker({
         <button
           type="button"
           onClick={() => {
-            if (!isOpen && selectedDate) {
-              setCurrentMonth(parseDate(selectedDate));
+            if (!isOpen) {
+              if (selectedDate) setCurrentMonth(parseDate(selectedDate));
+              setView('calendar');
+              const btn = datePickerRef.current?.querySelector('button');
+              if (btn && typeof window !== 'undefined') {
+                const rect = btn.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom - 4;
+                if (spaceBelow >= 320) {
+                  setPopupStyle({ top: rect.bottom + 4, left: rect.left });
+                } else {
+                  setPopupStyle({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+                }
+              }
             }
             setIsOpen(!isOpen);
-            if (!isOpen) {
-              setView('calendar');
-            }
           }}
-          className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between ${
+          className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between ${
             error ? 'border-red-300' : ''
           }`}
         >
@@ -265,8 +319,8 @@ export default function DatePicker({
           <FaCalendarAlt className="w-4 h-4 text-gray-400" />
         </button>
 
-        {isOpen && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl z-[9999] p-4 w-64 backdrop-blur-sm">
+        {isOpen && popupStyle && typeof document !== 'undefined' && createPortal(
+          <div id={`date-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="mt-1 bg-white/80 backdrop-blur-xl border border-gray-300 rounded-lg p-4 w-64">
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
               <button
@@ -275,18 +329,24 @@ export default function DatePicker({
               >
                 <FaChevronLeft className="w-4 h-4 text-gray-600" />
               </button>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 flex-1 justify-center min-w-0">
                 <button
                   onClick={() => setView('month')}
-                  className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors px-2 py-1 rounded"
+                  className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors px-1.5 py-0.5 rounded shrink-0"
                 >
                   {monthNames[currentMonth.getMonth()]}
                 </button>
                 <button
                   onClick={() => setView('year')}
-                  className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors px-2 py-1 rounded"
+                  className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors px-1.5 py-0.5 rounded shrink-0"
                 >
                   {currentMonth.getFullYear()}
+                </button>
+                <button
+                  onClick={handleToday}
+                  className="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded px-1.5 py-0.5 transition-colors shrink-0"
+                >
+                  Today
                 </button>
               </div>
               <button
@@ -294,16 +354,6 @@ export default function DatePicker({
                 className="p-1.5 hover:bg-gray-100 rounded transition-colors hover:shadow-sm"
               >
                 <FaChevronRight className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Today Button */}
-            <div className="mb-3">
-              <button
-                onClick={handleToday}
-                className="w-full px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
-              >
-                Today
               </button>
             </div>
 
@@ -377,7 +427,8 @@ export default function DatePicker({
                 </div>
               </>
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}

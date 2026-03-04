@@ -4,8 +4,13 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import CustomSelect from '@/components/forms/CustomSelect';
 import { ANNEX_01_SOCO_LABS, ANNEX_12_RANK } from '@/lib/annexData';
 import { MagnifyingGlass, Pencil, Trash, Eye, FunnelSimple, CaretUp, CaretDown } from 'phosphor-react';
+import { ArrowLeft, Plus } from 'lucide-react';
+
+const LAB_FILTER_OPTIONS = [{ value: '', label: 'All Labs' }, ...ANNEX_01_SOCO_LABS.map((l) => ({ value: l, label: l }))];
+const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -46,6 +51,8 @@ function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; s
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+type Officer = (typeof MOCK_OFFICERS)[number];
+
 export default function ViewOfficersPage() {
     const [search, setSearch] = useState('');
     const [filterLab, setFilterLab] = useState('');
@@ -54,6 +61,7 @@ export default function ViewOfficersPage() {
     const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [page, setPage] = useState(1);
     const [showFilters, setShowFilters] = useState(false);
+    const [viewingOfficer, setViewingOfficer] = useState<Officer | null>(null);
 
     const handleSort = (key: SortKey) => {
         if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -96,30 +104,33 @@ export default function ViewOfficersPage() {
                 <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
                     <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
 
-                        {/* Breadcrumb */}
-                        <nav className="mb-4 text-sm text-gray-500 flex items-center gap-2">
-                            <Link href="/config" className="hover:text-blue-600 transition-colors">Configuration</Link>
-                            <span>›</span>
-                            <Link href="/config/crime-officer" className="hover:text-blue-600 transition-colors">Crime Officer Management</Link>
-                            <span>›</span>
-                            <span className="text-gray-800 font-medium">View Officers</span>
-                        </nav>
-
-                        <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900">SOCO Officers</h2>
-                                <p className="text-sm text-gray-500 mt-0.5">SOCO නිලධාරීන් — {filtered.length} records found</p>
+                        {/* Page header */}
+                        <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+                            <div className="flex items-center gap-3">
+                                <Link
+                                    href="/config/crime-officer"
+                                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                                    aria-label="Back"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </Link>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">View SOCO Officers</h2>
+                                    <p className="text-sm text-gray-600 mt-0.5 font-noto-sinhala">
+                                        SOCO නිලධාරීන් — {filtered.length} records found
+                                    </p>
+                                </div>
                             </div>
                             <Link
                                 href="/config/crime-officer/add"
-                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
                             >
-                                + Add Officer
+                                <Plus className="w-4 h-4" /> Add Officer
                             </Link>
                         </div>
 
                         {/* Search & Filters */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
                             <div className="flex gap-3 flex-wrap items-center">
                                 {/* Search */}
                                 <div className="flex-1 min-w-[200px] relative">
@@ -128,7 +139,7 @@ export default function ViewOfficersPage() {
                                         value={search}
                                         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                                         placeholder="Search name, reg no, mobile..."
-                                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
+                                        className="w-full pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
                                     />
                                 </div>
 
@@ -147,25 +158,21 @@ export default function ViewOfficersPage() {
                                 <div className="mt-3 flex gap-3 flex-wrap pt-3 border-t border-gray-100">
                                     <div className="flex-1 min-w-[180px]">
                                         <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Lab</label>
-                                        <select
+                                        <CustomSelect
                                             value={filterLab}
-                                            onChange={(e) => { setFilterLab(e.target.value); setPage(1); }}
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
-                                        >
-                                            <option value="">All Labs</option>
-                                            {ANNEX_01_SOCO_LABS.map((l) => <option key={l} value={l}>{l}</option>)}
-                                        </select>
+                                            onChange={(v) => { setFilterLab(v); setPage(1); }}
+                                            options={LAB_FILTER_OPTIONS}
+                                            placeholder="All Labs"
+                                        />
                                     </div>
                                     <div className="flex-1 min-w-[140px]">
                                         <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Rank</label>
-                                        <select
+                                        <CustomSelect
                                             value={filterRank}
-                                            onChange={(e) => { setFilterRank(e.target.value); setPage(1); }}
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
-                                        >
-                                            <option value="">All Ranks</option>
-                                            {ANNEX_12_RANK.map((r) => <option key={r} value={r}>{r}</option>)}
-                                        </select>
+                                            onChange={(v) => { setFilterRank(v); setPage(1); }}
+                                            options={RANK_FILTER_OPTIONS}
+                                            placeholder="All Ranks"
+                                        />
                                     </div>
                                     {(filterLab || filterRank || search) && (
                                         <div className="flex items-end">
@@ -183,7 +190,7 @@ export default function ViewOfficersPage() {
                         </div>
 
                         {/* Table */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-fade-in">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
@@ -240,7 +247,7 @@ export default function ViewOfficersPage() {
                                                                 type="button"
                                                                 title="View"
                                                                 className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                                onClick={() => alert(`View officer ${officer.name}`)}
+                                                                onClick={() => setViewingOfficer(officer)}
                                                             >
                                                                 <Eye size={15} />
                                                             </button>
@@ -308,6 +315,73 @@ export default function ViewOfficersPage() {
                     <Footer />
                 </main>
             </div>
+
+            {/* View Officer Modal */}
+            {viewingOfficer && (
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+                    onClick={() => setViewingOfficer(null)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden border border-gray-200 animate-fade-in flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                            <h3 className="text-lg font-semibold text-gray-900">Officer Details</h3>
+                            <button
+                                type="button"
+                                onClick={() => setViewingOfficer(null)}
+                                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                                aria-label="Close"
+                            >
+                                <span className="text-xl leading-none">×</span>
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            <div className="flex items-center gap-4">
+                                <OfficerAvatar name={viewingOfficer.name} />
+                                <div>
+                                    <h4 className="text-xl font-bold text-gray-900">{viewingOfficer.name}</h4>
+                                    <p className="text-sm text-gray-500 font-mono">{viewingOfficer.regNo}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Rank</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.rank}</p>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Present Rank</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.presentRank}</p>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">SOCO Lab</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.socoLab}</p>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mobile</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.mobile}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-end gap-2">
+                            <Link
+                                href={`/config/crime-officer/add?edit=${viewingOfficer.id}`}
+                                className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors"
+                            >
+                                Edit
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => setViewingOfficer(null)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

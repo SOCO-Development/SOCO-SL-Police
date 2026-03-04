@@ -8,9 +8,13 @@ interface FeatureCardProps {
   icon: ReactNode;
   href?: string;
   onClick?: () => void;
+  /** Optional Sinhala subtitle below title */
+  subtitle?: ReactNode;
+  /** Optional description text */
+  description?: string;
 }
 
-export default function FeatureCard({ title, icon, href, onClick }: FeatureCardProps) {
+export default function FeatureCard({ title, icon, href, onClick, subtitle, description }: FeatureCardProps) {
   const cardContent = (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-2xl border border-gray-100 hover:border-blue-200 p-8 cursor-pointer h-full flex flex-col items-center justify-center text-center group relative overflow-hidden animate-fade-in transition-[shadow,border-color] duration-300 ease-in-out">
       {/* Gradient overlay on hover */}
@@ -26,6 +30,8 @@ export default function FeatureCard({ title, icon, href, onClick }: FeatureCardP
       <h3 className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 relative z-10 transition-colors duration-300 ease-in-out leading-tight">
         {title}
       </h3>
+      {subtitle && <p className="text-xs text-gray-400 relative z-10 mb-1 mt-0.5">{subtitle}</p>}
+      {description && <p className="text-xs text-gray-500 relative z-10 mt-2 leading-relaxed">{description}</p>}
 
       {/* Decorative corner accent */}
       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/0 to-teal-500/0 group-hover:from-blue-500/5 group-hover:to-teal-500/5 rounded-bl-full transition-[background] duration-300 ease-in-out"></div>

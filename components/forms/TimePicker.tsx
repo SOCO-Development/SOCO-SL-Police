@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { FaClock } from 'react-icons/fa';
 
 interface TimePickerProps {
@@ -25,7 +26,9 @@ export default function TimePicker({
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [isAM, setIsAM] = useState<boolean>(true);
+  const [popupStyle, setPopupStyle] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const timePickerRef = useRef<HTMLDivElement>(null);
+  const portalId = useId().replace(/:/g, '');
 
   useEffect(() => {
     if (value !== undefined) {
@@ -48,9 +51,11 @@ export default function TimePicker({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (timePickerRef.current && !timePickerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = event.target as Node;
+      if (timePickerRef.current?.contains(target)) return;
+      const portalEl = document.getElementById(`time-picker-portal-${portalId}`);
+      if (portalEl?.contains(target)) return;
+      setIsOpen(false);
     };
 
     if (isOpen) {
@@ -59,6 +64,47 @@ export default function TimePicker({
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, portalId]);
+
+  const MIN_SPACE_BELOW = 260;
+  const updatePopupPosition = () => {
+    const btn = timePickerRef.current?.querySelector('button');
+    if (btn && typeof window !== 'undefined') {
+      const rect = btn.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - 4;
+      if (spaceBelow >= MIN_SPACE_BELOW) {
+        setPopupStyle({ top: rect.bottom + 4, left: rect.left });
+      } else {
+        setPopupStyle({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const btn = timePickerRef.current?.querySelector('button');
+    if (!btn) return;
+    const getScrollableParents = (el: Element): Element[] => {
+      const parents: Element[] = [];
+      let current = el.parentElement;
+      while (current) {
+        const s = getComputedStyle(current);
+        const o = s.overflow + s.overflowY + s.overflowX;
+        if (o.includes('auto') || o.includes('scroll') || o.includes('overlay')) parents.push(current);
+        current = current.parentElement;
+      }
+      return parents;
+    };
+    const scrollParents = getScrollableParents(btn);
+    const handleScroll = () => updatePopupPosition();
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleScroll);
+    scrollParents.forEach((p) => p.addEventListener('scroll', handleScroll));
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleScroll);
+      scrollParents.forEach((p) => p.removeEventListener('scroll', handleScroll));
     };
   }, [isOpen]);
 
@@ -116,8 +162,22 @@ export default function TimePicker({
       <div className="relative">
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between ${
+          onClick={() => {
+            if (!isOpen && timePickerRef.current && typeof window !== 'undefined') {
+              const btn = timePickerRef.current.querySelector('button');
+              if (btn) {
+                const rect = btn.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom - 4;
+                if (spaceBelow >= 260) {
+                  setPopupStyle({ top: rect.bottom + 4, left: rect.left });
+                } else {
+                  setPopupStyle({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+                }
+              }
+            }
+            setIsOpen(!isOpen);
+          }}
+          className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between ${
             error ? 'border-red-300' : ''
           }`}
         >
@@ -127,8 +187,8 @@ export default function TimePicker({
           <FaClock className="w-4 h-4 text-gray-400" />
         </button>
 
-        {isOpen && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 shadow-xl rounded-lg z-[99999] min-w-[120px]">
+        {isOpen && popupStyle && typeof document !== 'undefined' && createPortal(
+          <div id={`time-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="mt-1 w-[150px] bg-white/80 backdrop-blur-xl border border-gray-200 rounded-lg">
                 <div className="flex flex-row divide-x divide-gray-200">
                   {/* Hours */}
                   <div className="p-1 max-h-56 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-white [&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
@@ -249,7 +309,8 @@ export default function TimePicker({
                 OK
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}

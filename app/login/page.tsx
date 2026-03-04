@@ -20,13 +20,13 @@ export default function LoginPage() {
       const isAuthenticated = localStorage.getItem('isAuthenticated');
       const username = localStorage.getItem('username');
       const authTimestamp = localStorage.getItem('authTimestamp');
-      
+
       // Check if session is expired (24 hours)
       const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-      const isSessionExpired = authTimestamp 
+      const isSessionExpired = authTimestamp
         ? (Date.now() - parseInt(authTimestamp)) > SESSION_DURATION
         : true;
-      
+
       // Clear expired or invalid authentication data
       if (isSessionExpired || !isAuthenticated || !username || username.trim() === '') {
         localStorage.removeItem('isAuthenticated');
@@ -81,24 +81,24 @@ export default function LoginPage() {
           <div className="hidden lg:flex flex-col items-center justify-center text-center space-y-8 w-full">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full blur-2xl opacity-50 -z-10"></div>
-                  <div className="w-40 h-40 mx-auto relative">
-                    <Image
-                      src="/logo.png"
-                      alt="Sri Lanka Police Logo"
-                      width={160}
-                      height={160}
-                      className="object-contain w-full h-full drop-shadow-2xl"
-                      loading="eager"
-                      priority
-                    />
-                  </div>
+              <div className="w-40 h-40 mx-auto relative">
+                <Image
+                  src="/logo.png"
+                  alt="Sri Lanka Police Logo"
+                  width={160}
+                  height={160}
+                  className="object-contain w-full h-full drop-shadow-2xl"
+                  loading="eager"
+                  priority
+                />
+              </div>
             </div>
-            
+
             <div className="space-y-4 w-full">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-noto">
                 SOCO - SL Police
               </h1>
-              
+
               <div className="space-y-2 text-gray-700 w-full">
                 <p className="text-xl font-semibold font-sinhala whitespace-nowrap">ශ්‍රී ලංකා පොලිස් පැමිණිලි කළමණාකරණ පද්ධතිය</p>
                 <p className="text-xl font-semibold font-tamil whitespace-nowrap">இலங்கை போலீசார் புகார் மேலாண்மை அமைப்பு</p>
@@ -124,17 +124,17 @@ export default function LoginPage() {
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 lg:p-10">
               {/* Mobile Logo */}
               <div className="lg:hidden mb-8 text-center">
-                    <div className="w-20 h-20 mx-auto mb-4 relative">
-                      <Image
-                        src="/logo.png"
-                        alt="Sri Lanka Police Logo"
-                        width={80}
-                        height={80}
-                        className="object-contain w-full h-full"
-                        loading="eager"
-                        priority
-                      />
-                    </div>
+                <div className="w-20 h-20 mx-auto mb-4 relative">
+                  <Image
+                    src="/logo.png"
+                    alt="Sri Lanka Police Logo"
+                    width={80}
+                    height={80}
+                    className="object-contain w-full h-full"
+                    loading="eager"
+                    priority
+                  />
+                </div>
                 <h1 className="text-2xl font-bold text-gray-900 font-noto mb-2">
                   SOCO - SL Police
                 </h1>

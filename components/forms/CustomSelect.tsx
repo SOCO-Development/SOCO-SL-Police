@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useId } from 'react';
-import { FaChevronDown } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
+import { FaChevronDown, FaCheck } from 'react-icons/fa';
 
 interface CustomSelectProps {
   label?: string;
@@ -25,9 +26,11 @@ export default function CustomSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState<string>(value || '');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownStyle, setDropdownStyle] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const selectRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
   const buttonId = useId();
+  const portalId = listboxId.replace(/:/g, '');
 
   useEffect(() => {
     if (value !== undefined) {
@@ -37,9 +40,11 @@ export default function CustomSelect({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = event.target as Node;
+      if (selectRef.current?.contains(target)) return;
+      const portalEl = document.getElementById(`custom-select-portal-${portalId}`);
+      if (portalEl?.contains(target)) return;
+      setIsOpen(false);
     };
 
     if (isOpen) {
@@ -49,7 +54,7 @@ export default function CustomSelect({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, portalId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -59,6 +64,47 @@ export default function CustomSelect({
       setHighlightedIndex(-1);
     }
   }, [isOpen, selectedValue, options]);
+
+  const MIN_SPACE_BELOW = 200;
+  const updateDropdownPosition = () => {
+    const btn = selectRef.current?.querySelector('button');
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const spaceBelow = typeof window !== 'undefined' ? window.innerHeight - rect.bottom - 4 : 0;
+      if (spaceBelow >= MIN_SPACE_BELOW) {
+        setDropdownStyle({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+      } else {
+        setDropdownStyle({ bottom: (typeof window !== 'undefined' ? window.innerHeight : 0) - rect.top + 4, left: rect.left, width: rect.width });
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const btn = selectRef.current?.querySelector('button');
+    if (!btn) return;
+    const getScrollableParents = (el: Element): Element[] => {
+      const parents: Element[] = [];
+      let current = el.parentElement;
+      while (current) {
+        const s = getComputedStyle(current);
+        const o = s.overflow + s.overflowY + s.overflowX;
+        if (o.includes('auto') || o.includes('scroll') || o.includes('overlay')) parents.push(current);
+        current = current.parentElement;
+      }
+      return parents;
+    };
+    const scrollParents = getScrollableParents(btn);
+    const handleScroll = () => updateDropdownPosition();
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleScroll);
+    scrollParents.forEach((p) => p.addEventListener('scroll', handleScroll));
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleScroll);
+      scrollParents.forEach((p) => p.removeEventListener('scroll', handleScroll));
+    };
+  }, [isOpen]);
 
   const handleSelect = (optionValue: string) => {
     setSelectedValue(optionValue);
@@ -118,62 +164,94 @@ export default function CustomSelect({
         <button
           id={buttonId}
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (!isOpen && selectRef.current) {
+              const btn = selectRef.current.querySelector('button');
+              if (btn) {
+                const rect = btn.getBoundingClientRect();
+                const spaceBelow = typeof window !== 'undefined' ? window.innerHeight - rect.bottom - 4 : 0;
+                if (spaceBelow >= 200) {
+                  setDropdownStyle({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+                } else {
+                  setDropdownStyle({ bottom: (typeof window !== 'undefined' ? window.innerHeight : 0) - rect.top + 4, left: rect.left, width: rect.width });
+                }
+              }
+            }
+            setIsOpen(!isOpen);
+          }}
           onKeyDown={handleKeyDown}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-controls={listboxId}
           aria-labelledby={label ? `${buttonId}-label` : undefined}
           aria-activedescendant={isOpen && highlightedIndex >= 0 ? `${listboxId}-option-${highlightedIndex}` : undefined}
-          className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between hover:border-gray-400 ${
-            error ? 'border-red-300' : ''
-          }`}
+          className={`group w-full min-h-10 px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between
+            border-gray-300 hover:border-gray-400 hover:bg-gray-50/50 active:bg-gray-50
+            ${isOpen ? 'border-blue-400 ring-1 ring-blue-500/20' : ''}
+            ${error ? 'border-red-300 focus:ring-red-500/30' : ''}`}
         >
           <span className={selectedValue ? 'text-gray-900' : 'text-gray-400'}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <FaChevronDown
-            className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
-              isOpen ? 'transform rotate-180' : ''
+            className={`w-4 h-4 text-gray-400 transition-all duration-200 ${
+              isOpen ? 'rotate-180 text-blue-500' : 'group-hover:text-gray-600'
             }`}
             aria-hidden
           />
         </button>
 
-        {isOpen && (
-          <ul
-            id={listboxId}
-            role="listbox"
-            aria-labelledby={label ? `${buttonId}-label` : undefined}
-            tabIndex={-1}
-            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-[9999] max-h-60 overflow-y-auto py-1"
+        {isOpen && dropdownStyle && typeof document !== 'undefined' && createPortal(
+          <div
+            id={`custom-select-portal-${portalId}`}
+            style={{
+              position: 'fixed',
+              ...(dropdownStyle.top != null ? { top: dropdownStyle.top } : { bottom: dropdownStyle.bottom }),
+              left: dropdownStyle.left,
+              width: dropdownStyle.width,
+              minWidth: 120,
+            }}
+            className="mt-1 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-xl z-[99999] overflow-hidden"
           >
-            {options.length > 0 ? (
-              options.map((option, index) => (
-                <li
-                  key={option.value}
-                  id={`${listboxId}-option-${index}`}
-                  role="option"
-                  aria-selected={selectedValue === option.value}
-                  className={`cursor-pointer px-4 py-2.5 text-left text-sm transition-colors ${
-                    selectedValue === option.value
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : index === highlightedIndex
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                  onClick={() => handleSelect(option.value)}
-                >
-                  {option.label}
+            <ul
+              role="listbox"
+              aria-labelledby={label ? `${buttonId}-label` : undefined}
+              tabIndex={-1}
+              className="custom-select-dropdown max-h-60 py-1.5 px-1"
+            >
+              {options.length > 0 ? (
+                options.map((option, index) => {
+                  const isSelected = selectedValue === option.value;
+                  const isHighlighted = index === highlightedIndex;
+                  return (
+                    <li
+                      key={option.value}
+                      id={`${listboxId}-option-${index}`}
+                      role="option"
+                      aria-selected={isSelected}
+                      className={`cursor-pointer px-4 py-2.5 mx-1.5 rounded-lg text-left text-sm transition-all duration-150 flex items-center justify-between gap-2 ${
+                        isSelected
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : isHighlighted
+                            ? 'bg-blue-50/70 text-gray-900'
+                            : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      onMouseEnter={() => setHighlightedIndex(index)}
+                      onClick={() => handleSelect(option.value)}
+                    >
+                      <span>{option.label}</span>
+                      {isSelected && <FaCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" aria-hidden />}
+                    </li>
+                  );
+                })
+              ) : (
+                <li className="px-4 py-2.5 mx-1.5 rounded-lg text-sm text-gray-500" role="option" aria-disabled>
+                  No options available
                 </li>
-              ))
-            ) : (
-              <li className="px-4 py-2.5 text-sm text-gray-500" role="option" aria-disabled>
-                No options available
-              </li>
-            )}
-          </ul>
+              )}
+            </ul>
+          </div>,
+          document.body
         )}
       </div>
       {error && <p className="text-xs text-red-600 mt-1" role="alert">{error}</p>}

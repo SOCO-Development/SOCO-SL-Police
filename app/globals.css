@@ -35,9 +35,11 @@
   background-color: var(--primary-action-bg);
   color: var(--primary-action-text);
 }
+
 .filter-primary-btn:hover {
   background-color: var(--primary-action-hover);
 }
+
 .filter-primary-btn:focus-visible {
   outline: 2px solid var(--primary-action-hover);
   outline-offset: 2px;
@@ -116,12 +118,16 @@ body {
 
 /* Login page blob animation */
 @keyframes blob {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
+
   33% {
     transform: translate(30px, -50px) scale(1.1);
   }
+
   66% {
     transform: translate(-20px, 20px) scale(0.9);
   }
@@ -137,6 +143,30 @@ body {
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* CustomSelect dropdown - scrollbar inside */
+.custom-select-dropdown {
+  overflow-y: scroll !important;
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #e5e7eb;
+  padding-right: 4px;
+  box-sizing: border-box;
+}
+.custom-select-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-select-dropdown::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.custom-select-dropdown::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 4px;
+}
+.custom-select-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }
 
 /* Form select dropdown styling */
@@ -181,6 +211,7 @@ select:active {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -192,6 +223,7 @@ select:active {
     opacity: 0;
     transform: translateX(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -202,24 +234,38 @@ select:active {
   animation: fadeIn 0.3s ease-out;
 }
 
+.animate-fade-in-stagger {
+  animation: fadeIn 0.45s ease-out both;
+}
+
+.font-noto-sinhala {
+  font-family: 'Noto Sans Sinhala', sans-serif;
+}
+
 .animate-slide-in {
   animation: slideIn 0.3s ease-out;
 }
 
 /* Sidebar icon animations */
 @keyframes iconPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.1);
   }
 }
 
 @keyframes iconBounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-3px);
   }
@@ -229,18 +275,23 @@ select:active {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
 @keyframes iconShake {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateX(0);
   }
+
   25% {
     transform: translateX(-2px);
   }
+
   75% {
     transform: translateX(2px);
   }
@@ -269,10 +320,13 @@ select:active {
 
 /* Hero section */
 @keyframes heroGradientShift {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.85;
     transform: scale(1.05);
@@ -280,18 +334,24 @@ select:active {
 }
 
 @keyframes heroGlowPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.4;
   }
+
   50% {
     opacity: 0.7;
   }
 }
 
 @keyframes heroFloat {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0) scale(1);
   }
+
   50% {
     transform: translateY(-8px) scale(1.02);
   }
@@ -316,11 +376,13 @@ select:active {
 
 /* Print: hide layout chrome on complaint report so only report content prints */
 @media print {
-  .complaint-report-page > header,
-  .complaint-report-page > div > aside,
+
+  .complaint-report-page>header,
+  .complaint-report-page>div>aside,
   .complaint-report-page main footer {
     display: none !important;
   }
+
   .complaint-report-page main {
     margin-left: 0 !important;
     padding-top: 0 !important;
