@@ -85,21 +85,35 @@ body {
   font-family: 'Noto Sans Tamil', 'Noto Sans', sans-serif;
 }
 
-/* Hide scrollbar but keep scrolling functionality */
+/* Visible scrollbar */
 ::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
-  background: transparent;
+  width: 10px;
+  height: 10px;
 }
 
-/* For Firefox */
-* {
-  scrollbar-width: none;
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
 }
 
-/* For IE and Edge */
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Firefox */
 * {
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+/* IE and Edge */
+* {
+  -ms-overflow-style: scrollbar;
 }
 
 /* Smooth transitions - optimized for performance */
@@ -143,6 +157,27 @@ body {
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* Dropdown/Time/Date picker - strong glass effect */
+.dropdown-blur {
+  background: rgba(248, 250, 252, 0.45) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  backdrop-filter: blur(48px) saturate(200%);
+  isolation: isolate;
+  transition: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Time picker - hide scrollbar, keep scroll */
+.time-picker-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.time-picker-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* CustomSelect dropdown - scrollbar inside */

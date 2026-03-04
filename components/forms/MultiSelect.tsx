@@ -90,7 +90,7 @@ export default function MultiSelect({
         </button>
 
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-[9999] overflow-hidden min-w-[280px]">
+          <div className="dropdown-blur absolute top-full left-0 right-0 mt-1 border border-white/50 rounded-lg z-[9999] overflow-hidden min-w-[280px]">
             <div className="p-2 border-b border-gray-200">
               <input
                 type="text"
@@ -116,7 +116,7 @@ export default function MultiSelect({
                 Deselect All
               </button>
             </div>
-            <div className="max-h-60 overflow-y-auto">
+            <div className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((option) => (
                   <button
@@ -125,8 +125,8 @@ export default function MultiSelect({
                     onClick={() => handleSelect(option.value)}
                     className={`w-full px-4 py-2.5 text-left text-sm transition-colors flex items-center gap-2 ${
                       value.includes(option.value)
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-blue-100 text-blue-800 font-medium'
+                        : 'text-gray-700 hover:bg-blue-100'
                     }`}
                   >
                     <span

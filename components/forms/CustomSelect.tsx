@@ -211,13 +211,14 @@ export default function CustomSelect({
               width: dropdownStyle.width,
               minWidth: 120,
             }}
-            className="mt-1 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-xl z-[99999] overflow-hidden"
+            className="dropdown-blur mt-1 border border-white/50 rounded-xl z-[99999] overflow-hidden"
           >
             <ul
               role="listbox"
               aria-labelledby={label ? `${buttonId}-label` : undefined}
               tabIndex={-1}
               className="custom-select-dropdown max-h-60 py-1.5 px-1"
+              onWheel={(e) => e.stopPropagation()}
             >
               {options.length > 0 ? (
                 options.map((option, index) => {
@@ -231,10 +232,10 @@ export default function CustomSelect({
                       aria-selected={isSelected}
                       className={`cursor-pointer px-4 py-2.5 mx-1.5 rounded-lg text-left text-sm transition-all duration-150 flex items-center justify-between gap-2 ${
                         isSelected
-                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          ? 'bg-blue-100 text-blue-800 font-medium'
                           : isHighlighted
-                            ? 'bg-blue-50/70 text-gray-900'
-                            : 'text-gray-700 hover:bg-gray-100'
+                            ? 'bg-blue-100 text-gray-900'
+                            : 'text-gray-700 hover:bg-blue-100'
                       }`}
                       onMouseEnter={() => setHighlightedIndex(index)}
                       onClick={() => handleSelect(option.value)}

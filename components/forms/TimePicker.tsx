@@ -25,7 +25,6 @@ export default function TimePicker({
   const [selectedTime, setSelectedTime] = useState<string>(value || defaultValue || '');
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
-  const [isAM, setIsAM] = useState<boolean>(true);
   const [popupStyle, setPopupStyle] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const timePickerRef = useRef<HTMLDivElement>(null);
   const portalId = useId().replace(/:/g, '');
@@ -38,14 +37,12 @@ export default function TimePicker({
         const hour24 = h || 0;
         setHours(hour24);
         setMinutes(m || 0);
-        setIsAM(hour24 < 12);
       }
     } else if (defaultValue) {
       const [h, m] = defaultValue.split(':').map(Number);
       const hour24 = h || 0;
       setHours(hour24);
       setMinutes(m || 0);
-      setIsAM(hour24 < 12);
     }
   }, [value, defaultValue]);
 
@@ -113,23 +110,14 @@ export default function TimePicker({
   };
 
   const formatDisplayTime = (h24: number, m: number): string => {
-    const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
-    const ampm = h24 < 12 ? 'AM' : 'PM';
-    return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+    return `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
 
-  const handleTimeChange = (newHours: number, newMinutes: number, newAM: boolean) => {
-    // Convert 12-hour to 24-hour format
-    let hour24 = newHours;
-    if (newAM && newHours === 12) hour24 = 0;
-    else if (!newAM && newHours !== 12) hour24 = newHours + 12;
-    else if (!newAM && newHours === 12) hour24 = 12;
-
-    const timeString = formatTime(hour24, newMinutes);
+  const handleTimeChange = (newHours: number, newMinutes: number) => {
+    const timeString = formatTime(newHours, newMinutes);
     setSelectedTime(timeString);
-    setHours(hour24);
+    setHours(newHours);
     setMinutes(newMinutes);
-    setIsAM(newAM);
     onChange?.(timeString);
   };
 
@@ -137,8 +125,7 @@ export default function TimePicker({
     const now = new Date();
     const h = now.getHours();
     const m = now.getMinutes();
-    const am = h < 12;
-    handleTimeChange(am ? (h === 0 ? 12 : h) : (h === 12 ? 12 : h - 12), m, am);
+    handleTimeChange(h, m);
     setIsOpen(false);
   };
 
@@ -148,9 +135,9 @@ export default function TimePicker({
 
   const displayTime = selectedTime 
     ? formatDisplayTime(hours, minutes)
-    : 'hh:mm aa';
+    : 'HH:mm';
 
-  // Generate hours array (1-12 for 12-hour display, but we'll use 0-23 for selection)
+  // Generate hours array in 24-hour format
   const hourOptions = Array.from({ length: 24 }, (_, i) => i);
   const minuteOptions = Array.from({ length: 60 }, (_, i) => i);
 
@@ -188,17 +175,17 @@ export default function TimePicker({
         </button>
 
         {isOpen && popupStyle && typeof document !== 'undefined' && createPortal(
-          <div id={`time-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="mt-1 w-[150px] bg-white/80 backdrop-blur-xl border border-gray-200 rounded-lg">
+          <div id={`time-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="dropdown-blur mt-1 w-[150px] border border-white/50 rounded-lg">
                 <div className="flex flex-row divide-x divide-gray-200">
                   {/* Hours */}
-                  <div className="p-1 max-h-56 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-white [&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
+                  <div className="time-picker-scroll p-1 max-h-56 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
                     {hourOptions.map((h) => {
                       const isSelected = h === hours;
                       return (
                         <label
                           key={h}
                           htmlFor={`time-hour-${h}`}
-                          className={`group relative flex justify-center items-center p-1.5 w-10 text-center text-sm text-gray-800 cursor-pointer rounded-md hover:bg-gray-100 hover:text-gray-800 ${
+                          className={`group relative flex justify-center items-center p-1.5 w-10 text-center text-sm text-gray-800 cursor-pointer rounded-md hover:bg-blue-200 ${
                             isSelected ? 'text-white bg-blue-600' : ''
                           }`}
                         >
@@ -208,11 +195,7 @@ export default function TimePicker({
                             name="time-hours"
                             className="hidden"
                             checked={isSelected}
-                            onChange={() => {
-                              const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                              const am = h < 12;
-                              handleTimeChange(h12, minutes, am);
-                            }}
+                            onChange={() => handleTimeChange(h, minutes)}
                           />
                           <span className="block">{String(h).padStart(2, '0')}</span>
                         </label>
@@ -221,14 +204,14 @@ export default function TimePicker({
                   </div>
 
                   {/* Minutes */}
-                  <div className="p-1 max-h-56 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-white [&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
+                  <div className="time-picker-scroll p-1 max-h-56 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
                     {minuteOptions.map((m) => {
                       const isSelected = m === minutes;
                       return (
                         <label
                           key={m}
                           htmlFor={`time-minute-${m}`}
-                          className={`group relative flex justify-center items-center p-1.5 w-10 text-center text-sm text-gray-800 cursor-pointer rounded-md hover:bg-gray-100 hover:text-gray-800 ${
+                          className={`group relative flex justify-center items-center p-1.5 w-10 text-center text-sm text-gray-800 cursor-pointer rounded-md hover:bg-blue-200 ${
                             isSelected ? 'text-white bg-blue-600' : ''
                           }`}
                         >
@@ -238,57 +221,12 @@ export default function TimePicker({
                             name="time-minutes"
                             className="hidden"
                             checked={isSelected}
-                            onChange={() => {
-                              const h12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                              handleTimeChange(h12, m, isAM);
-                            }}
+                            onChange={() => handleTimeChange(hours, m)}
                           />
                           <span className="block">{String(m).padStart(2, '0')}</span>
                         </label>
                       );
                     })}
-                  </div>
-
-                  {/* AM/PM */}
-                  <div className="p-1 max-h-56 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-white [&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
-                    <label
-                      htmlFor="time-am"
-                      className={`group relative flex justify-center items-center p-1.5 w-10 text-center text-sm text-gray-800 cursor-pointer rounded-md hover:bg-gray-100 hover:text-gray-800 ${
-                        isAM ? 'text-white bg-blue-600' : ''
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        id="time-am"
-                        name="time-ampm"
-                        className="hidden"
-                        checked={isAM}
-                        onChange={() => {
-                          const h12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                          handleTimeChange(h12, minutes, true);
-                        }}
-                      />
-                      <span className="block">AM</span>
-                    </label>
-                    <label
-                      htmlFor="time-pm"
-                      className={`group relative flex justify-center items-center p-1.5 w-10 text-center text-sm text-gray-800 cursor-pointer rounded-md hover:bg-gray-100 hover:text-gray-800 ${
-                        !isAM ? 'text-white bg-blue-600' : ''
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        id="time-pm"
-                        name="time-ampm"
-                        className="hidden"
-                        checked={!isAM}
-                        onChange={() => {
-                          const h12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                          handleTimeChange(h12, minutes, false);
-                        }}
-                      />
-                      <span className="block">PM</span>
-                    </label>
                   </div>
                 </div>
 

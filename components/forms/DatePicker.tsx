@@ -244,7 +244,7 @@ export default function DatePicker({
               ? 'bg-blue-100 text-blue-700 font-semibold border-2 border-blue-500'
               : isWeekend
               ? 'text-red-600 hover:bg-red-50 font-medium'
-              : 'text-gray-700 hover:bg-gray-100'
+              : 'text-gray-700 hover:bg-blue-100'
           }`}
         >
           {day}
@@ -320,12 +320,12 @@ export default function DatePicker({
         </button>
 
         {isOpen && popupStyle && typeof document !== 'undefined' && createPortal(
-          <div id={`date-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="mt-1 bg-white/80 backdrop-blur-xl border border-gray-300 rounded-lg p-4 w-64">
+          <div id={`date-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="dropdown-blur mt-1 border border-white/50 rounded-lg p-4 w-64">
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
               <button
                 onClick={view === 'calendar' ? handlePrevMonth : view === 'month' ? handlePrevYear : () => setCurrentMonth(new Date(currentMonth.getFullYear() - 12, currentMonth.getMonth(), 1))}
-                className="p-1.5 hover:bg-gray-100 rounded transition-colors hover:shadow-sm"
+                className="p-1.5 hover:bg-blue-100 rounded transition-colors hover:shadow-sm"
               >
                 <FaChevronLeft className="w-4 h-4 text-gray-600" />
               </button>
@@ -351,7 +351,7 @@ export default function DatePicker({
               </div>
               <button
                 onClick={view === 'calendar' ? handleNextMonth : view === 'month' ? handleNextYear : () => setCurrentMonth(new Date(currentMonth.getFullYear() + 12, currentMonth.getMonth(), 1))}
-                className="p-1.5 hover:bg-gray-100 rounded transition-colors hover:shadow-sm"
+                className="p-1.5 hover:bg-blue-100 rounded transition-colors hover:shadow-sm"
               >
                 <FaChevronRight className="w-4 h-4 text-gray-600" />
               </button>
@@ -367,7 +367,7 @@ export default function DatePicker({
                     className={`px-3 py-2 text-xs font-medium rounded transition-colors ${
                       index === currentMonth.getMonth()
                         ? 'bg-blue-600 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        : 'text-gray-700 hover:bg-blue-100'
                     }`}
                   >
                     {month.slice(0, 3)}
@@ -378,7 +378,7 @@ export default function DatePicker({
 
             {/* Year Selection View */}
             {view === 'year' && (
-              <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
+              <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1" onWheel={(e) => e.stopPropagation()}>
                 {Array.from({ length: 20 }, (_, i) => {
                   const year = currentMonth.getFullYear() - 10 + i;
                   const today = new Date();
@@ -391,7 +391,7 @@ export default function DatePicker({
                           ? 'bg-blue-600 text-white'
                           : year === today.getFullYear()
                           ? 'bg-blue-50 text-blue-700 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          : 'text-gray-700 hover:bg-blue-100'
                       }`}
                     >
                       {year}
