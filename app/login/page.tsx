@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import FormInput from '@/components/forms/FormInput';
-import { Lock, Shield, User } from 'lucide-react';
+import { Lock, Shield, User, CheckCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   // Clear expired sessions on mount, but don't auto-redirect
   // Let user explicitly log in or navigate to protected routes
@@ -58,8 +59,12 @@ export default function LoginPage() {
         localStorage.setItem('username', username);
         localStorage.setItem('authTimestamp', Date.now().toString());
       }
-      // Redirect to dashboard
-      router.push('/home');
+      setLoginSuccess(true);
+      setIsLoading(false);
+      // Brief success state then smooth redirect to home
+      setTimeout(() => {
+        router.push('/home');
+      }, 700);
     } else {
       setError('Invalid username or password. Please try again.');
       setIsLoading(false);
@@ -67,7 +72,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden animate-fade-in">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
@@ -121,7 +126,7 @@ export default function LoginPage() {
 
           {/* Right Section - Login Form */}
           <div className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 lg:p-10">
+            <div className={`bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 lg:p-10 transition-all duration-500 ease-out ${loginSuccess ? 'ring-2 ring-green-400/50 ring-offset-2 ring-offset-white/80' : ''}`}>
               {/* Mobile Logo */}
               <div className="lg:hidden mb-8 text-center">
                 <div className="w-20 h-20 mx-auto mb-4 relative">
@@ -140,17 +145,34 @@ export default function LoginPage() {
                 </h1>
               </div>
 
-              {/* Welcome Section */}
+              {/* Welcome / Success Section */}
               <div className="mb-8 text-center">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2 font-noto">
-                  Welcome Back
-                </h2>
-                <p className="text-gray-600 font-noto">
-                  Sign in to access the SOCO internal dashboard
-                </p>
+                {loginSuccess ? (
+                  <div className="animate-fade-in flex flex-col items-center gap-3">
+                    <div className="p-3 rounded-full bg-green-100">
+                      <CheckCircle className="w-10 h-10 text-green-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 font-noto">
+                      Welcome back!
+                    </h2>
+                    <p className="text-gray-600 font-noto text-sm">
+                      Taking you to the dashboard...
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2 font-noto">
+                      Welcome Back
+                    </h2>
+                    <p className="text-gray-600 font-noto">
+                      Sign in to access the SOCO internal dashboard
+                    </p>
+                  </>
+                )}
               </div>
 
-              {/* Login Form */}
+              {/* Login Form - hide when success */}
+              {!loginSuccess && (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-1">
                   <label className="block text-sm font-semibold text-gray-700 mb-2 font-noto flex items-center gap-2">
@@ -222,8 +244,10 @@ export default function LoginPage() {
                   )}
                 </button>
               </form>
+              )}
 
-              {/* Development Credentials */}
+              {/* Development Credentials - hide when success */}
+              {!loginSuccess && (
               <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl">
                 <p className="text-xs text-gray-700 font-noto text-center">
                   <strong className="text-blue-700">Development Mode:</strong>
@@ -239,6 +263,7 @@ export default function LoginPage() {
                   </div>
                 </div>
               </div>
+              )}
 
             </div>
           </div>

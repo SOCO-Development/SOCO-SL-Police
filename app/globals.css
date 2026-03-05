@@ -169,6 +169,15 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
+.dropdown-blur-dark {
+  background: rgba(17, 24, 39, 0.55) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  backdrop-filter: blur(48px) saturate(200%);
+  isolation: isolate;
+  transition: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 /* Time picker - hide scrollbar, keep scroll */
 .time-picker-scroll {
   scrollbar-width: none;
