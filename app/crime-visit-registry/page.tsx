@@ -20,7 +20,7 @@ export default function CrimeVisitRegistryPage() {
         {
             title: 'Crime Visits',
             icon: <List className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
-            href: '/crime-visit-registry/all',
+            href: '/crime-visit-registry/crime-visits',
         },
     ];
 

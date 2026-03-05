@@ -314,7 +314,7 @@ export default function DatePicker({
           }`}
         >
           <span className={selectedDate ? 'text-gray-900' : 'text-gray-400'}>
-            {selectedDate ? displayDate : 'Select date'}
+            {selectedDate ? displayDate : 'DD-MM-YYYY'}
           </span>
           <FaCalendarAlt className="w-4 h-4 text-gray-400" />
         </button>

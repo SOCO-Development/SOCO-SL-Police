@@ -580,7 +580,7 @@ export default function AddOfficerPage() {
                                                         <span className="text-gray-400 text-xs">Annex . 12</span><br />
                                                         Rank / තනතුර
                                                     </th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Date / දිනය (DD/MM/YY)</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Date / දිනය (DD-MM-YYYY)</th>
                                                     <th className="w-8" />
                                                 </tr>
                                             </thead>
@@ -627,8 +627,8 @@ export default function AddOfficerPage() {
                                                     <span className="text-gray-400 text-xs block">Annex . 01</span>
                                                     SOCO Lab
                                                 </th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">From (DD/MM/YY)</th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">To (DD/MM/YY)</th>
+                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">From (DD-MM-YYYY)</th>
+                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">To (DD-MM-YYYY)</th>
                                                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Duration</th>
                                                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">OIC / A-OIC</th>
                                                 <th className="w-8" />

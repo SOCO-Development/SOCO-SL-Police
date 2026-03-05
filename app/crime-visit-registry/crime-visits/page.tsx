@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import CrimeVisitList from '@/components/layout/CrimeVisitList';
+import CrimeVisitList from '@/components/layout/crime-visit/CrimeVisitList';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import type { CrimeVisit, CrimeVisitStatus } from '@/types/crimeVisit';
 import { ArrowLeft, Plus } from 'lucide-react';

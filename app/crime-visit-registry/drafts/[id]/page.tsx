@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import CrimeVisitForm from '@/components/forms/CrimeVisitForm';
+import CrimeVisitForm from '@/components/forms/crime-visit/CrimeVisitForm';
 import { crimeVisitService } from '@/lib/crimeVisitService';
+import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeVisit, CrimeVisitFormData, DraftAdditions } from '@/types/crimeVisit';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -59,7 +60,7 @@ export default function DraftDetailPage({ params }: Props) {
             const updated = crimeVisitService.submit(resolvedId);
             if (updated) {
                 showToast(`Submitted — ${updated.referenceNo}`);
-                setTimeout(() => router.push('/crime-visit-registry/all'), 1500);
+                setTimeout(() => router.push('/crime-visit-registry/crime-visits'), 1500);
             }
         } catch {
             showToast('Failed to submit.', 'error');
@@ -111,7 +112,7 @@ export default function DraftDetailPage({ params }: Props) {
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900">Draft — {visit.referenceNo}</h2>
                                     <p className="text-sm text-gray-500 mt-0.5">
-                                        Last updated: {new Date(visit.updatedAt).toLocaleString()}
+                                        Last updated: {formatDateTimeDDMMYYYY(visit.updatedAt)}
                                     </p>
                                 </div>
                             </div>
