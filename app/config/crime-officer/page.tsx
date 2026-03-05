@@ -37,7 +37,7 @@ export default function CrimeOfficerPage() {
                                 SOCO නිලධාරි කළමනාකරණ පද්ධතිය
                             </p>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-3xl">
                                 {cards.map((card) => (
                                     <FeatureCard
                                         key={card.href}

@@ -7,7 +7,7 @@ export interface OfficerInfo {
 }
 
 export interface DateTimeEntry {
-    date?: string;   // DD/MM/YY
+    date?: string;   // DD-MM-YYYY
     time?: string;   // HH:MM
     page?: string;
     para?: string;

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import CrimeVisitForm from '@/components/forms/CrimeVisitForm';
+import CrimeVisitForm from '@/components/forms/crime-visit/CrimeVisitForm';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import type { CrimeVisitFormData } from '@/types/crimeVisit';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function InitiateCrimeVisitPage() {
         try {
             const created = crimeVisitService.createSubmitted(data);
             showToast(`Crime Visit submitted — ${created.referenceNo}`);
-            setTimeout(() => router.push('/crime-visit-registry/all'), 1500);
+            setTimeout(() => router.push('/crime-visit-registry/crime-visits'), 1500);
         } catch {
             showToast('Failed to submit.', 'error');
         }

@@ -26,7 +26,7 @@ export default function CrimeVisitRegistryPage() {
             subtitle: 'අපරාධ ස්ථාන නිරීක්ෂණ ලැයිස්තුව',
             description: 'Browse and manage all completed crime visit entries.',
             icon: <List className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
-            href: '/crime-visit-registry/all',
+            href: '/crime-visit-registry/crime-visits',
         },
     ];
 

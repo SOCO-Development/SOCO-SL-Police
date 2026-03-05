@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import CrimeVisitForm from '@/components/forms/CrimeVisitForm';
+import CrimeVisitDetailView from '@/components/layout/crime-visit/CrimeVisitDetailView';
 import { crimeVisitService } from '@/lib/crimeVisitService';
-import type { CrimeVisit, CrimeVisitFormData } from '@/types/crimeVisit';
+import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
+import type { CrimeVisit } from '@/types/crimeVisit';
 import { ArrowLeft, CheckCircle, Clock } from 'lucide-react';
 
 interface Props {
@@ -37,7 +38,7 @@ export default function CrimeVisitDetailPage({ params }: Props) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-gray-500">
                 <p className="text-lg font-semibold">Record not found.</p>
-                <Link href="/crime-visit-registry/all" className="text-sm text-blue-600 hover:underline">
+                <Link href="/crime-visit-registry/crime-visits" className="text-sm text-blue-600 hover:underline">
                     ← Back to Crime Visits
                 </Link>
             </div>
@@ -50,12 +51,6 @@ export default function CrimeVisitDetailPage({ params }: Props) {
         return null;
     }
 
-    const viewData: CrimeVisitFormData = {
-        sectionA: visit.sectionA,
-        sectionB: visit.sectionB,
-        sectionC: visit.sectionC,
-    };
-
     return (
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
             <Header />
@@ -65,7 +60,7 @@ export default function CrimeVisitDetailPage({ params }: Props) {
                         {/* Page header */}
                         <div className="flex items-center gap-3 mb-6 flex-wrap">
                             <Link
-                                href="/crime-visit-registry/all"
+                                href="/crime-visit-registry/crime-visits"
                                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                                 aria-label="Back"
                             >
@@ -81,7 +76,7 @@ export default function CrimeVisitDetailPage({ params }: Props) {
                                 </div>
                                 <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
                                     <Clock className="w-3.5 h-3.5" />
-                                    Submitted: {new Date(visit.updatedAt).toLocaleString()}
+                                    Submitted: {formatDateTimeDDMMYYYY(visit.updatedAt)}
                                 </p>
                             </div>
                         </div>
@@ -94,7 +89,7 @@ export default function CrimeVisitDetailPage({ params }: Props) {
                             </p>
                         </div>
 
-                        <CrimeVisitForm initialData={viewData} readOnlyAll={true} />
+                        <CrimeVisitDetailView visit={visit} />
                     </div>
                     <Footer />
                 </main>
