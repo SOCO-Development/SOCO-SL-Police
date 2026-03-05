@@ -272,17 +272,15 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                {/* Primary CTA */}
-                <Link 
-                  href="/complaints" 
-                  className="group relative inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl overflow-hidden transition-all duration-300 shadow-[0_0_40px_-10px_rgba(37,99,235,0.4)] hover:shadow-[0_0_60px_-15px_rgba(37,99,235,0.6)] border border-blue-500/50 hover:border-blue-400"
+                {/* Primary CTA (disabled) */}
+                <div 
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-slate-700/60 text-slate-400 font-semibold rounded-xl border border-slate-600/50 cursor-not-allowed"
+                  aria-disabled="true"
                 >
-                  {/* Shimmer effect */}
-                  <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] bg-[position:-100%_0,0_0] bg-no-repeat transition-[background-position_0s_ease] hover:bg-[position:200%_0,0_0] hover:duration-[1500ms]" />
-                  <Shield className="w-5 h-5 relative z-10" />
-                  <span className="relative z-10 tracking-wide">Access Platform</span>
-                  <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                  <Shield className="w-5 h-5" />
+                  <span className="tracking-wide">Access Platform</span>
+                  <ArrowRight className="w-5 h-5" />
+                </div>
 
               </div>
 
