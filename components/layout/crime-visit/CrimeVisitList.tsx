@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { CrimeVisit } from '@/types/crimeVisit';
+import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { FileText, Clock, CheckCircle, Trash2, ExternalLink } from 'lucide-react';
 
 interface CrimeVisitListProps {
@@ -30,13 +31,7 @@ function statusBadge(status: CrimeVisit['status']) {
 
 function formatDate(iso: string) {
     try {
-        return new Date(iso).toLocaleString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+        return formatDateTimeDDMMYYYY(iso);
     } catch {
         return iso;
     }
@@ -78,7 +73,7 @@ export default function CrimeVisitList({
                         const isDraft = visit.status === 'DRAFT';
                         const detailHref = isDraft
                             ? `/crime-visit-registry/drafts/${visit.id}`
-                            : `/crime-visit-registry/all/${visit.id}`;
+                            : `/crime-visit-registry/crime-visits/${visit.id}`;
 
                         return (
                             <tr

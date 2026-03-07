@@ -178,7 +178,7 @@ interface DateTimeRowProps {
 function DateTimeRow({ label, value, isReadOnly = false, onChange, layout = 'row' }: DateTimeRowProps) {
     const fields = (
         <>
-            <FieldGroup label="Date (DD/MM/YY)">
+            <FieldGroup label="Date (DD-MM-YYYY)">
                 {isReadOnly ? (
                     <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{value.date || '—'}</div>
                 ) : (
@@ -683,7 +683,7 @@ export default function CrimeVisitForm({
                                     <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
                                     Examined by SOCO officers
                                 </h4>
-                                <FieldGroup label="Date (DD/MM/YY)">
+                                <FieldGroup label="Date (DD-MM-YYYY)">
                                     {ro ? (
                                         <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.examinedBySocoOfficers?.date ?? '—'}</div>
                                     ) : (
@@ -714,7 +714,7 @@ export default function CrimeVisitForm({
                                     <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
                                     Re-examined by SOCO officers
                                 </h4>
-                                <FieldGroup label="Date (DD/MM/YY)">
+                                <FieldGroup label="Date (DD-MM-YYYY)">
                                     {ro ? (
                                         <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">{sC.reExaminedBySocoOfficers?.date ?? '—'}</div>
                                     ) : (

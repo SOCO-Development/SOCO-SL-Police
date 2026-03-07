@@ -9,18 +9,24 @@ export default function CrimeVisitRegistryPage() {
     const cards = [
         {
             title: 'Initiate Crime Visit',
+            subtitle: 'අපරාධ ස්ථාන නිරීක්ෂණය ආරම්භ කරන්න',
+            description: 'Start a new scene-of-crime visit record and assign officers.',
             icon: <Clipboard className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,
             href: '/crime-visit-registry/initiate',
         },
         {
             title: 'Drafted Crime Visits',
+            subtitle: 'කෙටුම්පත් අපරාධ ස්ථාන නිරීක්ෂණ',
+            description: 'Continue and update saved draft crime visit records.',
             icon: <FileText className="w-12 h-12" weight="fill" style={{ color: '#f59e0b' }} />,
             href: '/crime-visit-registry/drafts',
         },
         {
             title: 'Crime Visits',
+            subtitle: 'අපරාධ ස්ථාන නිරීක්ෂණ ලැයිස්තුව',
+            description: 'Browse and manage all completed crime visit entries.',
             icon: <List className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
-            href: '/crime-visit-registry/all',
+            href: '/crime-visit-registry/crime-visits',
         },
     ];
 
@@ -36,12 +42,14 @@ export default function CrimeVisitRegistryPage() {
                                 Manage scene-of-crime visits, officer assignments, and evidence examination records.
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-3xl">
-                                {cards.map((card, index) => (
+                                {cards.map((card) => (
                                     <FeatureCard
-                                        key={index}
+                                        key={card.href}
                                         title={card.title}
                                         icon={card.icon}
                                         href={card.href}
+                                        subtitle={<span className="font-noto-sinhala">{card.subtitle}</span>}
+                                        description={card.description}
                                     />
                                 ))}
                             </div>

@@ -101,10 +101,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   // For protected routes, show loading screen while checking or if not authenticated
   if (isChecking || isAuthenticated === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-gray-50 animate-fade-in">
+        <div className="text-center animate-fade-in">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-blue-200 border-t-blue-600"></div>
+          <p className="mt-4 text-gray-600 text-sm">Loading...</p>
         </div>
       </div>
     );
@@ -113,10 +113,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   // If not authenticated, show loading (redirect is happening)
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Redirecting to login...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-gray-50 animate-fade-in">
+        <div className="text-center animate-fade-in">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-blue-200 border-t-blue-600"></div>
+          <p className="mt-4 text-gray-600 text-sm">Redirecting to login...</p>
         </div>
       </div>
     );
