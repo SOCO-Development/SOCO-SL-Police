@@ -325,4 +325,3 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
     </div>
   );
 }
-

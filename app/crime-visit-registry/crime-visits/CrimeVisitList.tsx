@@ -72,8 +72,8 @@ export default function CrimeVisitList({
                     {visits.map((visit) => {
                         const isDraft = visit.status === 'DRAFT';
                         const detailHref = isDraft
-                            ? `/crime-visit-registry/drafts/${visit.id}`
-                            : `/crime-visit-registry/crime-visits/${visit.id}`;
+                            ? `/crime-visit-registry/drafts?id=${visit.id}`
+                            : `/crime-visit-registry/crime-visits?id=${visit.id}`;
 
                         return (
                             <tr

@@ -11,14 +11,14 @@ export default function CrimeOfficerPage() {
             title: 'Add Officer',
             subtitle: 'නිලධාරි එකතු කරන්න',
             description: 'Register a new SOCO officer with full personnel details.',
-            href: '/config/crime-officer/add',
+            href: '/crime-officer/add',
             icon: <UserPlus className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,
         },
         {
             title: 'View Officers',
             subtitle: 'නිලධාරීන් බලන්න',
             description: 'Browse, search and manage all registered SOCO officers.',
-            href: '/config/crime-officer/view',
+            href: '/crime-officer/view',
             icon: <Users className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
         },
     ];
@@ -37,7 +37,7 @@ export default function CrimeOfficerPage() {
                                 SOCO නිලධාරි කළමනාකරණ පද්ධතිය
                             </p>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-3xl">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                                 {cards.map((card) => (
                                     <FeatureCard
                                         key={card.href}

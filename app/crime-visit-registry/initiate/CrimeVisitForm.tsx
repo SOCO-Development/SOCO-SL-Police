@@ -152,17 +152,19 @@ interface OfficerRowProps {
 }
 function OfficerRow({ label, value, isReadOnly = false, onChange, compact = false }: OfficerRowProps) {
     return (
-        <div className={compact ? 'grid grid-cols-1 sm:grid-cols-3 gap-3 items-end' : 'grid grid-cols-[150px,1fr,1fr,2fr] gap-3 items-end'}>
-            {!compact && <div className="text-sm font-medium text-gray-700 pb-2 leading-tight">{label}</div>}
-            <FieldGroup label="Rank">
-                <TextInput isReadOnly={isReadOnly} value={value.rank ?? ''} onChange={(e) => onChange({ ...value, rank: e.target.value })} placeholder="Rank" />
-            </FieldGroup>
-            <FieldGroup label="Reg. No.">
-                <TextInput isReadOnly={isReadOnly} value={value.regNo ?? ''} onChange={(e) => onChange({ ...value, regNo: e.target.value })} placeholder="Reg. No." />
-            </FieldGroup>
+        <div className="space-y-3">
+            {!compact && <div className="text-sm font-medium text-gray-700 pb-0.5 leading-tight">{label}</div>}
             <FieldGroup label="Name">
                 <TextInput isReadOnly={isReadOnly} value={value.name ?? ''} onChange={(e) => onChange({ ...value, name: e.target.value })} placeholder="Full name" />
             </FieldGroup>
+            <div className={compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-3 items-end' : 'grid grid-cols-2 gap-3 items-end'}>
+                <FieldGroup label="Reg. Number">
+                    <TextInput isReadOnly={isReadOnly} value={value.regNo ?? ''} onChange={(e) => onChange({ ...value, regNo: e.target.value })} placeholder="Reg. No." />
+                </FieldGroup>
+                <FieldGroup label="Rank">
+                    <TextInput isReadOnly={isReadOnly} value={value.rank ?? ''} onChange={(e) => onChange({ ...value, rank: e.target.value })} placeholder="Rank" />
+                </FieldGroup>
+            </div>
         </div>
     );
 }
@@ -312,7 +314,7 @@ function SupportOfficersEditor({ rows, isReadOnly = false, onChange }: SupportOf
         <div>
             <div className="space-y-3">
                 {rows.map((row) => (
-                    <div key={row.id} className="grid grid-cols-[1.2fr,2fr,1.6fr,1.4fr,40px] gap-3 items-end">
+                    <div key={row.id} className="grid grid-cols-[1.2fr,2fr,1fr,40px] gap-3 items-end">
                         <FieldGroup label="Role">
                             {isReadOnly ? (
                                 <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
@@ -335,22 +337,24 @@ function SupportOfficersEditor({ rows, isReadOnly = false, onChange }: SupportOf
                                 placeholder="Full name"
                             />
                         </FieldGroup>
-                        <FieldGroup label="Reg. Number">
-                            <TextInput
-                                isReadOnly={isReadOnly}
-                                value={row.officer.regNo ?? ''}
-                                onChange={(e) => updateRow(row.id, { officer: { ...row.officer, regNo: e.target.value } })}
-                                placeholder="Reg. No."
-                            />
-                        </FieldGroup>
-                        <FieldGroup label="Rank">
-                            <TextInput
-                                isReadOnly={isReadOnly}
-                                value={row.officer.rank ?? ''}
-                                onChange={(e) => updateRow(row.id, { officer: { ...row.officer, rank: e.target.value } })}
-                                placeholder="Rank"
-                            />
-                        </FieldGroup>
+                        <div className="grid grid-cols-2 gap-2">
+                            <FieldGroup label="Reg. Number">
+                                <TextInput
+                                    isReadOnly={isReadOnly}
+                                    value={row.officer.regNo ?? ''}
+                                    onChange={(e) => updateRow(row.id, { officer: { ...row.officer, regNo: e.target.value } })}
+                                    placeholder="Reg. No."
+                                />
+                            </FieldGroup>
+                            <FieldGroup label="Rank">
+                                <TextInput
+                                    isReadOnly={isReadOnly}
+                                    value={row.officer.rank ?? ''}
+                                    onChange={(e) => updateRow(row.id, { officer: { ...row.officer, rank: e.target.value } })}
+                                    placeholder="Rank"
+                                />
+                            </FieldGroup>
+                        </div>
                         {!isReadOnly ? (
                             <button
                                 type="button"
@@ -618,12 +622,14 @@ export default function CrimeVisitForm({
                                     <FieldGroup label="Name">
                                         <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.name ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), name: e.target.value })} placeholder="Full name" />
                                     </FieldGroup>
-                                    <FieldGroup label="Reg. Number">
-                                        <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.regNo ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), regNo: e.target.value })} placeholder="Reg. No." />
-                                    </FieldGroup>
-                                    <FieldGroup label="Rank">
-                                        <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.rank ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), rank: e.target.value })} placeholder="Rank" />
-                                    </FieldGroup>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FieldGroup label="Reg. Number">
+                                            <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.regNo ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), regNo: e.target.value })} placeholder="Reg. No." />
+                                        </FieldGroup>
+                                        <FieldGroup label="Rank">
+                                            <TextInput isReadOnly={locked} value={socoOfficers.inCharge?.rank ?? ''} onChange={(e) => updateInCharge({ ...(socoOfficers.inCharge ?? emptyOfficer()), rank: e.target.value })} placeholder="Rank" />
+                                        </FieldGroup>
+                                    </div>
                                 </div>
                             </div>
 

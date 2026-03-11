@@ -41,7 +41,7 @@ export default function CrimeVisitRegistryPage() {
                             <p className="text-sm text-gray-500 mb-6">
                                 Manage scene-of-crime visits, officer assignments, and evidence examination records.
                             </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-3xl">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                                 {cards.map((card) => (
                                     <FeatureCard
                                         key={card.href}

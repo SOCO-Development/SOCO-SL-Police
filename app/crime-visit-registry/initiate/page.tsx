@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import CrimeVisitForm from '@/components/forms/crime-visit/CrimeVisitForm';
+import CrimeVisitForm from './CrimeVisitForm';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import type { CrimeVisitFormData } from '@/types/crimeVisit';
 import { ArrowLeft, CheckCircle } from 'lucide-react';

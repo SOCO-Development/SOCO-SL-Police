@@ -217,7 +217,7 @@ export default function CustomSelect({
               role="listbox"
               aria-labelledby={label ? `${buttonId}-label` : undefined}
               tabIndex={-1}
-              className="custom-select-dropdown max-h-60 py-1.5 px-1"
+              className="custom-select-dropdown max-h-60 overflow-y-auto py-2 px-2 space-y-1.5"
               onWheel={(e) => e.stopPropagation()}
             >
               {options.length > 0 ? (
@@ -230,11 +230,11 @@ export default function CustomSelect({
                       id={`${listboxId}-option-${index}`}
                       role="option"
                       aria-selected={isSelected}
-                      className={`cursor-pointer px-4 py-2.5 mx-1.5 rounded-lg text-left text-sm transition-all duration-150 flex items-center justify-between gap-2 ${
+                      className={`cursor-pointer min-h-9 px-4 py-2 rounded-md text-left text-sm transition-all duration-150 flex items-center justify-between gap-2 ${
                         isSelected
-                          ? 'bg-blue-100 text-blue-800 font-medium'
+                          ? 'bg-blue-200 text-blue-900 font-semibold ring-2 ring-blue-400'
                           : isHighlighted
-                            ? 'bg-blue-100 text-gray-900'
+                            ? 'bg-blue-100 text-gray-700'
                             : 'text-gray-700 hover:bg-blue-100'
                       }`}
                       onMouseEnter={() => setHighlightedIndex(index)}
@@ -246,7 +246,7 @@ export default function CustomSelect({
                   );
                 })
               ) : (
-                <li className="px-4 py-2.5 mx-1.5 rounded-lg text-sm text-gray-500" role="option" aria-disabled>
+                <li className="min-h-9 px-4 py-2 rounded-md text-sm text-gray-500 flex items-center" role="option" aria-disabled>
                   No options available
                 </li>
               )}

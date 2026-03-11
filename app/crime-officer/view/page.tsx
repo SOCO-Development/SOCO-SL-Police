@@ -27,7 +27,7 @@ const MOCK_OFFICERS = [
 type SortKey = 'name' | 'rank' | 'dateJoined';
 type SortDir = 'asc' | 'desc';
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100].map((n) => ({ value: String(n), label: `${n} per page` }));
 
 // ─── Avatar placeholder ───────────────────────────────────────────────────────
 
@@ -60,6 +60,7 @@ export default function ViewOfficersPage() {
     const [sortKey, setSortKey] = useState<SortKey>('name');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     const [showFilters, setShowFilters] = useState(false);
     const [viewingOfficer, setViewingOfficer] = useState<Officer | null>(null);
 
@@ -88,8 +89,8 @@ export default function ViewOfficersPage() {
         return data;
     }, [search, filterLab, filterRank, sortKey, sortDir]);
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
     const handleDelete = (id: number) => {
         if (confirm('Are you sure you want to delete this officer record?')) {
@@ -108,7 +109,7 @@ export default function ViewOfficersPage() {
                         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
                             <div className="flex items-center gap-3">
                                 <Link
-                                    href="/config/crime-officer"
+                                    href="/crime-officer"
                                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                                     aria-label="Back"
                                 >
@@ -122,7 +123,7 @@ export default function ViewOfficersPage() {
                                 </div>
                             </div>
                             <Link
-                                href="/config/crime-officer/add"
+                                href="/crime-officer/add"
                                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
                             >
                                 <Plus className="w-4 h-4" /> Add Officer
@@ -172,6 +173,15 @@ export default function ViewOfficersPage() {
                                             onChange={(v) => { setFilterRank(v); setPage(1); }}
                                             options={RANK_FILTER_OPTIONS}
                                             placeholder="All Ranks"
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-[140px]">
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">View</label>
+                                        <CustomSelect
+                                            value={String(pageSize)}
+                                            onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+                                            options={PAGE_SIZE_OPTIONS}
+                                            placeholder="Per page"
                                         />
                                     </div>
                                     {(filterLab || filterRank || search) && (
@@ -252,7 +262,7 @@ export default function ViewOfficersPage() {
                                                                 <Eye size={15} />
                                                             </button>
                                                             <Link
-                                                                href={`/config/crime-officer/add?edit=${officer.id}`}
+                                                                href={`/crime-officer/add?edit=${officer.id}`}
                                                                 title="Edit"
                                                                 className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
                                                             >
@@ -276,9 +286,9 @@ export default function ViewOfficersPage() {
                             </div>
 
                             {/* Pagination */}
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+                            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/50">
                                 <p className="text-xs text-gray-500">
-                                    Showing {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} officers
+                                    Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length} officers
                                 </p>
                                 <div className="flex gap-1">
                                     <button
@@ -366,7 +376,7 @@ export default function ViewOfficersPage() {
                         </div>
                         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-end gap-2">
                             <Link
-                                href={`/config/crime-officer/add?edit=${viewingOfficer.id}`}
+                                href={`/crime-officer/add?edit=${viewingOfficer.id}`}
                                 className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors"
                             >
                                 Edit

@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Sun,
   Moon,
+  Settings,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -30,7 +31,8 @@ const NAV_LINKS = [
   { href: '/home', label: 'Home', icon: Home, isActive: (p: string) => p === '/home' },
   { href: '/crime-visit-registry', label: 'Crime Visit Registry', icon: FileText, isActive: (p: string) => p === '/crime-visit-registry' || p.startsWith('/crime-visit-registry/') },
   { href: '/reports', label: 'Reports', icon: LayoutDashboard, isActive: (p: string) => p === '/reports' || p.startsWith('/reports/') },
-  { href: '/config/crime-officer', label: 'Crime Officer Management', icon: Users, isActive: (p: string) => p === '/config' || p.startsWith('/config/') },
+  { href: '/crime-officer', label: 'Crime Officer Management', icon: Users, isActive: (p: string) => p === '/crime-officer' || p.startsWith('/crime-officer/') },
+  { href: '/system-config', label: 'Configuration', icon: Settings, isActive: (p: string) => p === '/system-config' || p.startsWith('/system-config/') },
 ] as const;
 
 export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeTheme }: HeaderProps) {

@@ -334,7 +334,7 @@ export default function AddOfficerPage() {
                         {/* Page header */}
                         <div className="flex items-center gap-3 mb-6">
                             <Link
-                                href="/config/crime-officer"
+                                href="/crime-officer"
                                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                                 aria-label="Back"
                             >
@@ -763,7 +763,7 @@ export default function AddOfficerPage() {
                             {/* ─── Action Bar ───────────────────────────────────────────────── */}
                             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
                                 <Link
-                                    href="/config/crime-officer"
+                                    href="/crime-officer"
                                     className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                                 >
                                     Cancel
