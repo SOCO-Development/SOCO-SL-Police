@@ -45,11 +45,6 @@
   outline-offset: 2px;
 }
 
-/* Data table (theme-driven) */
-.data-table-row:hover {
-  background-color: var(--table-row-hover);
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
