@@ -10,6 +10,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TrendingUp, Handshake, Users, Trash2 } from 'lucide-react';
 import { FaArrowLeft } from 'react-icons/fa';
+import Button from '@/components/buttons/Button';
 import FilterPrimaryButton from '@/components/buttons/FilterPrimaryButton';
 
 export default function DashboardPage() {
@@ -223,13 +224,10 @@ export default function DashboardPage() {
           <div className="w-full px-4 sm:px-6 lg:px-8 py-10 flex-1">
             {/* Page Title and Back Button */}
             <div className="flex items-center gap-4 mb-6">
-              <button
-                onClick={() => router.push('/reports')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 font-medium"
-              >
+              <Button variant="secondary" onClick={() => router.push('/reports')}>
                 <FaArrowLeft className="w-4 h-4" />
                 Back
-              </button>
+              </Button>
               <h1 className="text-3xl font-bold text-gray-900">360 Dashboard</h1>
             </div>
 

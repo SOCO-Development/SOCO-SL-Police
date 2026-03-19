@@ -3,7 +3,7 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FeatureCard from '@/components/cards/FeatureCard';
-import { MapPin, Truck, UserGear, IdentificationBadge, ListBullets } from 'phosphor-react';
+import { MapPin, Truck, UserGear, ListBullets } from 'phosphor-react';
 
 export default function SystemConfigPage() {
     const cards = [
@@ -27,13 +27,6 @@ export default function SystemConfigPage() {
             description: 'Manage system users, roles and access permissions.',
             href: '/system-config/user',
             icon: <UserGear className="w-12 h-12" weight="fill" style={{ color: '#8b5cf6' }} />,
-        },
-        {
-            title: 'SOCO Officer Configuration',
-            subtitle: 'SOCO නිලධාරි වින්‍යාස කිරීම',
-            description: 'Configure SOCO officer profiles, ranks and assignments.',
-            href: '/system-config/soco-officer',
-            icon: <IdentificationBadge className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
         },
         {
             title: 'LOV Management',
