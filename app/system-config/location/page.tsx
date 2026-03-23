@@ -4,18 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  Pencil,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil } from "lucide-react";
 import CustomSelect from "@/components/forms/CustomSelect";
+import AppTable, { type AppTableColumn } from "@/components/layout/AppTable";
 
-// --- Types ---
 interface LocationEntry {
   id: string;
   name: string;
@@ -36,45 +28,13 @@ const PROVINCE_OPTIONS = [
 ];
 
 type SortField = "name" | "division" | "province";
-type SortDir = "asc" | "desc";
-
-function SortIcon({
-  field,
-  sortField,
-  sortDir,
-}: {
-  field: SortField;
-  sortField: SortField;
-  sortDir: SortDir;
-}) {
-  return (
-    <span className="inline-flex flex-col ml-1 opacity-50">
-      <ChevronUp
-        size={10}
-        className={
-          sortField === field && sortDir === "asc"
-            ? "opacity-100 text-blue-600"
-            : ""
-        }
-      />
-      <ChevronDown
-        size={10}
-        className={
-          sortField === field && sortDir === "desc"
-            ? "opacity-100 text-blue-600"
-            : ""
-        }
-      />
-    </span>
-  );
-}
 
 export default function LocationConfigPage() {
   const [activeTab, setActiveTab] = useState<"all" | "addNew">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortKey, setSortKey] = useState<SortField>("name");
+  const [sortAsc, setSortAsc] = useState(true);
 
   const [locations, setLocations] = useState<LocationEntry[]>([
     {
@@ -92,27 +52,24 @@ export default function LocationConfigPage() {
     province: "",
   });
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("asc");
+  const handleSort = (key: string) => {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else {
+      setSortKey(key as SortField);
+      setSortAsc(true);
     }
   };
 
   const filtered = locations
     .filter((loc) =>
-      [loc.name, loc.division, loc.province].some((val) =>
-        val.toLowerCase().includes(search.toLowerCase()),
+      [loc.name, loc.division, loc.province].some((v) =>
+        v.toLowerCase().includes(search.toLowerCase()),
       ),
     )
     .sort((a, b) => {
-      const aVal = a[sortField].toLowerCase();
-      const bVal = b[sortField].toLowerCase();
-      return sortDir === "asc"
-        ? aVal.localeCompare(bVal)
-        : bVal.localeCompare(aVal);
+      const aVal = a[sortKey].toLowerCase();
+      const bVal = b[sortKey].toLowerCase();
+      return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
 
   const handleSave = (e: React.FormEvent) => {
@@ -145,15 +102,72 @@ export default function LocationConfigPage() {
     setActiveTab("addNew");
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setFormData({ name: "", division: "", province: "" });
-    setActiveTab("all");
+  const handleReset = () => {
+    if (editingId) {
+      setEditingId(null);
+      setFormData({ name: "", division: "", province: "" });
+      setActiveTab("all");
+    } else {
+      setFormData({ name: "", division: "", province: "" });
+    }
   };
 
   const removeLocation = (id: string) => {
     setLocations(locations.filter((loc) => loc.id !== id));
   };
+
+  const openAddNew = () => {
+    setEditingId(null);
+    setFormData({ name: "", division: "", province: "" });
+    setActiveTab("addNew");
+  };
+
+  const columns: AppTableColumn<LocationEntry>[] = [
+    {
+      key: "name",
+      label: "Location Name",
+      sortable: true,
+      render: (_, row) => (
+        <span className="text-blue-600 font-semibold cursor-pointer hover:underline">
+          {row.name}
+        </span>
+      ),
+    },
+    { key: "division", label: "Police Division", sortable: true },
+    {
+      key: "province",
+      label: "Province",
+      sortable: true,
+      render: (_, row) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          {row.province}
+        </span>
+      ),
+    },
+    {
+      key: "id",
+      label: "Actions",
+      align: "right",
+      render: (_, row) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => handleEdit(row)}
+            className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+            title="Edit"
+          >
+            <Pencil size={15} />
+          </button>
+          <button
+            onClick={() => removeLocation(row.id)}
+            className="text-gray-400 hover:text-red-600 transition-colors p-1"
+            title="Delete"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
@@ -175,13 +189,13 @@ export default function LocationConfigPage() {
                   <h2 className="text-2xl font-bold text-gray-900">
                     Location Configuration
                   </h2>
-                  <p className="text-sm text-gray-500 mt-0.5 font-noto-sinhala">
-                    ස්ථාන වින්‍යාස කිරීම
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Manage SOCO locations — add and view location assignments.
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setActiveTab("addNew")}
+                onClick={openAddNew}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors shadow-sm"
               >
                 <Plus size={16} />
@@ -189,23 +203,26 @@ export default function LocationConfigPage() {
               </button>
             </div>
 
-            <div className="flex items-center gap-6 border-b border-gray-200 mb-6">
+            {/* Tabs */}
+            <div className="flex items-center border-b border-gray-200 mb-6">
               <button
                 onClick={() => setActiveTab("all")}
-                className={`pb-3 text-sm font-medium flex items-center gap-1.5 border-b-2 -mb-px transition-colors ${
+                className={`flex items-center gap-1.5 px-1 pb-3 mr-6 text-sm font-medium border-b-2 -mb-px transition-colors ${
                   activeTab === "all"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 All
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                <span
+                  className={`text-sm font-semibold ${activeTab === "all" ? "text-blue-600" : "text-gray-500"}`}
+                >
                   {locations.length}
                 </span>
               </button>
               <button
-                onClick={() => setActiveTab("addNew")}
-                className={`pb-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                onClick={openAddNew}
+                className={`px-1 pb-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
                   activeTab === "addNew"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -215,9 +232,9 @@ export default function LocationConfigPage() {
               </button>
             </div>
 
+            {/* All Tab */}
             {activeTab === "all" && (
               <div>
-                {/* Search */}
                 <div className="flex items-center gap-3 mb-4">
                   <label className="text-sm font-medium text-gray-600">
                     Search:
@@ -230,92 +247,20 @@ export default function LocationConfigPage() {
                     className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:outline-none w-52 text-gray-800"
                   />
                 </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-white">
-                          {(
-                            [
-                              { label: "Location Name", field: "name" },
-                              { label: "Police Division", field: "division" },
-                              { label: "Province", field: "province" },
-                            ] as { label: string; field: SortField }[]
-                          ).map(({ label, field }) => (
-                            <th
-                              key={field}
-                              className="px-6 py-3 text-xs font-semibold text-gray-700 cursor-pointer select-none whitespace-nowrap"
-                              onClick={() => handleSort(field)}
-                            >
-                              {label}
-                              <SortIcon
-                                field={field}
-                                sortField={sortField}
-                                sortDir={sortDir}
-                              />
-                            </th>
-                          ))}
-                          <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {filtered.length > 0 ? (
-                          filtered.map((loc) => (
-                            <tr
-                              key={loc.id}
-                              className="hover:bg-gray-50/60 transition-colors"
-                            >
-                              <td className="px-6 py-3.5 text-sm font-medium text-gray-900">
-                                {loc.name}
-                              </td>
-                              <td className="px-6 py-3.5 text-sm text-gray-600">
-                                {loc.division}
-                              </td>
-                              <td className="px-6 py-3.5">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {loc.province}
-                                </span>
-                              </td>
-                              <td className="px-6 py-3.5 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <button
-                                    onClick={() => handleEdit(loc)}
-                                    className="text-gray-400 hover:text-blue-600 transition-colors p-1"
-                                    title="Edit"
-                                  >
-                                    <Pencil size={15} />
-                                  </button>
-                                  <button
-                                    onClick={() => removeLocation(loc.id)}
-                                    className="text-gray-400 hover:text-red-600 transition-colors p-1"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={15} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan={4}
-                              className="px-6 py-12 text-center text-gray-400 text-sm"
-                            >
-                              No locations configured yet.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <AppTable<LocationEntry>
+                  columns={columns}
+                  data={filtered}
+                  keyField="id"
+                  sortKey={sortKey}
+                  sortAsc={sortAsc}
+                  onSort={handleSort}
+                  emptyMessage="No locations configured yet."
+                  variant="card"
+                />
               </div>
             )}
 
+            {/* Add New / Edit Tab */}
             {activeTab === "addNew" && (
               <form onSubmit={handleSave}>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-4">
@@ -325,18 +270,19 @@ export default function LocationConfigPage() {
                   <p className="text-sm text-gray-500 mb-6">
                     {editingId
                       ? "Update the location details below."
-                      : "Enter location details to register a new SOCO station."}
+                      : "Enter location details and assign the division/province."}
                   </p>
 
+                  {/* ── Single-row inputs ── */}
                   <div className="border border-gray-200 rounded-xl p-5">
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">
                       Location Details
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* Location Name */}
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Location Name / ස්ථානයේ නම{" "}
-                          <span className="text-red-500">*</span>
+                          Location Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -348,9 +294,11 @@ export default function LocationConfigPage() {
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-200 focus:outline-none"
                         />
                       </div>
+
+                      {/* Police Division */}
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Police Division / පොලිස් කොට්ඨාශය{" "}
+                          Police Division{" "}
                           <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -366,10 +314,11 @@ export default function LocationConfigPage() {
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-200 focus:outline-none"
                         />
                       </div>
-                      <div className="sm:col-span-2">
+
+                      {/* Province */}
+                      <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Province / පළාත{" "}
-                          <span className="text-red-500">*</span>
+                          Province <span className="text-red-500">*</span>
                         </label>
                         <CustomSelect
                           value={formData.province}
@@ -387,7 +336,7 @@ export default function LocationConfigPage() {
                 <div className="flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={handleCancelEdit}
+                    onClick={handleReset}
                     className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     {editingId ? "Cancel" : "Reset"}
