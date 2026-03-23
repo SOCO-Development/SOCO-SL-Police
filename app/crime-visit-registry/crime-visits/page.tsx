@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -8,8 +8,10 @@ import Footer from '@/components/layout/Footer';
 import CrimeVisitList from './CrimeVisitList';
 import CrimeVisitDetailView from '@/app/crime-visit-registry/crime-visits/CrimeVisitDetailView';
 import { crimeVisitService } from '@/lib/crimeVisitService';
+import { sortCrimeVisits } from '@/lib/crimeVisitSort';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeVisit, CrimeVisitStatus } from '@/types/crimeVisit';
+import Button from '@/components/buttons/Button';
 import { ArrowLeft, CheckCircle, Clock, Plus } from 'lucide-react';
 
 // ─── List View ────────────────────────────────────────────────────────────────
@@ -25,11 +27,23 @@ const tabs: { label: string; value: FilterTab }[] = [
 function ListView() {
     const [all, setAll] = useState<CrimeVisit[]>([]);
     const [filter, setFilter] = useState<FilterTab>('ALL');
+    const [sortKey, setSortKey] = useState<keyof CrimeVisit | string | null>('createdAt');
+    const [sortAsc, setSortAsc] = useState(false);
 
     useEffect(() => { setAll(crimeVisitService.getAll()); }, []);
 
     const visible = filter === 'ALL' ? all : all.filter((v) => v.status === filter);
+    const sortedVisible = useMemo(() => sortCrimeVisits(visible, sortKey, sortAsc), [visible, sortKey, sortAsc]);
     const countFor = (tab: FilterTab) => tab === 'ALL' ? all.length : all.filter((v) => v.status === tab).length;
+
+    const handleSort = (key: keyof CrimeVisit | string) => {
+        if (sortKey === key) {
+            setSortAsc((prev) => !prev);
+        } else {
+            setSortKey(key);
+            setSortAsc(true);
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
@@ -47,9 +61,11 @@ function ListView() {
                                     <p className="text-sm text-gray-500 mt-0.5">All crime visit records — draft and submitted.</p>
                                 </div>
                             </div>
-                            <Link href="/crime-visit-registry/initiate" className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
-                                <Plus className="w-4 h-4" /> New Visit
-                            </Link>
+                            <Button variant="primary" asChild>
+                                <Link href="/crime-visit-registry/initiate">
+                                    <Plus className="w-4 h-4" /> New Visit
+                                </Link>
+                            </Button>
                         </div>
 
                         <div className="flex gap-2 mb-6 border-b border-gray-200">
@@ -64,7 +80,14 @@ function ListView() {
                             ))}
                         </div>
 
-                        <CrimeVisitList visits={visible} showStatusBadge emptyMessage="No crime visits found for this filter." />
+                        <CrimeVisitList
+                            visits={sortedVisible}
+                            showStatusBadge
+                            sortKey={sortKey}
+                            sortAsc={sortAsc}
+                            onSort={handleSort}
+                            emptyMessage="No crime visits found for this filter."
+                        />
                     </div>
                     <Footer />
                 </main>

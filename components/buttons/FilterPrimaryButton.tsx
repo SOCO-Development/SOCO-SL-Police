@@ -1,6 +1,7 @@
 'use client';
 
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
+import Button from './Button';
 
 interface FilterPrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
@@ -8,22 +9,22 @@ interface FilterPrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 /**
- * Primary action button used in filter sections across report and complaint pages.
- * Same UI everywhere: green, centered text, consistent height.
+ * Primary action button used in filter sections (reports, dashboard).
+ * Uses Button variant="success" with full-width layout.
  */
 export default function FilterPrimaryButton({
   children,
   className = '',
-  type = 'button',
   ...rest
 }: FilterPrimaryButtonProps) {
   return (
-    <button
-      type={type}
-      className={`filter-primary-btn flex items-center justify-center text-white px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap w-full h-[42px] border border-transparent ${className}`}
+    <Button
+      variant="success"
+      type="button"
+      className={`w-full h-[42px] ${className}`.trim()}
       {...rest}
     >
-      <span>{children}</span>
-    </button>
+      {children}
+    </Button>
   );
 }

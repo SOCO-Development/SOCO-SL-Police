@@ -8,11 +8,12 @@ import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
+import Button from '@/components/buttons/Button';
 import FilterPrimaryButton from '@/components/buttons/FilterPrimaryButton';
 import FilterSection from '@/components/layout/FilterSection';
 import ContentCard from '@/components/layout/ContentCard';
 import TableToolbar from '@/components/layout/TableToolbar';
-import DataTable, { type DataTableColumn } from '@/components/layout/DataTable';
+import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import { FaArrowLeft } from 'react-icons/fa';
 
 // Aggregate row: complaint category with counts per type
@@ -99,7 +100,7 @@ const categoryOptions = [
   { value: 'Other institutions under the Ministry', label: 'Other institutions under the Ministry' },
 ];
 
-const REPORT_COLUMNS: DataTableColumn<CategoryRow>[] = [
+const REPORT_COLUMNS: AppTableColumn<CategoryRow>[] = [
   { key: 'no', label: 'NO', sortable: true, align: 'right' },
   { key: 'complaintCategory', label: 'Complaint Category', sortable: true, className: 'text-gray-800 font-medium' },
   { key: 'utr', label: 'UTR', sortable: true, align: 'right' },
@@ -194,14 +195,14 @@ export default function ComplaintReportPage() {
         <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen print:ml-0">
           <div className="w-full px-4 sm:px-6 lg:px-8 py-10 flex-1 print:py-4">
             <div className="flex items-center gap-4 mb-6 print:mb-4">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => router.push('/reports')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 font-medium print:hidden"
+                className="print:hidden"
               >
                 <FaArrowLeft className="w-4 h-4" />
                 Back
-              </button>
+              </Button>
               <h1 className="text-3xl font-bold text-gray-900">Complaint Report</h1>
             </div>
 
@@ -252,7 +253,7 @@ export default function ComplaintReportPage() {
                 }}
               />
 
-              <DataTable<CategoryRow>
+              <AppTable<CategoryRow>
                 columns={REPORT_COLUMNS}
                 data={paginatedRows}
                 keyField="no"
@@ -260,6 +261,7 @@ export default function ComplaintReportPage() {
                 sortAsc={sortAsc}
                 onSort={handleSort}
                 emptyMessage="No complaints match the selected filters."
+                variant="plain"
                 pagination={{
                   currentPage,
                   totalPages,

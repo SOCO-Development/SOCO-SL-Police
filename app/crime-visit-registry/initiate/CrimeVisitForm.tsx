@@ -13,6 +13,7 @@ import type {
 import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import CustomSelect from '@/components/forms/CustomSelect';
+import Button from '@/components/buttons/Button';
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -781,37 +782,28 @@ export default function CrimeVisitForm({
             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
 
                 {/* Prev */}
-                <button
+                <Button
+                    variant="secondary"
                     type="button"
                     onClick={() => setActiveTab((t) => (t > 1 ? (t - 1) as TabId : t))}
                     disabled={activeTab === 1}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                     ← Prev
-                </button>
+                </Button>
 
                 {/* Centre actions */}
                 {!readOnlyAll ? (
                     <div className="flex items-center gap-2">
-                        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                        <Button variant="ghost" type="button" onClick={onCancel}>
                             Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSaveDraft}
-                            className="px-5 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors"
-                        >
+                        </Button>
+                        <Button variant="amber" type="button" onClick={handleSaveDraft}>
                             {appendMode ? 'Save Additions' : 'Save as Draft'}
-                        </button>
+                        </Button>
                         {!appendMode && (
-                            <button
-                                type="button"
-                                disabled={submitting}
-                                onClick={handleSubmit}
-                                className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors"
-                            >
+                            <Button variant="success" type="button" disabled={submitting} onClick={handleSubmit}>
                                 Submit
-                            </button>
+                            </Button>
                         )}
                     </div>
                 ) : (
@@ -819,14 +811,14 @@ export default function CrimeVisitForm({
                 )}
 
                 {/* Next */}
-                <button
+                <Button
+                    variant="secondary"
                     type="button"
                     onClick={() => setActiveTab((t) => (t < 3 ? (t + 1) as TabId : t))}
                     disabled={activeTab === 3}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                     Next →
-                </button>
+                </Button>
             </div>
         </div>
     );

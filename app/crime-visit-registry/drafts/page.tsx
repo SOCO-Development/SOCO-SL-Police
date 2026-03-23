@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -8,17 +8,32 @@ import Footer from '@/components/layout/Footer';
 import CrimeVisitList from '../crime-visits/CrimeVisitList';
 import CrimeVisitForm from '../initiate/CrimeVisitForm';
 import { crimeVisitService } from '@/lib/crimeVisitService';
+import { sortCrimeVisits } from '@/lib/crimeVisitSort';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeVisit, CrimeVisitFormData, DraftAdditions } from '@/types/crimeVisit';
+import Button from '@/components/buttons/Button';
 import { ArrowLeft, CheckCircle, Plus } from 'lucide-react';
 
 // ─── Drafts List ──────────────────────────────────────────────────────────────
 
 function DraftsList() {
     const [drafts, setDrafts] = useState<CrimeVisit[]>([]);
+    const [sortKey, setSortKey] = useState<keyof CrimeVisit | string | null>('updatedAt');
+    const [sortAsc, setSortAsc] = useState(false);
 
     function loadDrafts() { setDrafts(crimeVisitService.getDrafts()); }
     useEffect(() => { loadDrafts(); }, []);
+
+    const sortedDrafts = useMemo(() => sortCrimeVisits(drafts, sortKey, sortAsc), [drafts, sortKey, sortAsc]);
+
+    function handleSort(key: keyof CrimeVisit | string) {
+        if (sortKey === key) {
+            setSortAsc((prev) => !prev);
+        } else {
+            setSortKey(key);
+            setSortAsc(true);
+        }
+    }
 
     function handleDelete(id: string) {
         if (!confirm('Delete this draft?')) return;
@@ -44,9 +59,11 @@ function DraftsList() {
                                     </p>
                                 </div>
                             </div>
-                            <Link href="/crime-visit-registry/initiate" className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
-                                <Plus className="w-4 h-4" /> New Visit
-                            </Link>
+                            <Button variant="primary" asChild>
+                                <Link href="/crime-visit-registry/initiate">
+                                    <Plus className="w-4 h-4" /> New Visit
+                                </Link>
+                            </Button>
                         </div>
 
                         <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
@@ -57,9 +74,12 @@ function DraftsList() {
                         </div>
 
                         <CrimeVisitList
-                            visits={drafts}
+                            visits={sortedDrafts}
                             onDelete={handleDelete}
                             showStatusBadge={false}
+                            sortKey={sortKey}
+                            sortAsc={sortAsc}
+                            onSort={handleSort}
                             emptyMessage="No drafted crime visits. Start one by clicking 'New Visit'."
                         />
                     </div>
@@ -150,9 +170,9 @@ function DraftDetail({ id }: { id: string }) {
                                     <p className="text-sm text-gray-500 mt-0.5">Last updated: {formatDateTimeDDMMYYYY(visit.updatedAt)}</p>
                                 </div>
                             </div>
-                            <button onClick={handleSubmit} className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm">
+                            <Button variant="success" onClick={handleSubmit}>
                                 <CheckCircle className="w-4 h-4" /> Submit this Visit
-                            </button>
+                            </Button>
                         </div>
 
                         <div className="mb-6 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
