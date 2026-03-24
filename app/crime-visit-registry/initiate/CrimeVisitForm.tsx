@@ -685,7 +685,7 @@ export default function CrimeVisitForm({
                             </div>
 
                             {/* Examined by SOCO officers */}
-                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                            {/* <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
                                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
                                     <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
                                     Examined by SOCO officers
@@ -713,10 +713,10 @@ export default function CrimeVisitForm({
                                         )}
                                     </FieldGroup>
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* Re-examined by SOCO officers */}
-                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                            {/* <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
                                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
                                     <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
                                     Re-examined by SOCO officers
@@ -744,35 +744,35 @@ export default function CrimeVisitForm({
                                         )}
                                     </FieldGroup>
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* Investigation Officer */}
-                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                            {/* <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
                                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
                                     <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
                                     Investigation Officer
                                 </h4>
                                 <OfficerRow label="Investigation Officer" value={sC.investigationOfficer ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ investigationOfficer: v })} compact />
                                 {errors['officer'] && <p className="text-xs text-red-600 font-medium mt-2">{errors['officer']}</p>}
-                            </div>
+                            </div> */}
 
                             {/* Re-Assigned Case */}
-                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                            {/* <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
                                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
                                     <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
                                     Re-Assigned Case
                                 </h4>
                                 <OfficerRow label="Re-Assigned Case" value={sC.reAssignedCaseOfficer ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ reAssignedCaseOfficer: v })} compact />
-                            </div>
+                            </div> */}
 
                             {/* Scene Guard */}
-                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+                            {/* <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
                                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
                                     <span className="w-1.5 h-4 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
                                     Scene Guard
                                 </h4>
                                 <OfficerRow label="Scene Guard" value={sC.sceneGuard ?? emptyOfficer()} isReadOnly={ro} onChange={(v) => updateC({ sceneGuard: v })} compact />
-                            </div>
+                            </div> */}
                         </div>
                     </div>
                 )}
@@ -800,11 +800,11 @@ export default function CrimeVisitForm({
                         <Button variant="amber" type="button" onClick={handleSaveDraft}>
                             {appendMode ? 'Save Additions' : 'Save as Draft'}
                         </Button>
-                        {!appendMode && (
+                        {/* {!appendMode && (
                             <Button variant="success" type="button" disabled={submitting} onClick={handleSubmit}>
                                 Submit
                             </Button>
-                        )}
+                        )} */}
                     </div>
                 ) : (
                     <span className="text-xs text-gray-400 italic">Read-only view</span>
