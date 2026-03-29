@@ -55,9 +55,9 @@ export default function InitiateCrimeVisitPage() {
                                 <ArrowLeft className="w-5 h-5" />
                             </Link>
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900">Initiate Crime Visit</h2>
+                                <h2 className="text-2xl font-bold text-gray-900">Initiate Visit</h2>
                                 <p className="text-sm text-gray-600 mt-0.5">
-                                    Fill in all three sections. Save as Draft anytime, or Submit when complete.
+                                    Fill in the required details. Save as Draft anytime, or Submit when complete.
                                 </p>
                             </div>
                         </div>

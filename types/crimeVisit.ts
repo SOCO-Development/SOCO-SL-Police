@@ -23,6 +23,9 @@ export interface Expert {
 // ─── Sections ────────────────────────────────────────────────────────────────
 
 export interface SectionA {
+    requestFromStation?: string;
+    requestDivision?: string;
+    requestReason?: string;
     reportedToSocoLab?: DateTimeEntry;
     out?: DateTimeEntry;
     in?: DateTimeEntry;

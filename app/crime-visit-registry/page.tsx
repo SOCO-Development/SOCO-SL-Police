@@ -8,7 +8,7 @@ import { Clipboard, FileText, List } from 'phosphor-react';
 export default function CrimeVisitRegistryPage() {
     const cards = [
         {
-            title: 'Initiate Crime Visit',
+            title: 'Initiate Visit',
             subtitle: 'අපරාධ ස්ථාන නිරීක්ෂණය ආරම්භ කරන්න',
             description: 'Start a new scene-of-crime visit record and assign officers.',
             icon: <Clipboard className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,

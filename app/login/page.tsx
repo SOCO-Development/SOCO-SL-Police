@@ -72,27 +72,42 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden animate-fade-in">
-      {/* Animated Background Elements */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#031633] via-[#072146] to-[#0a2a56] relative overflow-hidden animate-fade-in">
+      {/* Subtle navy overlays and crime-scene tapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.14),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.1),transparent_45%)]"></div>
+
+        <div className="absolute left-1/2 top-[30%] flex w-[175%] -translate-x-1/2 -rotate-[13deg] bg-yellow-400 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.45)] border-y-2 border-yellow-300/80">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <span key={`top-tape-${index}`} className="mx-4 whitespace-nowrap text-lg sm:text-xl font-black tracking-widest text-slate-900">
+              DO NOT CROSS
+            </span>
+          ))}
+        </div>
+
+        <div className="absolute left-1/2 top-[53%] flex w-[175%] -translate-x-1/2 rotate-[12deg] bg-yellow-400 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.45)] border-y-2 border-yellow-300/80">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <span key={`bottom-tape-${index}`} className="mx-4 whitespace-nowrap text-lg sm:text-xl font-black tracking-widest text-slate-900">
+              DO NOT CROSS
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
           {/* Left Section - Branding */}
           <div className="hidden lg:flex flex-col items-center justify-center text-center space-y-8 w-full">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full blur-2xl opacity-50 -z-10"></div>
-              <div className="w-40 h-40 mx-auto relative">
+            <div className="relative isolate">
+              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(125,211,252,0.4)_0%,rgba(56,189,248,0.16)_45%,transparent_72%)] blur-xl scale-125"></div>
+              <div className="relative w-60 h-60 mx-auto rounded-full border border-cyan-200/45 bg-[#031b3f]/65 backdrop-blur-sm shadow-[0_22px_60px_rgba(2,8,23,0.72)] flex items-center justify-center">
+                <div className="absolute inset-3 rounded-full border border-cyan-100/30"></div>
                 <Image
-                  src="/logo.png"
+                  src="/logoo.png"
                   alt="Sri Lanka Police Logo"
-                  width={160}
-                  height={160}
-                  className="object-contain w-full h-full drop-shadow-2xl"
+                  width={220}
+                  height={220}
+                  className="object-contain w-[85%] h-[85%] drop-shadow-[0_16px_30px_rgba(0,0,0,0.7)]"
                   loading="eager"
                   priority
                 />
@@ -100,25 +115,25 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-4 w-full">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-noto">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-300 to-blue-100 bg-clip-text text-transparent font-noto">
                 SOCO - SL Police
               </h1>
 
-              <div className="space-y-2 text-gray-700 w-full">
-                <p className="text-xl font-semibold font-sinhala whitespace-nowrap">ශ්‍රී ලංකා පොලිස් පැමිණිලි කළමණාකරණ පද්ධතිය</p>
+              <div className="space-y-2 text-blue-50 w-full">
+                <p className="text-xl font-semibold font-sinhala whitespace-nowrap">අපරාධ ස්ථාන පරීක්ෂණ නිලධාරී ව්‍යාපෘතිය</p>
                 <p className="text-xl font-semibold font-tamil whitespace-nowrap">இலங்கை போலீசார் புகார் மேலாண்மை அமைப்பு</p>
-                <p className="text-xl font-semibold text-gray-700 font-noto whitespace-nowrap">Sri Lanka Police SOCO Internal System</p>
+                <p className="text-xl font-semibold text-blue-100 font-noto whitespace-nowrap">Scene of Crime Officer Project</p>
               </div>
             </div>
 
             {/* Security Features */}
-            <div className="flex items-center gap-6 pt-8 border-t border-gray-200">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Shield className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center gap-6 pt-8 border-t border-blue-300/30">
+              <div className="flex items-center gap-2 text-blue-100">
+                <Shield className="w-5 h-5 text-cyan-300" />
                 <span className="text-sm font-medium font-noto">Secure</span>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Lock className="w-5 h-5 text-purple-600" />
+              <div className="flex items-center gap-2 text-blue-100">
+                <Lock className="w-5 h-5 text-cyan-300" />
                 <span className="text-sm font-medium font-noto">Encrypted</span>
               </div>
             </div>
@@ -126,16 +141,16 @@ export default function LoginPage() {
 
           {/* Right Section - Login Form */}
           <div className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
-            <div className={`bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 lg:p-10 transition-all duration-500 ease-out ${loginSuccess ? 'ring-2 ring-green-400/50 ring-offset-2 ring-offset-white/80' : ''}`}>
+            <div className={`bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-blue-100/80 p-8 lg:p-10 transition-all duration-500 ease-out ${loginSuccess ? 'ring-2 ring-green-400/50 ring-offset-2 ring-offset-white/80' : ''}`}>
               {/* Mobile Logo */}
               <div className="lg:hidden mb-8 text-center">
-                <div className="w-20 h-20 mx-auto mb-4 relative">
+                <div className="w-24 h-24 mx-auto mb-4 relative">
                   <Image
-                    src="/logo.png"
+                    src="/logoo.png"
                     alt="Sri Lanka Police Logo"
-                    width={80}
-                    height={80}
-                    className="object-contain w-full h-full"
+                    width={96}
+                    height={96}
+                    className="object-contain w-full h-full drop-shadow-xl"
                     loading="eager"
                     priority
                   />
@@ -145,29 +160,19 @@ export default function LoginPage() {
                 </h1>
               </div>
 
-              {/* Welcome / Success Section */}
               <div className="mb-8 text-center">
-                {loginSuccess ? (
-                  <div className="animate-fade-in flex flex-col items-center gap-3">
-                    <div className="p-3 rounded-full bg-green-100">
-                      <CheckCircle className="w-10 h-10 text-green-600" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 font-noto">
-                      Welcome back!
-                    </h2>
-                    <p className="text-gray-600 font-noto text-sm">
-                      Taking you to the dashboard...
-                    </p>
+                <h2 className="text-3xl font-bold text-slate-900 mb-2 font-noto">
+                  Officer Login
+                </h2>
+                <p className="text-slate-600 font-noto text-sm">
+                  Sign in to access the SOCO internal dashboard
+                </p>
+
+                {loginSuccess && (
+                  <div className="mt-4 animate-fade-in inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full border border-green-200">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="text-sm font-medium font-noto">Authentication successful. Redirecting...</span>
                   </div>
-                ) : (
-                  <>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2 font-noto">
-                      Welcome Back
-                    </h2>
-                    <p className="text-gray-600 font-noto">
-                      Sign in to access the SOCO internal dashboard
-                    </p>
-                  </>
                 )}
               </div>
 
@@ -226,7 +231,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-noto flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-[#0b2f64] to-[#0a4685] hover:from-[#0e3c7f] hover:to-[#0e57a3] text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-noto flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
@@ -248,7 +253,7 @@ export default function LoginPage() {
 
               {/* Development Credentials - hide when success */}
               {!loginSuccess && (
-              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl">
+              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl">
                 <p className="text-xs text-gray-700 font-noto text-center">
                   <strong className="text-blue-700">Development Mode:</strong>
                 </p>
@@ -272,8 +277,8 @@ export default function LoginPage() {
 
       {/* Footer - Centered at bottom of page */}
       <div className="absolute bottom-8 left-0 right-0 text-center px-4">
-        <p className="text-xs text-gray-500 font-noto">
-          Powered by <span className="font-bold text-blue-600">Sri Lanka Telecom</span> | © {new Date().getFullYear()} Sri Lanka Police
+        <p className="text-xs text-blue-100/80 font-noto">
+          Powered by <span className="font-bold text-cyan-200">Sri Lanka Telecom</span> | © {new Date().getFullYear()} Sri Lanka Police
         </p>
       </div>
     </div>
