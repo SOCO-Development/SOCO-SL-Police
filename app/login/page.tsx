@@ -98,23 +98,54 @@ export default function LoginPage() {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
           {/* Left Section - Branding */}
           <div className="hidden lg:flex flex-col items-center justify-center text-center space-y-8 w-full">
-            <div className="relative isolate">
-              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(125,211,252,0.4)_0%,rgba(56,189,248,0.16)_45%,transparent_72%)] blur-xl scale-125"></div>
-              <div className="relative w-60 h-60 mx-auto rounded-full border border-cyan-200/45 bg-[#031b3f]/65 backdrop-blur-sm shadow-[0_22px_60px_rgba(2,8,23,0.72)] flex items-center justify-center">
-                <div className="absolute inset-3 rounded-full border border-cyan-100/30"></div>
-                <Image
-                  src="/logoo.png"
-                  alt="Sri Lanka Police Logo"
-                  width={220}
-                  height={220}
-                  className="object-contain w-[85%] h-[85%] drop-shadow-[0_16px_30px_rgba(0,0,0,0.7)]"
-                  loading="eager"
-                  priority
-                />
+            <div className="relative isolate mx-auto flex w-full justify-center px-2">
+              <div
+                className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-[radial-gradient(ellipse_80%_70%_at_50%_45%,rgba(56,189,248,0.22),transparent_70%)] blur-3xl"
+                aria-hidden
+              />
+
+              <div className="relative size-52 shrink-0 overflow-hidden rounded-xl border border-white/50 bg-white/30 p-px shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.45)] backdrop-blur-xl backdrop-saturate-150 sm:size-56">
+                <div className="relative flex h-full w-full items-center justify-center rounded-[calc(0.75rem-1px)] bg-white/25 p-4 backdrop-blur-md sm:p-5">
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-[0.45] bg-[linear-gradient(105deg,transparent_42%,rgba(255,255,255,0.55)_50%,transparent_58%)]"
+                    aria-hidden
+                  />
+                  <span
+                    className="pointer-events-none absolute left-3 top-3 h-6 w-6 rounded-tl-md border-l-2 border-t-2 border-slate-400/55"
+                    aria-hidden
+                  />
+                  <span
+                    className="pointer-events-none absolute right-3 top-3 h-6 w-6 rounded-tr-md border-r-2 border-t-2 border-slate-400/55"
+                    aria-hidden
+                  />
+                  <span
+                    className="pointer-events-none absolute bottom-3 left-3 h-6 w-6 rounded-bl-md border-b-2 border-l-2 border-slate-400/45"
+                    aria-hidden
+                  />
+                  <span
+                    className="pointer-events-none absolute bottom-3 right-3 h-6 w-6 rounded-br-md border-b-2 border-r-2 border-slate-400/45"
+                    aria-hidden
+                  />
+
+                  <div
+                    className="pointer-events-none absolute inset-[10%] rounded-lg bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.04)_0%,transparent_65%)]"
+                    aria-hidden
+                  />
+                  <Image
+                    src="/logoo.png"
+                    alt="Sri Lanka Police Logo"
+                    width={280}
+                    height={280}
+                    className="relative z-[1] max-h-full max-w-full object-contain object-center drop-shadow-[0_2px_12px_rgba(15,23,42,0.18)]"
+                    sizes="(min-width: 1024px) 224px, 96px"
+                    loading="eager"
+                    priority
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4 w-full">
+            <div className="space-y-4 w-full pt-12">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-300 to-blue-100 bg-clip-text text-transparent font-noto">
                 SOCO - SL Police
               </h1>
@@ -144,18 +175,33 @@ export default function LoginPage() {
             <div className={`bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-blue-100/80 p-8 lg:p-10 transition-all duration-500 ease-out ${loginSuccess ? 'ring-2 ring-green-400/50 ring-offset-2 ring-offset-white/80' : ''}`}>
               {/* Mobile Logo */}
               <div className="lg:hidden mb-8 text-center">
-                <div className="w-24 h-24 mx-auto mb-4 relative">
-                  <Image
-                    src="/logoo.png"
-                    alt="Sri Lanka Police Logo"
-                    width={96}
-                    height={96}
-                    className="object-contain w-full h-full drop-shadow-xl"
-                    loading="eager"
-                    priority
-                  />
+                <div className="relative mx-auto mb-4 size-[7.25rem] shrink-0 overflow-hidden rounded-xl border border-white/55 bg-white/35 p-px shadow-[0_12px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl backdrop-saturate-150">
+                  <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[calc(0.75rem-1px)] bg-white/25 p-3 backdrop-blur-md">
+                    <span
+                      className="pointer-events-none absolute left-2 top-2 h-4 w-4 rounded-tl border-l border-t border-slate-400/50"
+                      aria-hidden
+                    />
+                    <span
+                      className="pointer-events-none absolute right-2 top-2 h-4 w-4 rounded-tr border-r border-t border-slate-400/50"
+                      aria-hidden
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-[12%] rounded-md bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.035)_0%,transparent_70%)]"
+                      aria-hidden
+                    />
+                    <Image
+                      src="/logoo.png"
+                      alt="Sri Lanka Police Logo"
+                      width={180}
+                      height={180}
+                      className="relative z-[1] max-h-full max-w-full object-contain object-center drop-shadow-[0_2px_8px_rgba(15,23,42,0.15)]"
+                      sizes="116px"
+                      loading="eager"
+                      priority
+                    />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 font-noto mb-2">
+                <h1 className="mt-8 text-2xl font-bold text-gray-900 font-noto mb-2">
                   SOCO - SL Police
                 </h1>
               </div>
