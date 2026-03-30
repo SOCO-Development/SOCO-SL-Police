@@ -16,7 +16,7 @@ export function getCrimeVisitSortValue(v: CrimeVisit, key: string): string {
         case 'updatedAt':
             return (v.updatedAt ?? '').toLowerCase();
         default:
-            return String((v as Record<string, unknown>)[key] ?? '').toLowerCase();
+            return String(Reflect.get(v as object, key) ?? '').toLowerCase();
     }
 }
 
