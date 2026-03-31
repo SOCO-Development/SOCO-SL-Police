@@ -12,7 +12,7 @@ function generateId(): string {
 
 function generateRef(id: string): string {
     const seq = id.split('_')[1] ?? Date.now().toString();
-    return `CVR-${new Date().getFullYear()}-${seq.slice(-6)}`;
+    return `${new Date().getFullYear()}-${seq.slice(-6)}`;
 }
 
 function now(): string {
