@@ -25,13 +25,7 @@ export default function CrimeVisitRegistryPage() {
             icon: <Clipboard className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,
             href: '/crime-visit-registry/initiate',
         },
-        {
-            title: 'Drafted Crime Visits',
-            subtitle: 'කෙටුම්පත් අපරාධ ස්ථාන නිරීක්ෂණ',
-            description: 'Continue and update saved draft crime visit records.',
-            icon: <FileText className="w-12 h-12" weight="fill" style={{ color: '#f59e0b' }} />,
-            href: '/crime-visit-registry/drafts',
-        },
+
         {
             title: 'Crime Visits',
             subtitle: 'අපරාධ ස්ථාන නිරීක්ෂණ ලැයිස්තුව',

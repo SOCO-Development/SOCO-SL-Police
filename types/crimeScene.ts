@@ -4,12 +4,22 @@ export interface CrimeSceneOfficer {
   name: string;
   regNo?: string;
   rank?: string;
+  teamRole?: string;
+  socoRole?: string;
+}
+
+export interface SpecialistTeamMember {
+  name: string;
+  role: string;
 }
 
 export interface CrimeSceneSpecialistTeam {
   role: string;
-  specialist: string;
-  teamMembers: string;
+  specialist?: string;
+  teamMembers?: string;
+  inTime?: string;
+  outTime?: string;
+  members?: SpecialistTeamMember[];
 }
 
 export interface CrimeSceneDateTime {
@@ -36,6 +46,9 @@ export interface CrimeScene {
   inChargeOfficer: CrimeSceneOfficer;
   socoOfficers: CrimeSceneOfficer[];
   specialistTeams: CrimeSceneSpecialistTeam[];
+
+  investigationOfficer?: CrimeSceneOfficer;
+  sceneGuards?: CrimeSceneOfficer[];
 
   photoZipName?: string;
   sketchFileName?: string;

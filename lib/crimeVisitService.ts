@@ -97,6 +97,10 @@ export const crimeVisitService = {
 
         const updated: CrimeVisit = {
             ...visit,
+            sectionA: {
+                ...visit.sectionA,
+                ...(additions.in ? { in: additions.in } : {})
+            },
             sectionB: {
                 ...visit.sectionB,
                 experts: mergedExperts,
@@ -104,7 +108,10 @@ export const crimeVisitService = {
             updatedAt: now(),
             draftAdditions: {},
             lockedSnapshot: {
-                sectionA: visit.sectionA,
+                sectionA: {
+                    ...visit.sectionA,
+                    ...(additions.in ? { in: additions.in } : {})
+                },
                 sectionB: { ...visit.sectionB, experts: mergedExperts },
                 sectionC: visit.sectionC,
             },

@@ -464,7 +464,7 @@ export default function CrimeVisitForm({
                                 OUT & IN
                             </h4>
                             <DateTimeRow label="OUT" value={sA.out ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('out', v)} layout="stack" />
-                            <DateTimeRow label="IN" value={sA.in ?? emptyDatetime()} isReadOnly={locked} onChange={(v) => updateA('in', v)} layout="stack" />
+                            <DateTimeRow label="IN" value={sA.in ?? emptyDatetime()} isReadOnly={ro} onChange={(v) => updateA('in', v)} layout="stack" />
                         </div>
 
                         <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
@@ -499,10 +499,12 @@ export default function CrimeVisitForm({
                         <Button variant="ghost" type="button" onClick={onCancel}>
                             Cancel
                         </Button>
-                        <Button variant="amber" type="button" onClick={handleSaveDraft}>
-                            {appendMode ? 'Save Additions' : 'Save as Draft'}
-                        </Button>
-                        {!appendMode && onSubmit && (
+                        {!appendMode && (
+                            <Button variant="amber" type="button" onClick={handleSaveDraft}>
+                                Save as Draft
+                            </Button>
+                        )}
+                        {onSubmit && (
                             <Button variant="success" type="button" onClick={() => onSubmit(formData)}>
                                 Submit
                             </Button>

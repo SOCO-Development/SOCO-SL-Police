@@ -84,12 +84,29 @@ const SPECIALIST_ROLE_OPTIONS = [
   'Others',
 ].map((value) => ({ value, label: value }));
 
+const TEAM_ROLE_OPTIONS = [
+  { value: 'Team Leader', label: 'Team Leader' },
+  { value: 'Other SOCO Officer', label: 'Other SOCO Officer' },
+];
+
+const SOCO_ROLE_OPTIONS = [
+  { value: 'Photographer', label: 'Photographer' },
+  { value: 'Sketcher', label: 'Sketcher' },
+  { value: 'Evidence Collector', label: 'Evidence Collector' },
+  { value: 'Other', label: 'Other' },
+];
+
+const SPECIALIST_MEMBER_ROLE_OPTIONS = [
+  { value: 'Team Leader', label: 'Team Leader' },
+  { value: 'Team Member', label: 'Team Member' },
+];
+
 function emptyOfficer(): CrimeSceneOfficer {
-  return { name: '', regNo: '', rank: '' };
+  return { name: '', regNo: '', rank: '', teamRole: 'Other SOCO Officer', socoRole: 'Other' };
 }
 
 function emptySpecialist(): CrimeSceneSpecialistTeam {
-  return { role: '', specialist: '', teamMembers: '' };
+  return { role: '', inTime: '', outTime: '', members: [{ name: '', role: 'Team Leader' }] };
 }
 
 function defaultForm(): CrimeSceneFormData {
@@ -109,6 +126,8 @@ function defaultForm(): CrimeSceneFormData {
     inChargeOfficer: emptyOfficer(),
     socoOfficers: [emptyOfficer()],
     specialistTeams: [emptySpecialist()],
+    investigationOfficer: emptyOfficer(),
+    sceneGuards: [emptyOfficer()],
     photoZipName: '',
     sketchFileName: '',
     reportFileName: '',
@@ -182,11 +201,52 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
     }));
   };
 
+  const updateSceneGuard = (index: number, patch: Partial<CrimeSceneOfficer>) => {
+    setForm((prev) => ({
+      ...prev,
+      sceneGuards: (prev.sceneGuards ?? []).map((guard, i) => (i === index ? { ...guard, ...patch } : guard)),
+    }));
+  };
+
   const updateSpecialist = (index: number, patch: Partial<CrimeSceneSpecialistTeam>) => {
     setForm((prev) => ({
       ...prev,
       specialistTeams: prev.specialistTeams.map((row, i) => (i === index ? { ...row, ...patch } : row)),
     }));
+  };
+
+  const updateSpecialistMember = (teamIndex: number, memberIndex: number, patch: Partial<{ name: string; role: string }>) => {
+    setForm((prev) => {
+      const teams = [...prev.specialistTeams];
+      const team = { ...teams[teamIndex] };
+      const members = [...(team.members || [])];
+      members[memberIndex] = { ...members[memberIndex], ...patch };
+      team.members = members;
+      teams[teamIndex] = team;
+      return { ...prev, specialistTeams: teams };
+    });
+  };
+
+  const addSpecialistMember = (teamIndex: number) => {
+    setForm((prev) => {
+      const teams = [...prev.specialistTeams];
+      const team = { ...teams[teamIndex] };
+      team.members = [...(team.members || []), { name: '', role: 'Team Member' }];
+      teams[teamIndex] = team;
+      return { ...prev, specialistTeams: teams };
+    });
+  };
+
+  const removeSpecialistMember = (teamIndex: number, memberIndex: number) => {
+    setForm((prev) => {
+      const teams = [...prev.specialistTeams];
+      const team = { ...teams[teamIndex] };
+      const members = [...(team.members || [])];
+      members.splice(memberIndex, 1);
+      team.members = members;
+      teams[teamIndex] = team;
+      return { ...prev, specialistTeams: teams };
+    });
   };
 
   const validate = (): string => {
@@ -212,7 +272,11 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
     }
 
     const filteredOfficers = form.socoOfficers.filter((officer) => officer.name.trim());
-    const filteredSpecialists = form.specialistTeams.filter((row) => row.role.trim() || row.specialist.trim() || row.teamMembers.trim());
+    const filteredSpecialists = form.specialistTeams.map((team) => ({
+      ...team,
+      members: (team.members || []).filter((m) => m.name.trim()),
+    })).filter((team) => team.role.trim() || (team.members && team.members.length > 0));
+    const filteredSceneGuards = (form.sceneGuards ?? []).filter((guard) => guard.name.trim());
 
     const payload: CrimeSceneFormData = {
       ...form,
@@ -221,6 +285,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
       revisitCvrNo: form.visitType === 'REVISIT' ? form.revisitCvrNo : '',
       socoOfficers: filteredOfficers,
       specialistTeams: filteredSpecialists,
+      sceneGuards: filteredSceneGuards,
     };
 
     const created = crimeSceneService.create(payload);
@@ -247,7 +312,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
         </div>
 
         <div className="overflow-y-auto flex-1 p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <CustomSelect
               label="Visit Type"
               value={form.visitType}
@@ -275,11 +340,19 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             )}
 
             <CustomSelect
-              label="Police Station"
+              label="Requested Police Station"
               value={form.policeStation}
               onChange={(value) => setForm((prev) => ({ ...prev, policeStation: value }))}
               options={POLICE_STATIONS}
               placeholder="Select police station"
+            />
+
+            <CustomSelect
+              label="Police Division"
+              value={form.division}
+              onChange={(value) => setForm((prev) => ({ ...prev, division: value }))}
+              options={DIVISIONS}
+              placeholder="Select police division"
             />
           </div>
 
@@ -335,13 +408,6 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                   onChange={(value) => setForm((prev) => ({ ...prev, sceneOutTime: value }))}
                 />
                 <CustomSelect
-                  label="Division"
-                  value={form.division}
-                  onChange={(value) => setForm((prev) => ({ ...prev, division: value }))}
-                  options={DIVISIONS}
-                  placeholder="Select division"
-                />
-                <CustomSelect
                   label="Offence"
                   value={form.offence}
                   onChange={(value) => setForm((prev) => ({ ...prev, offence: value }))}
@@ -384,38 +450,63 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
               />
             </div>
 
-            <div className="space-y-3">
-              {form.socoOfficers.map((officer, index) => (
-                <div key={`officer-${index}`} className="grid grid-cols-1 md:grid-cols-[2fr,1fr,1fr,44px] gap-3 items-end">
-                  <FormInput
-                    label={`SOCO Officer ${index + 1}`}
-                    value={officer.name}
-                    onChange={(e) => updateOfficer(index, { name: e.target.value })}
-                    placeholder="Officer name"
-                  />
-                  <FormInput
-                    label="Reg. No"
-                    value={officer.regNo}
-                    onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
-                    placeholder="Reg. No"
-                  />
-                  <FormInput
-                    label="Rank"
-                    value={officer.rank}
-                    onChange={(e) => updateOfficer(index, { rank: e.target.value })}
-                    placeholder="Rank"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
-                    className="h-10 text-red-500 hover:text-red-700 disabled:opacity-40"
-                    disabled={form.socoOfficers.length <= 1}
-                    aria-label="Remove officer"
-                  >
-                    ×
-                  </button>
+            <div className="space-y-4">
+              {form.socoOfficers.map((officer, index) => {
+                const hasOtherTeamLeader = form.socoOfficers.some(
+                  (o, i) => i !== index && o.teamRole === 'Team Leader'
+                );
+
+                return (
+                <div key={`officer-${index}`} className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <CustomSelect
+                      label="Team Role"
+                      value={officer.teamRole ?? 'Other SOCO Officer'}
+                      onChange={(value) => updateOfficer(index, { teamRole: value })}
+                      options={TEAM_ROLE_OPTIONS.filter(
+                        (option) => option.value !== 'Team Leader' || !hasOtherTeamLeader
+                      )}
+                      placeholder="Select team role"
+                    />
+                    <CustomSelect
+                      label="SOCO Role"
+                      value={officer.socoRole ?? 'Other'}
+                      onChange={(value) => updateOfficer(index, { socoRole: value })}
+                      options={SOCO_ROLE_OPTIONS}
+                      placeholder="Select SOCO duty"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr,1fr,44px] gap-3 items-end">
+                    <FormInput
+                      label={`SOCO Officer Name`}
+                      value={officer.name}
+                      onChange={(e) => updateOfficer(index, { name: e.target.value })}
+                      placeholder="Officer name"
+                    />
+                    <FormInput
+                      label="Reg. No"
+                      value={officer.regNo}
+                      onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
+                      placeholder="Reg. No"
+                    />
+                    <FormInput
+                      label="Rank"
+                      value={officer.rank}
+                      onChange={(e) => updateOfficer(index, { rank: e.target.value })}
+                      placeholder="Rank"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
+                      className="h-10 w-full flex items-center justify-center text-red-500 hover:text-red-700 disabled:opacity-40"
+                      disabled={form.socoOfficers.length <= 1}
+                      aria-label="Remove officer"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-              ))}
+              )})}
             </div>
             <Button
               variant="secondary"
@@ -426,35 +517,145 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800">Specialists with Teams</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Expert Assistant</h3>
+            <div className="space-y-4">
+              {form.specialistTeams.map((team, index) => (
+                <div key={`specialist-${index}`} className="p-4 bg-gray-50 border border-gray-100 rounded-xl space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-sm font-medium text-gray-700">Team {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, specialistTeams: prev.specialistTeams.filter((_, i) => i !== index) }))}
+                      className="text-red-500 hover:text-red-700 disabled:opacity-40"
+                      disabled={form.specialistTeams.length <= 1}
+                    >
+                      Remove Team
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <CustomSelect
+                      label="Team Role"
+                      value={team.role}
+                      onChange={(value) => updateSpecialist(index, { role: value })}
+                      options={SPECIALIST_ROLE_OPTIONS}
+                      placeholder="Select role"
+                    />
+                    <TimePicker
+                      label="In Time"
+                      value={team.inTime ?? ''}
+                      onChange={(value) => updateSpecialist(index, { inTime: value })}
+                    />
+                    <TimePicker
+                      label="Out Time"
+                      value={team.outTime ?? ''}
+                      onChange={(value) => updateSpecialist(index, { outTime: value })}
+                    />
+                  </div>
+                  
+                  <div className="pt-2">
+                    <h5 className="text-xs font-semibold text-gray-600 mb-2">Team Members</h5>
+                    <div className="space-y-2">
+                      {(team.members || []).map((member, mIndex) => (
+                        <div key={`m-${mIndex}`} className="grid grid-cols-1 md:grid-cols-[1fr,2fr,44px] gap-2 items-end">
+                          <CustomSelect
+                            label={mIndex === 0 ? "Role" : ""}
+                            value={member.role}
+                            onChange={(value) => updateSpecialistMember(index, mIndex, { role: value })}
+                            options={SPECIALIST_MEMBER_ROLE_OPTIONS}
+                            placeholder="Role"
+                          />
+                          <FormInput
+                            label={mIndex === 0 ? "Member Name" : ""}
+                            value={member.name}
+                            onChange={(e) => updateSpecialistMember(index, mIndex, { name: e.target.value })}
+                            placeholder="Member name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSpecialistMember(index, mIndex)}
+                            className="h-10 text-red-500 hover:text-red-700 disabled:opacity-40"
+                            disabled={(team.members || []).length <= 1}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addSpecialistMember(index)}
+                      className="mt-2 text-xs text-blue-600 font-medium hover:text-blue-800"
+                    >
+                      + Add Member
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setForm((prev) => ({ ...prev, specialistTeams: [...prev.specialistTeams, emptySpecialist()] }))}
+            >
+              Add Specialist Team
+            </Button>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-800">Investigation Officer</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <FormInput
+                label="Rank"
+                value={form.investigationOfficer?.rank ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, investigationOfficer: { ...(prev.investigationOfficer || emptyOfficer()), rank: e.target.value } }))}
+                placeholder="Rank"
+              />
+              <FormInput
+                label="Reg. Number"
+                value={form.investigationOfficer?.regNo ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, investigationOfficer: { ...(prev.investigationOfficer || emptyOfficer()), regNo: e.target.value } }))}
+                placeholder="Reg. No"
+              />
+              <FormInput
+                label="Name"
+                value={form.investigationOfficer?.name ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, investigationOfficer: { ...(prev.investigationOfficer || emptyOfficer()), name: e.target.value } }))}
+                placeholder="Name"
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-semibold text-gray-800">Scene Guard :-</h3>
+            </div>
             <div className="space-y-3">
-              {form.specialistTeams.map((row, index) => (
-                <div key={`specialist-${index}`} className="grid grid-cols-1 md:grid-cols-[1.5fr,1.5fr,2fr,44px] gap-3 items-end">
-                  <CustomSelect
-                    label="Role"
-                    value={row.role}
-                    onChange={(value) => updateSpecialist(index, { role: value })}
-                    options={SPECIALIST_ROLE_OPTIONS}
-                    placeholder="Select role"
+              {(form.sceneGuards ?? []).map((guard, index) => (
+                <div key={`snc-guard-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr,1fr,2fr,44px] gap-3 items-end">
+                  <FormInput
+                    label="Rank"
+                    value={guard.rank ?? ''}
+                    onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
+                    placeholder="Rank"
                   />
                   <FormInput
-                    label={`Specialist ${index + 1} Name`}
-                    value={row.specialist}
-                    onChange={(e) => updateSpecialist(index, { specialist: e.target.value })}
-                    placeholder="Specialist name"
+                    label="Reg. Number"
+                    value={guard.regNo ?? ''}
+                    onChange={(e) => updateSceneGuard(index, { regNo: e.target.value })}
+                    placeholder="Reg. No"
                   />
                   <FormInput
-                    label="Team Members Names"
-                    value={row.teamMembers}
-                    onChange={(e) => updateSpecialist(index, { teamMembers: e.target.value })}
-                    placeholder="Member 1, Member 2"
+                    label={`Name`}
+                    value={guard.name}
+                    onChange={(e) => updateSceneGuard(index, { name: e.target.value })}
+                    placeholder="Guard name"
                   />
                   <button
                     type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, specialistTeams: prev.specialistTeams.filter((_, i) => i !== index) }))}
+                    onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
                     className="h-10 text-red-500 hover:text-red-700 disabled:opacity-40"
-                    disabled={form.specialistTeams.length <= 1}
-                    aria-label="Remove specialist"
+                    disabled={(form.sceneGuards ?? []).length <= 1}
+                    aria-label="Remove guard"
                   >
                     ×
                   </button>
@@ -463,9 +664,9 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             </div>
             <Button
               variant="secondary"
-              onClick={() => setForm((prev) => ({ ...prev, specialistTeams: [...prev.specialistTeams, emptySpecialist()] }))}
+              onClick={() => setForm((prev) => ({ ...prev, sceneGuards: [...(prev.sceneGuards ?? []), emptyOfficer()] }))}
             >
-              Add Specialist
+              Add Scene Guard
             </Button>
           </div>
 

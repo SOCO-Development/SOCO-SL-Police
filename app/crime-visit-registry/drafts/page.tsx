@@ -109,25 +109,22 @@ function DraftDetail({ id }: { id: string }) {
         setTimeout(() => setToast(null), 3500);
     }
 
-    function handleSaveAdditions(data: CrimeVisitFormData) {
+    function handleSubmitForm(data: CrimeVisitFormData) {
         try {
-            const additions: DraftAdditions = { experts: data.sectionB?.experts ?? [] };
+            const additions: DraftAdditions = {
+                experts: data.sectionB?.experts ?? [],
+                in: data.sectionA?.in
+            };
             const updated = crimeVisitService.updateDraft(id, additions);
-            if (updated) { setVisit(updated); showToast('Draft updated with new additions.'); }
-        } catch {
-            showToast('Failed to save additions.', 'error');
-        }
-    }
-
-    function handleSubmit() {
-        try {
-            const updated = crimeVisitService.submit(id);
             if (updated) {
-                showToast(`Submitted — ${updated.referenceNo}`);
-                setTimeout(() => router.push('/crime-visit-registry/crime-visits'), 1500);
+                const submitted = crimeVisitService.submit(id);
+                if (submitted) {
+                    showToast(`Submitted — ${submitted.referenceNo}`);
+                    setTimeout(() => router.push('/crime-visit-registry/crime-visits'), 1500);
+                }
             }
         } catch {
-            showToast('Failed to submit.', 'error');
+            showToast('Failed to save and submit additions.', 'error');
         }
     }
 
@@ -170,9 +167,6 @@ function DraftDetail({ id }: { id: string }) {
                                     <p className="text-sm text-gray-500 mt-0.5">Last updated: {formatDateTimeDDMMYYYY(visit.updatedAt)}</p>
                                 </div>
                             </div>
-                            <Button variant="success" onClick={handleSubmit}>
-                                <CheckCircle className="w-4 h-4" /> Submit this Visit
-                            </Button>
                         </div>
 
                         <div className="mb-6 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
@@ -186,7 +180,7 @@ function DraftDetail({ id }: { id: string }) {
                             initialData={lockedData}
                             lockedMode={true}
                             appendMode={true}
-                            onSaveDraft={handleSaveAdditions}
+                            onSubmit={handleSubmitForm}
                             onCancel={() => router.push('/crime-visit-registry/drafts')}
                         />
                     </div>

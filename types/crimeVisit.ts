@@ -60,6 +60,7 @@ export interface SectionC {
 
 export interface DraftAdditions {
     experts?: Expert[];
+    in?: DateTimeEntry;
 }
 
 // ─── Locked snapshot (read-only layer for draft editing) ─────────────────────
