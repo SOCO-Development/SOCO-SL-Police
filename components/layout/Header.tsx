@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import Image from 'next/image';
 import Link from 'next/link';
+import { publicAssetSrc } from '@/lib/publicAsset';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
@@ -177,14 +177,14 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
           <div className="h-full flex items-center justify-between gap-4">
             {/* Logo */}
             <Link href="/home" className="flex items-center gap-3 flex-shrink-0 min-w-0">
-              <Image
-                src="/logo.png"
+              <img
+                src={publicAssetSrc('/logo.png')}
                 alt="SL Police"
                 width={32}
                 height={32}
                 className="object-contain flex-shrink-0"
                 loading="eager"
-                priority
+                fetchPriority="high"
               />
               <div className="hidden sm:block min-w-0">
                 <span className={`text-base font-semibold truncate block transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>SOCO CMS</span>

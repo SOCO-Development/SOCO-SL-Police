@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { publicAssetSrc } from '@/lib/publicAsset';
 import Header from '@/components/layout/Header';
 import {
   FileText,
@@ -274,13 +274,13 @@ export default function HomePage() {
                 <div className="space-y-6">
                   <div className={`flex items-center gap-4 border-b pb-6 w-max pr-12 transition-colors duration-500 ${d ? 'border-slate-800/80' : 'border-gray-200'}`}>
                     <div className={`p-2 rounded-xl border shadow-inner transition-colors duration-500 ${d ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
-                      <Image
-                        src="/logo.png"
+                      <img
+                        src={publicAssetSrc('/logo.png')}
                         alt="Sri Lanka Police"
                         width={48}
                         height={48}
                         className="object-contain drop-shadow-md"
-                        priority
+                        fetchPriority="high"
                       />
                     </div>
                     <div className="flex flex-col">

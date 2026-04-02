@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
+import { getNextBasePath } from "./lib/publicAsset";
+
+const basePath = getNextBasePath();
 
 const nextConfig: NextConfig = {
   /* config options here */
+  ...(basePath ? { basePath } : {}),
   // Serve images directly from /public so deployments without Next image optimizer still work.
   images: {
     unoptimized: true,

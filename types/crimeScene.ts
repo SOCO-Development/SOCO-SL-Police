@@ -58,6 +58,6 @@ export interface CrimeScene {
   updatedAt: string;
 }
 
-export interface CrimeSceneFormData extends Omit<CrimeScene, 'id' | 'createdAt' | 'updatedAt'> {
+export interface CrimeSceneFormData extends Omit<CrimeScene, 'id' | 'createdAt' | 'updatedAt' | 'cvrNo'> {
   cvrNo?: string;
 }

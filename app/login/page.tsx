@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { publicAssetSrc } from '@/lib/publicAsset';
 import FormInput from '@/components/forms/FormInput';
 import { Lock, Shield, User, CheckCircle } from 'lucide-react';
 
@@ -131,15 +131,14 @@ export default function LoginPage() {
                     className="pointer-events-none absolute inset-[10%] rounded-lg bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.04)_0%,transparent_65%)]"
                     aria-hidden
                   />
-                  <Image
-                    src="/logoo.png"
+                  <img
+                    src={publicAssetSrc('/logo.png')}
                     alt="Sri Lanka Police Logo"
                     width={280}
                     height={280}
                     className="relative z-[1] max-h-full max-w-full object-contain object-center drop-shadow-[0_2px_12px_rgba(15,23,42,0.18)]"
-                    sizes="(min-width: 1024px) 224px, 96px"
                     loading="eager"
-                    priority
+                    fetchPriority="high"
                   />
                 </div>
               </div>
@@ -189,15 +188,14 @@ export default function LoginPage() {
                       className="pointer-events-none absolute inset-[12%] rounded-md bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.035)_0%,transparent_70%)]"
                       aria-hidden
                     />
-                    <Image
-                      src="/logoo.png"
+                    <img
+                      src={publicAssetSrc('/logo.png')}
                       alt="Sri Lanka Police Logo"
                       width={180}
                       height={180}
                       className="relative z-[1] max-h-full max-w-full object-contain object-center drop-shadow-[0_2px_8px_rgba(15,23,42,0.15)]"
-                      sizes="116px"
                       loading="eager"
-                      priority
+                      fetchPriority="high"
                     />
                   </div>
                 </div>
