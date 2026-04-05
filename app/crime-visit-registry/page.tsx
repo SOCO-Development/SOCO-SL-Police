@@ -6,10 +6,8 @@ import Footer from '@/components/layout/Footer';
 import FeatureCard from '@/components/cards/FeatureCard';
 import { Clipboard, FileText, List, MapPin } from 'phosphor-react';
 import { CheckCircle } from 'lucide-react';
-import CreateCrimeSceneModal from '@/app/crime-visit-registry/CreateCrimeSceneModal';
 
 export default function CrimeVisitRegistryPage() {
-    const [isCreateSceneOpen, setIsCreateSceneOpen] = useState(false);
     const [toast, setToast] = useState<string>('');
 
     function showToast(message: string) {
@@ -38,7 +36,7 @@ export default function CrimeVisitRegistryPage() {
             subtitle: 'අපරාධ ස්ථාන තොරතුරු එකතු කරන්න',
             description: 'Add one or more crime scenes under a started visit and save with CVR.',
             icon: <MapPin className="w-12 h-12" weight="fill" style={{ color: '#ef4444' }} />,
-            onClick: () => setIsCreateSceneOpen(true),
+            href: '/crime-visit-registry/create-scene',
         },
     ];
 
@@ -60,7 +58,6 @@ export default function CrimeVisitRegistryPage() {
                                         title={card.title}
                                         icon={card.icon}
                                         href={card.href}
-                                        onClick={card.onClick}
                                         subtitle={<span className="font-noto-sinhala">{card.subtitle}</span>}
                                         description={card.description}
                                     />
@@ -71,12 +68,6 @@ export default function CrimeVisitRegistryPage() {
                     <Footer />
                 </main>
             </div>
-
-            <CreateCrimeSceneModal
-                isOpen={isCreateSceneOpen}
-                onClose={() => setIsCreateSceneOpen(false)}
-                onSaved={({ cvrNo }) => showToast(`Crime scene saved - ${cvrNo}`)}
-            />
 
             {toast ? (
                 <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl bg-green-600 text-white text-sm font-medium shadow-lg">
