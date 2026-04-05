@@ -500,15 +500,15 @@ export default function CrimeVisitForm({
                             Cancel
                         </Button>
                         {!appendMode && (
-                            <Button variant="amber" type="button" onClick={handleSaveDraft}>
+                            <Button variant="success" type="button" onClick={handleSaveDraft}>
                                 Save as Draft
                             </Button>
                         )}
-                        {onSubmit && (
+                        {/* {onSubmit && (
                             <Button variant="success" type="button" onClick={() => onSubmit(formData)}>
                                 Submit
                             </Button>
-                        )}
+                        )} */}
                     </div>
                 ) : (
                     <span className="text-xs text-gray-400 italic">Read-only view</span>
