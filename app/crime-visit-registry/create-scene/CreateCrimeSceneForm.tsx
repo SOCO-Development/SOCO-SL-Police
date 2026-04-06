@@ -1,11 +1,11 @@
 'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import type { CrimeSceneFormData, CrimeSceneOfficer, CrimeSceneSpecialistTeam, CrimeSceneVisitType } from '@/types/crimeScene';
 import type { CrimeVisit } from '@/types/crimeVisit';
 import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import CustomSelect from '@/components/forms/CustomSelect';
+import MultiSelect from '@/components/forms/MultiSelect';
 import Button from '@/components/buttons/Button';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
@@ -23,7 +23,6 @@ interface FieldGroupProps {
   children: React.ReactNode;
   className?: string;
 }
-
 function FieldGroup({ label, children, className = '' }: FieldGroupProps) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
@@ -36,7 +35,6 @@ function FieldGroup({ label, children, className = '' }: FieldGroupProps) {
 interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   isReadOnly?: boolean;
 }
-
 function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
   return (
     <input
@@ -51,10 +49,7 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
   );
 }
 
-interface CreateCrimeSceneFormProps {
-  onSaved?: (payload: { cvrNo: string }) => void;
-  onCancel?: () => void;
-}
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const POLICE_STATIONS = [
   'Colombo Fort Police Station',
@@ -89,7 +84,7 @@ const OFFENCE_OPTIONS = [
   'අයුතු ඇතුල්වීම සහ ගෙවල් බිදිම',
   'සොරකම් කිරීම',
   'ගිණි තැබීම් හා අනර්ථය සිදු කිරීම',
-  'බලෙන් ලබා ගැනීම ( මුදლක්, යම් දේපළක් හෝ වටිනා ඇපයක්, වටිනා ඇපයකට හැරවිය හැකි අත්සන් කරනු ලැබු යමක් )',
+  'බලෙන් ලබා ගැනීම ( මුදලක්, යම් දේපළක් හෝ වටිනා ඇපයක්, වටිනා ඇපයකට හැරවිය හැකි අත්සන් කරනු ලැබු යමක් )',
   'රු. 700000/- ක් හෝ ඊට වැඩි සාවද්‍ය පරිහරණය, සාපරාධි විශ්වාසය කඩ කිරීම, වංචා කිරීම සහ අනෙකෙකු ලෙස පෙනි සිට වංචා කිරීම',
   'රාජ්‍ය විරෝධී වැරදි',
   'නීති විරෝධි රැස්වීම / කැරළි කෝලාහල',
@@ -106,19 +101,20 @@ const OFFENCE_OPTIONS = [
   '1993 අංක 49 දරන පනතින් සංශෝධිත 1937 අංක 02 දරන වන සත්ත්ව හා වෘක්ෂලතා ආඥා පනත ( 2009 අංක 22 සංශෝධනය දක්වා සියළු සංශෝධන ඇතුලත් )',
 ].map((value) => ({ value, label: value }));
 
+const OFFENCE_TYPES = [
+  { value: 'D', label: 'D' },
+  { value: 'GCR', label: 'GCR' },
+  { value: 'Other', label: 'Other' },
+];
+
 const VISIT_TYPES: { value: CrimeSceneVisitType; label: string }[] = [
-  { value: 'NEW_VISIT', label: 'New Visit' },
+  { value: 'NEW_VISIT', label: 'New Crime Scene' },
   { value: 'REVISIT', label: 'Revisit' },
 ];
 
 const SPECIALIST_ROLE_OPTIONS = [
-  'Magistrate',
-  'GAD',
-  'JMO',
-  'Finger Print',
-  'Kannel',
-  'Foreign Investigation Officers',
-  'Others',
+  'Magistrate', 'GAD', 'JMO', 'Finger Print', 'Kannel',
+  'Foreign Investigation Officers', 'Others',
 ].map((value) => ({ value, label: value }));
 
 const TEAM_ROLE_OPTIONS = [
@@ -126,12 +122,7 @@ const TEAM_ROLE_OPTIONS = [
   { value: 'Other SOCO Officer', label: 'Other SOCO Officer' },
 ];
 
-const SOCO_ROLE_OPTIONS = [
-  { value: 'Photographer', label: 'Photographer' },
-  { value: 'Sketcher', label: 'Sketcher' },
-  { value: 'Evidence Collector', label: 'Evidence Collector' },
-  { value: 'Other', label: 'Other' },
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function emptyOfficer(): CrimeSceneOfficer {
   return { name: '', regNo: '', rank: '', teamRole: 'Other SOCO Officer', socoRole: 'Other' };
@@ -153,7 +144,8 @@ function defaultForm(): CrimeSceneFormData {
     sceneInTime: '',
     sceneOutTime: '',
     division: '',
-    offence: '',
+    offence: [],
+    offenceType: '',
     placeOfCrimeScene: '',
     inChargeOfficer: emptyOfficer(),
     socoOfficers: [emptyOfficer()],
@@ -177,16 +169,12 @@ function formatDuration(inTime: string, outTime: string): string {
   const inMinutes = toMinutes(inTime);
   const outMinutes = toMinutes(outTime);
   if (inMinutes == null || outMinutes == null) return '--';
-
   let diff = outMinutes - inMinutes;
-  if (diff < 0) {
-    diff += 24 * 60;
-  }
-
-  const hours = Math.floor(diff / 60);
-  const minutes = diff % 60;
-  return `${hours}h ${minutes}m`;
+  if (diff < 0) diff += 24 * 60;
+  return `${Math.floor(diff / 60)}h ${diff % 60}m`;
 }
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeSceneFormProps) {
   const [form, setForm] = useState<CrimeSceneFormData>(defaultForm());
@@ -195,10 +183,10 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const visits = crimeVisitService.getAll();
-    setAllVisits(visits);
-
-    const cvrs = Array.from(new Set(crimeSceneService.getAll().map((scene) => scene.cvrNo))).filter(Boolean);
+    setAllVisits(crimeVisitService.getAll());
+    const cvrs = Array.from(
+      new Set(crimeSceneService.getAll().map((scene) => scene.cvrNo))
+    ).filter(Boolean);
     setExistingCvrs(cvrs);
   }, []);
 
@@ -211,41 +199,45 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
     }));
 
   const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr, label: cvr }));
-
   const sceneDuration = formatDuration(form.sceneInTime, form.sceneOutTime);
+
+  // ── Update helpers ────────────────────────────────────────────────────────
 
   const updateOfficer = useCallback((index: number, patch: Partial<CrimeSceneOfficer>) => {
     setForm((prev) => ({
       ...prev,
-      socoOfficers: prev.socoOfficers.map((officer, i) => (i === index ? { ...officer, ...patch } : officer)),
+      socoOfficers: prev.socoOfficers.map((o, i) => (i === index ? { ...o, ...patch } : o)),
     }));
   }, []);
 
   const updateSceneGuard = useCallback((index: number, patch: Partial<CrimeSceneOfficer>) => {
     setForm((prev) => ({
       ...prev,
-      sceneGuards: (prev.sceneGuards ?? []).map((guard, i) => (i === index ? { ...guard, ...patch } : guard)),
+      sceneGuards: (prev.sceneGuards ?? []).map((g, i) => (i === index ? { ...g, ...patch } : g)),
     }));
   }, []);
 
   const updateSpecialist = useCallback((index: number, patch: Partial<CrimeSceneSpecialistTeam>) => {
     setForm((prev) => ({
       ...prev,
-      specialistTeams: prev.specialistTeams.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+      specialistTeams: prev.specialistTeams.map((t, i) => (i === index ? { ...t, ...patch } : t)),
     }));
   }, []);
 
-  const updateSpecialistMember = useCallback((teamIndex: number, memberIndex: number, patch: Partial<{ name: string; role: string }>) => {
-    setForm((prev) => {
-      const teams = [...prev.specialistTeams];
-      const team = { ...teams[teamIndex] };
-      const members = [...(team.members || [])];
-      members[memberIndex] = { ...members[memberIndex], ...patch };
-      team.members = members;
-      teams[teamIndex] = team;
-      return { ...prev, specialistTeams: teams };
-    });
-  }, []);
+  const updateSpecialistMember = useCallback(
+    (teamIndex: number, memberIndex: number, patch: Partial<{ name: string; role: string }>) => {
+      setForm((prev) => {
+        const teams = [...prev.specialistTeams];
+        const team = { ...teams[teamIndex] };
+        const members = [...(team.members || [])];
+        members[memberIndex] = { ...members[memberIndex], ...patch };
+        team.members = members;
+        teams[teamIndex] = team;
+        return { ...prev, specialistTeams: teams };
+      });
+    },
+    []
+  );
 
   const addSpecialistMember = useCallback((teamIndex: number) => {
     setForm((prev) => {
@@ -269,16 +261,19 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
     });
   }, []);
 
+  // ── Validation & Save ─────────────────────────────────────────────────────
+
   const validate = (): string => {
     if (form.visitType === 'NEW_VISIT' && !form.visitId) return 'Please select a Visit ID.';
     if (form.visitType === 'NEW_VISIT' && !form.cvrNo?.trim()) return 'Please enter a CVR number for the new visit.';
     if (form.visitType === 'REVISIT' && !form.revisitCvrNo) return 'Please select a CVR number for revisit.';
     if (!form.policeStation) return 'Please select a police station.';
-    if (!form.reportedToPoliceStation.date || !form.reportedToPoliceStation.time) return 'Please add date and time reported to Police station.';
-    if (!form.reportedToSocoLab.date || !form.reportedToSocoLab.time) return 'Please add date and time reported to SOCO lab.';
+    if (!form.reportedToPoliceStation.date || !form.reportedToPoliceStation.time)
+      return 'Please add date and time reported to Police station.';
+    if (!form.reportedToSocoLab.date || !form.reportedToSocoLab.time)
+      return 'Please add date and time reported to SOCO lab.';
     if (!form.sceneInTime || !form.sceneOutTime) return 'Please provide scene in and out times.';
     if (!form.division) return 'Please select division.';
-    if (!form.offence.trim()) return 'Please enter offence.';
     if (!form.placeOfCrimeScene.trim()) return 'Please enter place of crime scene.';
     if (!form.inChargeOfficer.name.trim()) return 'Please enter the in-charge officer.';
     return '';
@@ -286,26 +281,18 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
 
   const handleSave = () => {
     const validation = validate();
-    if (validation) {
-      setError(validation);
-      return;
-    }
-
-    const filteredOfficers = form.socoOfficers.filter((officer) => officer.name.trim());
-    const filteredSpecialists = form.specialistTeams.map((team) => ({
-      ...team,
-      members: (team.members || []).filter((m) => m.name.trim()),
-    })).filter((team) => team.role.trim() || (team.members && team.members.length > 0));
-    const filteredSceneGuards = (form.sceneGuards ?? []).filter((guard) => guard.name.trim());
+    if (validation) { setError(validation); return; }
 
     const payload: CrimeSceneFormData = {
       ...form,
       cvrNo: form.visitType === 'NEW_VISIT' ? (form.cvrNo?.trim() ?? '') : form.revisitCvrNo,
       visitId: form.visitType === 'NEW_VISIT' ? form.visitId : '',
       revisitCvrNo: form.visitType === 'REVISIT' ? form.revisitCvrNo : '',
-      socoOfficers: filteredOfficers,
-      specialistTeams: filteredSpecialists,
-      sceneGuards: filteredSceneGuards,
+      socoOfficers: form.socoOfficers.filter((o) => o.name.trim()),
+      specialistTeams: form.specialistTeams
+        .map((t) => ({ ...t, members: (t.members || []).filter((m) => m.name.trim()) }))
+        .filter((t) => t.role.trim() || (t.members && t.members.length > 0)),
+      sceneGuards: (form.sceneGuards ?? []).filter((g) => g.name.trim()),
     };
 
     const created = crimeSceneService.create(payload);
@@ -314,16 +301,25 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
     setForm(defaultForm());
   };
 
+  // ── Offence helpers ───────────────────────────────────────────────────────
+  const offenceArray: string[] = Array.isArray(form.offence)
+    ? form.offence
+    : form.offence ? [form.offence] : [];
+
+  const removeOffence = (idx: number) =>
+    setForm((f) => ({ ...f, offence: offenceArray.filter((_, i) => i !== idx) }));
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ minHeight: '600px' }}>
-      {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="animate-fade-in space-y-5">
+
           <h3 className="text-base font-semibold text-gray-700 uppercase tracking-widest pb-2 border-b border-gray-200">
             Create Crime Scene
           </h3>
 
-          {/* Visit Type & Basic Info */}
+          {/* ── Scene Basics ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
@@ -338,6 +334,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                   placeholder="Select visit type"
                 />
               </FieldGroup>
+
               {form.visitType === 'NEW_VISIT' ? (
                 <FieldGroup label="Visit ID with Date">
                   <CustomSelect
@@ -358,6 +355,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 </FieldGroup>
               )}
             </div>
+
             {form.visitType === 'NEW_VISIT' && (
               <div className="mt-3">
                 <FieldGroup label="CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)">
@@ -371,7 +369,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             )}
           </div>
 
-          {/* Police Station & Division */}
+          {/* ── Location ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
@@ -397,7 +395,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </div>
           </div>
 
-          {/* Reporting Times */}
+          {/* ── Reporting Times ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
             <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
@@ -407,13 +405,17 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
               <FieldGroup label="Date">
                 <DatePicker
                   value={form.reportedToPoliceStation.date}
-                  onChange={(value) => setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, date: value } }))}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, date: value } }))
+                  }
                 />
               </FieldGroup>
               <FieldGroup label="Time">
                 <TimePicker
                   value={form.reportedToPoliceStation.time}
-                  onChange={(value) => setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, time: value } }))}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, time: value } }))
+                  }
                 />
               </FieldGroup>
             </div>
@@ -426,24 +428,29 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
               <FieldGroup label="Date">
                 <DatePicker
                   value={form.reportedToSocoLab.date}
-                  onChange={(value) => setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, date: value } }))}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, date: value } }))
+                  }
                 />
               </FieldGroup>
               <FieldGroup label="Time">
                 <TimePicker
                   value={form.reportedToSocoLab.time}
-                  onChange={(value) => setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, time: value } }))}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, time: value } }))
+                  }
                 />
               </FieldGroup>
             </div>
           </div>
 
-          {/* Scene Details */}
+          {/* ── Scene Times & Details ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-cyan-500 inline-block flex-shrink-0" />
               Scene Times & Details
             </h4>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <FieldGroup label="Scene In Time">
                 <TimePicker
@@ -458,17 +465,57 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 />
               </FieldGroup>
             </div>
+
             <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
               Scene Visit Duration: <span className="font-semibold">{sceneDuration}</span>
             </div>
-            <FieldGroup label="Offence">
-              <CustomSelect
-                value={form.offence}
-                onChange={(value) => setForm((prev) => ({ ...prev, offence: value }))}
+
+            {/* Offences */}
+            <FieldGroup label="Offences">
+              <MultiSelect
+                value={offenceArray}
+                onChange={(val) => setForm((f) => ({ ...f, offence: val }))}
                 options={OFFENCE_OPTIONS}
-                placeholder="Select offence"
+                placeholder="Select one or more offences"
               />
             </FieldGroup>
+
+            {offenceArray.length > 0 && (
+              <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/50">
+                <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-2 px-1">
+                  Selected Offences
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {offenceArray.map((off, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-white border border-violet-200 rounded-lg shadow-sm"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                      <span className="text-xs font-medium text-violet-900 leading-snug">{off}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeOffence(idx)}
+                        className="ml-1 text-violet-400 hover:text-red-500 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Offence Type */}
+            <FieldGroup label="Offence Type">
+              <CustomSelect
+                value={form.offenceType ?? ''}
+                onChange={(val) => setForm((f) => ({ ...f, offenceType: val }))}
+                options={OFFENCE_TYPES}
+                placeholder="D / GCR"
+              />
+            </FieldGroup>
+
             <FieldGroup label="Place of Crime Scene">
               <TextInput
                 value={form.placeOfCrimeScene}
@@ -478,7 +525,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </FieldGroup>
           </div>
 
-          {/* In-Charge Officer */}
+          {/* ── In-Charge Officer ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-green-500 inline-block flex-shrink-0" />
@@ -509,7 +556,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </div>
           </div>
 
-          {/* Support Officers */}
+          {/* ── Support Officers ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-pink-500 inline-block flex-shrink-0" />
@@ -520,7 +567,6 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 const hasOtherTeamLeader = form.socoOfficers.some(
                   (o, i) => i !== index && o.teamRole === 'Team Leader'
                 );
-
                 return (
                   <div key={`officer-${index}`} className="grid grid-cols-[1.2fr,2fr,1fr,40px] gap-3 items-end">
                     <FieldGroup label="Team Role">
@@ -528,7 +574,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                         value={officer.teamRole ?? 'Other SOCO Officer'}
                         onChange={(value) => updateOfficer(index, { teamRole: value })}
                         options={TEAM_ROLE_OPTIONS.filter(
-                          (option) => option.value !== 'Team Leader' || !hasOtherTeamLeader
+                          (opt) => opt.value !== 'Team Leader' || !hasOtherTeamLeader
                         )}
                         placeholder="Select team role"
                       />
@@ -578,7 +624,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </button>
           </div>
 
-          {/* Expert Teams */}
+          {/* ── Expert Teams ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-orange-500 inline-block flex-shrink-0" />
@@ -598,7 +644,6 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                       ×
                     </button>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <FieldGroup label="Expert Role">
                       <CustomSelect
@@ -622,7 +667,6 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                     </FieldGroup>
                   </div>
 
-                  {/* Team Members Section */}
                   <div className="pt-2 border-t border-gray-200 space-y-2">
                     <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Team Members</div>
                     <div className="space-y-2">
@@ -640,7 +684,6 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                               type="button"
                               onClick={() => removeSpecialistMember(index, mIndex)}
                               className="h-10 text-red-400 hover:text-red-600 text-lg leading-none"
-                              disabled={(team.members || []).length <= 1}
                             >
                               ×
                             </button>
@@ -668,7 +711,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </button>
           </div>
 
-          {/* Investigation Officer */}
+          {/* ── Investigation Officer ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-fuchsia-500 inline-block flex-shrink-0" />
@@ -699,7 +742,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </div>
           </div>
 
-          {/* Scene Guards */}
+          {/* ── Scene Guards ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-yellow-500 inline-block flex-shrink-0" />
@@ -750,72 +793,47 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </button>
           </div>
 
-          {/* Attachments */}
+          {/* ── Attachments ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-red-500 inline-block flex-shrink-0" />
               Attachments
             </h4>
             <div className="space-y-3">
-              <FieldGroup label="Photo ZIP">
-                <input
-                  type="file"
-                  accept=".zip,application/zip,application/x-zip-compressed"
-                  onChange={(e) => {
-                    const fileName = e.target.files?.[0]?.name ?? '';
-                    setForm((prev) => ({ ...prev, photoZipName: fileName }));
-                  }}
-                  className="w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-2 hover:file:bg-blue-100"
-                />
-                {form.photoZipName && <p className="text-xs text-gray-500 mt-1">Selected: {form.photoZipName}</p>}
-              </FieldGroup>
-              <FieldGroup label="Sketch">
-                <input
-                  type="file"
-                  onChange={(e) => {
-                    const fileName = e.target.files?.[0]?.name ?? '';
-                    setForm((prev) => ({ ...prev, sketchFileName: fileName }));
-                  }}
-                  className="w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-2 hover:file:bg-blue-100"
-                />
-                {form.sketchFileName && <p className="text-xs text-gray-500 mt-1">Selected: {form.sketchFileName}</p>}
-              </FieldGroup>
-              <FieldGroup label="Report">
-                <input
-                  type="file"
-                  onChange={(e) => {
-                    const fileName = e.target.files?.[0]?.name ?? '';
-                    setForm((prev) => ({ ...prev, reportFileName: fileName }));
-                  }}
-                  className="w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-2 hover:file:bg-blue-100"
-                />
-                {form.reportFileName && <p className="text-xs text-gray-500 mt-1">Selected: {form.reportFileName}</p>}
-              </FieldGroup>
+              {(['photoZipName', 'sketchFileName', 'reportFileName'] as const).map((field, i) => (
+                <FieldGroup key={field} label={['Photo ZIP', 'Sketch', 'Report'][i]}>
+                  <input
+                    type="file"
+                    accept={field === 'photoZipName' ? '.zip,application/zip' : undefined}
+                    onChange={(e) => {
+                      const fileName = e.target.files?.[0]?.name ?? '';
+                      setForm((prev) => ({ ...prev, [field]: fileName }));
+                    }}
+                    className="w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-2 hover:file:bg-blue-100"
+                  />
+                  {form[field] && <p className="text-xs text-gray-500 mt-1">Selected: {form[field]}</p>}
+                </FieldGroup>
+              ))}
             </div>
           </div>
 
-          {/* Error */}
+          {/* ── Error ── */}
           {error && (
             <div className="p-4 rounded-xl border border-red-200 bg-red-50">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
+
         </div>
       </div>
 
-      {/* Bottom Action Bar */}
+      {/* ── Bottom Action Bar ── */}
       <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
         <div />
-
         <div className="flex items-center gap-2">
-          <Button variant="ghost" type="button" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button variant="success" type="button" onClick={handleSave}>
-            Save Crime Scene
-          </Button>
+          <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
+          <Button variant="success" type="button" onClick={handleSave}>Save Crime Scene</Button>
         </div>
-
         <div />
       </div>
     </div>

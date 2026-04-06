@@ -121,7 +121,8 @@ function defaultForm(): CrimeSceneFormData {
     sceneInTime: '',
     sceneOutTime: '',
     division: '',
-    offence: '',
+    offence: {},
+    offenceType: '',
     placeOfCrimeScene: '',
     inChargeOfficer: emptyOfficer(),
     socoOfficers: [emptyOfficer()],
@@ -258,7 +259,6 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
     if (!form.reportedToSocoLab.date || !form.reportedToSocoLab.time) return 'Please add date and time reported to SOCO lab.';
     if (!form.sceneInTime || !form.sceneOutTime) return 'Please provide scene in and out times.';
     if (!form.division) return 'Please select division.';
-    if (!form.offence.trim()) return 'Please enter offence.';
     if (!form.placeOfCrimeScene.trim()) return 'Please enter place of crime scene.';
     if (!form.inChargeOfficer.name.trim()) return 'Please enter the in-charge officer.';
     return '';
@@ -407,13 +407,13 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                   value={form.sceneOutTime}
                   onChange={(value) => setForm((prev) => ({ ...prev, sceneOutTime: value }))}
                 />
-                <CustomSelect
+                {/* <CustomSelect
                   label="Offence"
                   value={form.offence}
                   onChange={(value) => setForm((prev) => ({ ...prev, offence: value }))}
                   options={OFFENCE_OPTIONS}
                   placeholder="Select offence"
-                />
+                /> */}
               </div>
               <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
                 Scene Visit Duration: <span className="font-semibold">{sceneDuration}</span>
