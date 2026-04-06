@@ -336,20 +336,42 @@ function DateTimeRow({
           />
         )}
       </FieldGroup>
+      {/* Page and Para Fields */}
+      <div className="grid grid-cols-2 gap-2">
+        <FieldGroup label="Page">
+          <TextInput
+            isReadOnly={isReadOnly}
+            value={value.page ?? ""}
+            onChange={(e) => onChange({ ...value, page: e.target.value })}
+            placeholder="No."
+          />
+        </FieldGroup>
+        <FieldGroup label="Para">
+          <TextInput
+            isReadOnly={isReadOnly}
+            value={value.para ?? ""}
+            onChange={(e) => onChange({ ...value, para: e.target.value })}
+            placeholder="Para"
+          />
+        </FieldGroup>
+      </div>
     </>
   );
+
   if (layout === "stack") {
     return (
       <div className={label ? "space-y-2" : ""}>
         {label && (
           <div className="text-sm font-medium text-gray-700">{label}</div>
         )}
-        <div className="grid grid-cols-2 gap-2">{fields}</div>
+        {/* Adjusted to 3 columns: Date, Time, and (Page/Para) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{fields}</div>
       </div>
     );
   }
+
   return (
-    <div className="grid gap-3 items-end grid-cols-[150px,1fr,1fr]">
+    <div className="grid gap-3 items-end grid-cols-[120px,1fr,1fr,1fr]">
       <div className="text-sm font-medium text-gray-700 pb-2 leading-tight">
         {label}
       </div>
@@ -751,12 +773,14 @@ export default function CrimeVisitForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
-                OUT & IN
-              </h4>
+          {/* OUT & IN Section */}
+          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-4">
+            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
+              <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
+              OUT & IN Details
+            </h4>
+
+            <div className="grid grid-cols-1 gap-6">
               <DateTimeRow
                 label="OUT"
                 value={sA.out ?? emptyDatetime()}
@@ -764,6 +788,13 @@ export default function CrimeVisitForm({
                 onChange={(v) => updateA("out", v)}
                 layout="stack"
               />
+
+              <div className="border-t border-dashed border-gray-300 relative my-2">
+                <span className="absolute left-4 -top-3 bg-gray-50 px-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                  Return Details
+                </span>
+              </div>
+
               <DateTimeRow
                 label="IN"
                 value={sA.in ?? emptyDatetime()}
@@ -772,7 +803,9 @@ export default function CrimeVisitForm({
                 layout="stack"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
             <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
                 <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
