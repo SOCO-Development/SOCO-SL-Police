@@ -34,6 +34,13 @@ export default function CrimeVisitRegistryPage() {
             href: '/crime-visit-registry/crime-visits',
         },
         {
+            title: 'Submitted Crime Scenes',
+            subtitle: 'යවන ලද අපරාධ ස්ථාන වාර්තා',
+            description: 'View all crime scenes that have been saved under CVR numbers.',
+            icon: <FileText className="w-12 h-12" weight="fill" style={{ color: '#0891b2' }} />,
+            href: '/crime-visit-registry/submitted-crime-scenes',
+        },
+        {
             title: 'Create Crime Scene',
             subtitle: 'අපරාධ ස්ථාන තොරතුරු එකතු කරන්න',
             description: 'Add one or more crime scenes under a started visit and save with CVR.',

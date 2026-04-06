@@ -476,25 +476,27 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                       placeholder="Select SOCO duty"
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr,1fr,44px] gap-3 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr,44px] gap-3 items-end">
                     <FormInput
                       label={`SOCO Officer Name`}
                       value={officer.name}
                       onChange={(e) => updateOfficer(index, { name: e.target.value })}
                       placeholder="Officer name"
                     />
-                    <FormInput
-                      label="Reg. No"
-                      value={officer.regNo}
-                      onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
-                      placeholder="Reg. No"
-                    />
-                    <FormInput
-                      label="Rank"
-                      value={officer.rank}
-                      onChange={(e) => updateOfficer(index, { rank: e.target.value })}
-                      placeholder="Rank"
-                    />
+                    <div className="grid grid-cols-2 gap-3 md:min-w-[280px]">
+                      <FormInput
+                        label="Reg. No"
+                        value={officer.regNo}
+                        onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
+                        placeholder="Reg. No"
+                      />
+                      <FormInput
+                        label="Rank"
+                        value={officer.rank}
+                        onChange={(e) => updateOfficer(index, { rank: e.target.value })}
+                        placeholder="Rank"
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
@@ -627,29 +629,31 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
 
           <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-gray-800">Scene Guard :-</h3>
+              <h3 className="text-sm font-semibold text-gray-800">Scene Guard</h3>
             </div>
             <div className="space-y-3">
               {(form.sceneGuards ?? []).map((guard, index) => (
-                <div key={`snc-guard-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr,1fr,2fr,44px] gap-3 items-end">
-                  <FormInput
-                    label="Rank"
-                    value={guard.rank ?? ''}
-                    onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
-                    placeholder="Rank"
-                  />
-                  <FormInput
-                    label="Reg. Number"
-                    value={guard.regNo ?? ''}
-                    onChange={(e) => updateSceneGuard(index, { regNo: e.target.value })}
-                    placeholder="Reg. No"
-                  />
-                  <FormInput
-                    label={`Name`}
-                    value={guard.name}
-                    onChange={(e) => updateSceneGuard(index, { name: e.target.value })}
-                    placeholder="Guard name"
-                  />
+                <div key={`snc-guard-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr,44px] gap-3 items-end p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <FormInput
+                      label="Rank"
+                      value={guard.rank ?? ''}
+                      onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
+                      placeholder="Rank"
+                    />
+                    <FormInput
+                      label="Reg. Number"
+                      value={guard.regNo ?? ''}
+                      onChange={(e) => updateSceneGuard(index, { regNo: e.target.value })}
+                      placeholder="Reg. No"
+                    />
+                    <FormInput
+                      label="Name"
+                      value={guard.name}
+                      onChange={(e) => updateSceneGuard(index, { name: e.target.value })}
+                      placeholder="Guard name"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
