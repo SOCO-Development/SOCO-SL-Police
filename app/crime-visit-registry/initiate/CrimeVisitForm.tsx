@@ -253,27 +253,23 @@ function OfficerRow({
   compact = false,
 }: OfficerRowProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {!compact && (
         <div className="text-sm font-medium text-gray-700 pb-0.5 leading-tight">
           {label}
         </div>
       )}
-      <FieldGroup label="Name">
-        <TextInput
-          isReadOnly={isReadOnly}
-          value={value.name ?? ""}
-          onChange={(e) => onChange({ ...value, name: e.target.value })}
-          placeholder="Full name"
-        />
-      </FieldGroup>
-      <div
-        className={
-          compact
-            ? "grid grid-cols-1 sm:grid-cols-2 gap-3 items-end"
-            : "grid grid-cols-2 gap-3 items-end"
-        }
-      >
+
+      <div className="grid grid-cols-3 gap-3">
+        <FieldGroup label="Name">
+          <TextInput
+            isReadOnly={isReadOnly}
+            value={value.name ?? ""}
+            onChange={(e) => onChange({ ...value, name: e.target.value })}
+            placeholder="Full name"
+          />
+        </FieldGroup>
+
         <FieldGroup label="Reg. Number">
           <TextInput
             isReadOnly={isReadOnly}
@@ -282,6 +278,7 @@ function OfficerRow({
             placeholder="Reg. No."
           />
         </FieldGroup>
+
         <FieldGroup label="Rank">
           <TextInput
             isReadOnly={isReadOnly}
@@ -805,27 +802,34 @@ export default function CrimeVisitForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
-                Vehicle & Driver
-              </h4>
-              <FieldGroup label="Vehicle Number">
-                <TextInput
+          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-4">
+            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
+              <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
+              Vehicle & Driver Details
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {/* Vehicle Number - Spans 1 column */}
+              <div className="md:col-span-1">
+                <FieldGroup label="Vehicle Number">
+                  <TextInput
+                    isReadOnly={ro}
+                    value={sC.vehicleNo ?? ""}
+                    onChange={(e) => updateC({ vehicleNo: e.target.value })}
+                    placeholder="e.g. CAB-1234"
+                  />
+                </FieldGroup>
+              </div>
+
+              {/* Driver Details - Spans 2 columns */}
+              <div className="md:col-span-2">
+                <OfficerRow
+                  label="Driver"
+                  value={sC.driver ?? emptyOfficer()}
                   isReadOnly={ro}
-                  value={sC.vehicleNo ?? ""}
-                  onChange={(e) => updateC({ vehicleNo: e.target.value })}
-                  placeholder="e.g. CAB-1234"
+                  onChange={(v) => updateC({ driver: v })}
+                  compact
                 />
-              </FieldGroup>
-              <OfficerRow
-                label="Driver"
-                value={sC.driver ?? emptyOfficer()}
-                isReadOnly={ro}
-                onChange={(v) => updateC({ driver: v })}
-                compact
-              />
+              </div>
             </div>
           </div>
 
