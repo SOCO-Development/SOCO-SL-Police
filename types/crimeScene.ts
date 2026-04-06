@@ -40,7 +40,8 @@ export interface CrimeScene {
   sceneInTime: string;
   sceneOutTime: string;
   division: string;
-  offence: string;
+  offence: {};
+  offenceType: string,
   placeOfCrimeScene: string;
 
   inChargeOfficer: CrimeSceneOfficer;

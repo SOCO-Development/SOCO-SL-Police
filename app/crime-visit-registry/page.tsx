@@ -38,6 +38,13 @@ export default function CrimeVisitRegistryPage() {
             icon: <MapPin className="w-12 h-12" weight="fill" style={{ color: '#ef4444' }} />,
             href: '/crime-visit-registry/create-scene',
         },
+        {
+            title: 'Submitted Crime Scenes',
+            subtitle: 'යවන ලද අපරාධ ස්ථාන වාර්තා',
+            description: 'View all crime scenes that have been saved under CVR numbers.',
+            icon: <FileText className="w-12 h-12" weight="fill" style={{ color: '#0891b2' }} />,
+            href: '/crime-visit-registry/submitted-crime-scenes',
+        },
     ];
 
     return (
