@@ -668,7 +668,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                   </div>
 
                   <div className="pt-2 border-t border-gray-200 space-y-2">
-                    <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Team Members</div>
+                    <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Expert Team Members</div>
                     <div className="space-y-2">
                       {(team.members || []).map((member, mIndex) => (
                         <div key={`m-${mIndex}`} className="grid grid-cols-[1fr,40px] gap-2 items-end">
