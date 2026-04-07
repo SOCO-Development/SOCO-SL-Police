@@ -529,7 +529,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-green-500 inline-block flex-shrink-0" />
-              In-Charge Officer
+                Team Leader
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <FieldGroup label="Name">
