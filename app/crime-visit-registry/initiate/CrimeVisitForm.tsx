@@ -862,11 +862,11 @@ export default function CrimeVisitForm({
                 Save as Draft
               </Button>
             )}
-            {/* {onSubmit && (
-                            <Button variant="success" type="button" onClick={() => onSubmit(formData)}>
-                                Submit
-                            </Button>
-                        )} */}
+            {onSubmit && appendMode && (
+              <Button variant="success" type="button" onClick={() => onSubmit(formData)}>
+                Submit
+              </Button>
+            )}
           </div>
         ) : (
           <span className="text-xs text-gray-400 italic">Read-only view</span>
