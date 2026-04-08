@@ -41,7 +41,8 @@ export interface CrimeScene {
   sceneOutTime: string;
   division: string;
   offence: {};
-  offenceType: string,
+  offenceType: string;
+  offenceTypeOther?: string;
   placeOfCrimeScene: string;
 
   inChargeOfficer: CrimeSceneOfficer;
