@@ -146,6 +146,7 @@ function defaultForm(): CrimeSceneFormData {
     division: '',
     offence: [],
     offenceType: '',
+    offenceTypeOther: '',
     placeOfCrimeScene: '',
     inChargeOfficer: emptyOfficer(),
     socoOfficers: [emptyOfficer()],
@@ -327,12 +328,25 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </h4>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <FieldGroup label="Visit Type">
-                <CustomSelect
-                  value={form.visitType}
-                  onChange={(value) => setForm((prev) => ({ ...prev, visitType: value as CrimeSceneVisitType }))}
-                  options={VISIT_TYPES}
-                  placeholder="Select visit type"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                  {VISIT_TYPES.map((option) => (
+                    <label
+                      key={option.value}
+                      className="inline-flex items-center gap-2 text-sm text-gray-700"
+                    >
+                      <input
+                        type="radio"
+                        name="crimeSceneVisitType"
+                        checked={form.visitType === option.value}
+                        onChange={() =>
+                          setForm((prev) => ({ ...prev, visitType: option.value as CrimeSceneVisitType }))
+                        }
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
               </FieldGroup>
 
               {form.visitType === 'NEW_VISIT' ? (
@@ -402,22 +416,24 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
                 Reported to Police
               </h4>
-              <FieldGroup label="Date">
-                <DatePicker
-                  value={form.reportedToPoliceStation.date}
-                  onChange={(value) =>
-                    setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, date: value } }))
-                  }
-                />
-              </FieldGroup>
-              <FieldGroup label="Time">
-                <TimePicker
-                  value={form.reportedToPoliceStation.time}
-                  onChange={(value) =>
-                    setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, time: value } }))
-                  }
-                />
-              </FieldGroup>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <FieldGroup label="Date">
+                  <DatePicker
+                    value={form.reportedToPoliceStation.date}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, date: value } }))
+                    }
+                  />
+                </FieldGroup>
+                <FieldGroup label="Time">
+                  <TimePicker
+                    value={form.reportedToPoliceStation.time}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, reportedToPoliceStation: { ...prev.reportedToPoliceStation, time: value } }))
+                    }
+                  />
+                </FieldGroup>
+              </div>
             </div>
 
             <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
@@ -425,22 +441,24 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
                 Reported to SOCO Lab
               </h4>
-              <FieldGroup label="Date">
-                <DatePicker
-                  value={form.reportedToSocoLab.date}
-                  onChange={(value) =>
-                    setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, date: value } }))
-                  }
-                />
-              </FieldGroup>
-              <FieldGroup label="Time">
-                <TimePicker
-                  value={form.reportedToSocoLab.time}
-                  onChange={(value) =>
-                    setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, time: value } }))
-                  }
-                />
-              </FieldGroup>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <FieldGroup label="Date">
+                  <DatePicker
+                    value={form.reportedToSocoLab.date}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, date: value } }))
+                    }
+                  />
+                </FieldGroup>
+                <FieldGroup label="Time">
+                  <TimePicker
+                    value={form.reportedToSocoLab.time}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, reportedToSocoLab: { ...prev.reportedToSocoLab, time: value } }))
+                    }
+                  />
+                </FieldGroup>
+              </div>
             </div>
           </div>
 
@@ -451,7 +469,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
               Scene Times & Details
             </h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <FieldGroup label="Scene In Time">
                 <TimePicker
                   value={form.sceneInTime}
@@ -464,21 +482,65 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                   onChange={(value) => setForm((prev) => ({ ...prev, sceneOutTime: value }))}
                 />
               </FieldGroup>
+              <FieldGroup label="Scene Visit Duration">
+                <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-blue-50 border-blue-200 text-blue-800">
+                  {sceneDuration}
+                </div>
+              </FieldGroup>
             </div>
 
-            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-              Scene Visit Duration: <span className="font-semibold">{sceneDuration}</span>
-            </div>
+            {/* Offence Type */}
+            <FieldGroup label="Offence Type">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2 md:col-span-1">
+                  {OFFENCE_TYPES.map((option) => (
+                    <label key={option.value} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="radio"
+                        name="crimeSceneOffenceType"
+                        checked={(form.offenceType ?? '') === option.value}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            offenceType: option.value,
+                            offenceTypeOther: option.value === 'Other' ? prev.offenceTypeOther : '',
+                          }))
+                        }
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+                {(form.offenceType ?? '') === 'Other' && (
+                  <TextInput
+                    className="md:col-span-2"
+                    value={form.offenceTypeOther ?? ''}
+                    onChange={(e) => setForm((prev) => ({ ...prev, offenceTypeOther: e.target.value }))}
+                    placeholder="Specify offence type"
+                  />
+                )}
+              </div>
+            </FieldGroup>
 
             {/* Offences */}
-            <FieldGroup label="Offences">
-              <MultiSelect
-                value={offenceArray}
-                onChange={(val) => setForm((f) => ({ ...f, offence: val }))}
-                options={OFFENCE_OPTIONS}
-                placeholder="Select one or more offences"
-              />
-            </FieldGroup>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FieldGroup label="Offences">
+                <MultiSelect
+                  value={offenceArray}
+                  onChange={(val) => setForm((f) => ({ ...f, offence: val }))}
+                  options={OFFENCE_OPTIONS}
+                  placeholder="Select one or more offences"
+                />
+              </FieldGroup>
+              <FieldGroup label="Place of Crime Scene">
+                <TextInput
+                  value={form.placeOfCrimeScene}
+                  onChange={(e) => setForm((prev) => ({ ...prev, placeOfCrimeScene: e.target.value }))}
+                  placeholder="Enter location details"
+                />
+              </FieldGroup>
+            </div>
 
             {offenceArray.length > 0 && (
               <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/50">
@@ -505,24 +567,6 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 </div>
               </div>
             )}
-
-            {/* Offence Type */}
-            <FieldGroup label="Offence Type">
-              <CustomSelect
-                value={form.offenceType ?? ''}
-                onChange={(val) => setForm((f) => ({ ...f, offenceType: val }))}
-                options={OFFENCE_TYPES}
-                placeholder="D / GCR"
-              />
-            </FieldGroup>
-
-            <FieldGroup label="Place of Crime Scene">
-              <TextInput
-                value={form.placeOfCrimeScene}
-                onChange={(e) => setForm((prev) => ({ ...prev, placeOfCrimeScene: e.target.value }))}
-                placeholder="Enter location details"
-              />
-            </FieldGroup>
           </div>
 
           {/* ── In-Charge Officer ── */}
@@ -567,50 +611,65 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 const hasOtherTeamLeader = form.socoOfficers.some(
                   (o, i) => i !== index && o.teamRole === 'Team Leader'
                 );
+                const roleOptions = TEAM_ROLE_OPTIONS.filter(
+                  (opt) => opt.value !== 'Team Leader' || !hasOtherTeamLeader || officer.teamRole === 'Team Leader'
+                );
                 return (
-                  <div key={`officer-${index}`} className="grid grid-cols-[1.2fr,2fr,1fr,40px] gap-3 items-end">
+                  <div key={`officer-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-3">
                     <FieldGroup label="Team Role">
-                      <CustomSelect
-                        value={officer.teamRole ?? 'Other SOCO Officer'}
-                        onChange={(value) => updateOfficer(index, { teamRole: value })}
-                        options={TEAM_ROLE_OPTIONS.filter(
-                          (opt) => opt.value !== 'Team Leader' || !hasOtherTeamLeader
-                        )}
-                        placeholder="Select team role"
-                      />
+                      <div className="grid grid-cols-2 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                        {roleOptions.map((option) => (
+                          <label
+                            key={option.value}
+                            className="inline-flex items-center gap-2 text-sm text-gray-700"
+                          >
+                            <input
+                              type="radio"
+                              name={`team-role-${index}`}
+                              checked={(officer.teamRole ?? 'Other SOCO Officer') === option.value}
+                              onChange={() => updateOfficer(index, { teamRole: option.value })}
+                              className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
                     </FieldGroup>
-                    <FieldGroup label="Name">
-                      <TextInput
-                        value={officer.name}
-                        onChange={(e) => updateOfficer(index, { name: e.target.value })}
-                        placeholder="Full name"
-                      />
-                    </FieldGroup>
-                    <div className="grid grid-cols-2 gap-2">
-                      <FieldGroup label="Reg. No">
+
+                    <div className="flex items-end gap-3">
+                      <FieldGroup label="Name" className="flex-1">
+                        <TextInput
+                          value={officer.name}
+                          onChange={(e) => updateOfficer(index, { name: e.target.value })}
+                          placeholder="Full name"
+                        />
+                      </FieldGroup>
+                      <FieldGroup label="Reg. No" className="flex-1">
                         <TextInput
                           value={officer.regNo}
                           onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
                           placeholder="Reg. No"
                         />
                       </FieldGroup>
-                      <FieldGroup label="Rank">
+                      <FieldGroup label="Rank" className="flex-1">
                         <TextInput
                           value={officer.rank}
                           onChange={(e) => updateOfficer(index, { rank: e.target.value })}
                           placeholder="Rank"
                         />
                       </FieldGroup>
+                      <div className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
+                          className="h-10 self-end whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
+                          disabled={form.socoOfficers.length <= 1}
+                          aria-label="Remove officer"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
-                      className="h-10 text-red-400 hover:text-red-600 text-lg leading-none transition-colors"
-                      disabled={form.socoOfficers.length <= 1}
-                      aria-label="Remove officer"
-                    >
-                      ×
-                    </button>
                   </div>
                 );
               })}
@@ -638,10 +697,10 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                     <button
                       type="button"
                       onClick={() => setForm((prev) => ({ ...prev, specialistTeams: prev.specialistTeams.filter((_, i) => i !== index) }))}
-                      className="text-red-400 hover:text-red-600 text-lg leading-none disabled:opacity-40"
+                      className="h-8 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-2.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
                       disabled={form.specialistTeams.length <= 1}
                     >
-                      ×
+                      Remove
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -673,8 +732,8 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                     </h4>
                     <div className="space-y-2">
                       {(team.members || []).map((member, mIndex) => (
-                        <div key={`m-${mIndex}`} className="grid grid-cols-[1fr,40px] gap-2 items-end">
-                          <FieldGroup label={mIndex === 0 ? 'Team Leader' : `Member ${mIndex}`} className="mb-0">
+                        <div key={`m-${mIndex}`} className="flex items-end gap-3">
+                          <FieldGroup label={mIndex === 0 ? 'Team Leader' : `Member ${mIndex}`} className="mb-0 flex-1">
                             <TextInput
                               value={member.name}
                               onChange={(e) => updateSpecialistMember(index, mIndex, { name: e.target.value })}
@@ -682,13 +741,18 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                             />
                           </FieldGroup>
                           {mIndex > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => removeSpecialistMember(index, mIndex)}
-                              className="h-10 text-red-400 hover:text-red-600 text-lg leading-none"
-                            >
-                              ×
-                            </button>
+                            <div className="shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => removeSpecialistMember(index, mIndex)}
+                                className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
+                          {mIndex === 0 && (
+                            <div className="h-10 w-[74px] shrink-0" aria-hidden />
                           )}
                         </div>
                       ))}
@@ -752,37 +816,39 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </h4>
             <div className="space-y-3">
               {(form.sceneGuards ?? []).map((guard, index) => (
-                <div key={`snc-guard-${index}`} className="grid grid-cols-[1fr,1fr,1.5fr,40px] gap-3 items-end">
-                  <FieldGroup label={index === 0 ? 'Rank' : ''} className="mb-0">
-                    <TextInput
-                      value={guard.rank ?? ''}
-                      onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
-                      placeholder="Rank"
-                    />
-                  </FieldGroup>
-                  <FieldGroup label={index === 0 ? 'Reg. No' : ''} className="mb-0">
-                    <TextInput
-                      value={guard.regNo ?? ''}
-                      onChange={(e) => updateSceneGuard(index, { regNo: e.target.value })}
-                      placeholder="Reg. No"
-                    />
-                  </FieldGroup>
-                  <FieldGroup label={index === 0 ? 'Name' : ''} className="mb-0">
+                <div key={`snc-guard-${index}`} className="flex items-end gap-3">
+                  <FieldGroup label="Name" className="mb-0 flex-1">
                     <TextInput
                       value={guard.name}
                       onChange={(e) => updateSceneGuard(index, { name: e.target.value })}
                       placeholder="Guard name"
                     />
                   </FieldGroup>
-                  <button
-                    type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
-                    className="h-10 text-red-400 hover:text-red-600 text-lg leading-none"
-                    disabled={(form.sceneGuards ?? []).length <= 1}
-                    aria-label="Remove guard"
-                  >
-                    ×
-                  </button>
+                  <FieldGroup label="Reg. Number" className="mb-0 flex-1">
+                    <TextInput
+                      value={guard.regNo ?? ''}
+                      onChange={(e) => updateSceneGuard(index, { regNo: e.target.value })}
+                      placeholder="Reg. No"
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Rank" className="mb-0 flex-1">
+                    <TextInput
+                      value={guard.rank ?? ''}
+                      onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
+                      placeholder="Rank"
+                    />
+                  </FieldGroup>
+                  <div className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
+                      className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
+                      disabled={(form.sceneGuards ?? []).length <= 1}
+                      aria-label="Remove guard"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

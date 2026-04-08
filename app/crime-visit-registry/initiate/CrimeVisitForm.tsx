@@ -109,6 +109,7 @@ const OFFENCE_TYPES = [
   { value: "GCR", label: "GCR" },
   { value: "Other", label: "Other" },
 ];
+const OFFENCE_TYPE_PRESETS = OFFENCE_TYPES.map((item) => item.value);
 
 let supportOfficerRowSeed = 1;
 
@@ -171,6 +172,7 @@ function defaultFormData(): CrimeVisitFormData {
       requestDivision: "",
       offence: "",
       offenceType: "",
+      offenceTypeOther: "",
       requestReason: "",
       reportedToSocoLab: { date: "", time: "" },
       out: emptyDatetime(),
@@ -333,25 +335,22 @@ function DateTimeRow({
           />
         )}
       </FieldGroup>
-      {/* Page and Para Fields */}
-      <div className="grid grid-cols-2 gap-2">
-        <FieldGroup label="Page">
-          <TextInput
-            isReadOnly={isReadOnly}
-            value={value.page ?? ""}
-            onChange={(e) => onChange({ ...value, page: e.target.value })}
-            placeholder="No."
-          />
-        </FieldGroup>
-        <FieldGroup label="Para">
-          <TextInput
-            isReadOnly={isReadOnly}
-            value={value.para ?? ""}
-            onChange={(e) => onChange({ ...value, para: e.target.value })}
-            placeholder="Para"
-          />
-        </FieldGroup>
-      </div>
+      <FieldGroup label="Page">
+        <TextInput
+          isReadOnly={isReadOnly}
+          value={value.page ?? ""}
+          onChange={(e) => onChange({ ...value, page: e.target.value })}
+          placeholder="No."
+        />
+      </FieldGroup>
+      <FieldGroup label="Para">
+        <TextInput
+          isReadOnly={isReadOnly}
+          value={value.para ?? ""}
+          onChange={(e) => onChange({ ...value, para: e.target.value })}
+          placeholder="Para"
+        />
+      </FieldGroup>
     </>
   );
 
@@ -361,8 +360,9 @@ function DateTimeRow({
         {label && (
           <div className="text-sm font-medium text-gray-700">{label}</div>
         )}
-        {/* Adjusted to 3 columns: Date, Time, and (Page/Para) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{fields}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {fields}
+        </div>
       </div>
     );
   }
@@ -382,11 +382,15 @@ function DateTimeRow({
 interface SupportOfficersEditorProps {
   rows: SupportOfficerRow[];
   isReadOnly?: boolean;
+  otherRoleLabel: string;
+  onOtherRoleLabelChange: (value: string) => void;
   onChange: (rows: SupportOfficerRow[]) => void;
 }
 function SupportOfficersEditor({
   rows,
   isReadOnly = false,
+  otherRoleLabel,
+  onOtherRoleLabelChange,
   onChange,
 }: SupportOfficersEditorProps) {
   const updateRow = (id: number, patch: Partial<SupportOfficerRow>) =>
@@ -409,46 +413,69 @@ function SupportOfficersEditor({
         {rows.map((row) => (
           <div
             key={row.id}
-            className="grid grid-cols-[1.2fr,2fr,1fr,40px] gap-3 items-end"
+            className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-3"
           >
             <FieldGroup label="Role">
               {isReadOnly ? (
                 <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
-                  {SUPPORT_ROLE_OPTIONS.find((o) => o.value === row.role)
-                    ?.label ??
+                  {SUPPORT_ROLE_OPTIONS.find((o) => o.value === row.role)?.label ??
                     (row.role || "—")}
                 </div>
               ) : (
-                <CustomSelect
-                  value={row.role}
-                  onChange={(v) =>
-                    updateRow(row.id, { role: v as SupportRole })
-                  }
-                  options={SUPPORT_ROLE_OPTIONS.filter(
-                    (opt) =>
-                      opt.value === row.role ||
-                      !rows.some(
-                        (r) => r.id !== row.id && r.role === opt.value,
-                      ),
+                <div
+                  className={`grid gap-2 ${
+                    row.role === "otherOfficer"
+                      ? "grid-cols-1 md:grid-cols-4"
+                      : "grid-cols-1"
+                  }`}
+                >
+                  <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                    {SUPPORT_ROLE_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="inline-flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="radio"
+                          name={`support-role-${row.id}`}
+                          checked={row.role === opt.value}
+                          onChange={() =>
+                            updateRow(row.id, { role: opt.value as SupportRole })
+                          }
+                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                  {row.role === "otherOfficer" && (
+                    <div className="md:col-span-1">
+                      <TextInput
+                        isReadOnly={isReadOnly}
+                        value={otherRoleLabel}
+                        onChange={(e) => onOtherRoleLabelChange(e.target.value)}
+                        placeholder="Specify role"
+                      />
+                    </div>
                   )}
-                  placeholder="Select role"
-                />
+                </div>
               )}
             </FieldGroup>
-            <FieldGroup label="Name">
-              <TextInput
-                isReadOnly={isReadOnly}
-                value={row.officer.name ?? ""}
-                onChange={(e) =>
-                  updateRow(row.id, {
-                    officer: { ...row.officer, name: e.target.value },
-                  })
-                }
-                placeholder="Full name"
-              />
-            </FieldGroup>
-            <div className="grid grid-cols-2 gap-2">
-              <FieldGroup label="Reg. Number">
+
+            <div className="flex items-end gap-3">
+              <FieldGroup label="Name" className="flex-1">
+                <TextInput
+                  isReadOnly={isReadOnly}
+                  value={row.officer.name ?? ""}
+                  onChange={(e) =>
+                    updateRow(row.id, {
+                      officer: { ...row.officer, name: e.target.value },
+                    })
+                  }
+                  placeholder="Full name"
+                />
+              </FieldGroup>
+              <FieldGroup label="Reg. Number" className="flex-1">
                 <TextInput
                   isReadOnly={isReadOnly}
                   value={row.officer.regNo ?? ""}
@@ -460,7 +487,7 @@ function SupportOfficersEditor({
                   placeholder="Reg. No."
                 />
               </FieldGroup>
-              <FieldGroup label="Rank">
+              <FieldGroup label="Rank" className="flex-1">
                 <TextInput
                   isReadOnly={isReadOnly}
                   value={row.officer.rank ?? ""}
@@ -472,19 +499,21 @@ function SupportOfficersEditor({
                   placeholder="Rank"
                 />
               </FieldGroup>
+              {!isReadOnly ? (
+                <div className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.id)}
+                    className="h-10 w-auto self-end whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-2 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-[11px] font-semibold"
+                    aria-label="Remove officer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div />
+              )}
             </div>
-            {!isReadOnly ? (
-              <button
-                type="button"
-                onClick={() => removeRow(row.id)}
-                className="h-10 text-red-400 hover:text-red-600 text-lg leading-none transition-colors"
-                aria-label="Remove officer"
-              >
-                ×
-              </button>
-            ) : (
-              <div />
-            )}
           </div>
         ))}
       </div>
@@ -527,6 +556,14 @@ export default function CrimeVisitForm({
 }: CrimeVisitFormProps) {
   const [formData, setFormData] = useState<CrimeVisitFormData>(
     initialData ?? defaultFormData(),
+  );
+  const [offenceTypeOther, setOffenceTypeOther] = useState<string>(() => {
+    const defaults = initialData ?? defaultFormData();
+    const value = defaults.sectionA?.offenceType ?? "";
+    return defaults.sectionA?.offenceTypeOther ?? (OFFENCE_TYPE_PRESETS.includes(value) ? "" : value);
+  });
+  const [supportOtherRole, setSupportOtherRole] = useState<string>(
+    () => (initialData ?? defaultFormData()).sectionB?.socoOfficers?.supportOtherRole ?? "",
   );
   const [supportRows, setSupportRows] = useState<SupportOfficerRow[]>(() =>
     supportToRows(
@@ -663,6 +700,7 @@ export default function CrimeVisitForm({
                   </div>
                 ) : (
                   <MultiSelect
+                    className="[&>div>button]:min-h-10 [&>div>button]:px-3 [&>div>button]:py-2"
                     value={
                       Array.isArray(sA.offence)
                         ? sA.offence
@@ -724,23 +762,68 @@ export default function CrimeVisitForm({
 
               <FieldGroup label="Offence Type">
                 {locked ? (
-                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500 font-medium">
-                    {sA.offenceType || "—"}
+                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
+                    {sA.offenceType === "Other"
+                      ? sA.offenceTypeOther || offenceTypeOther || "Other"
+                      : sA.offenceType || "—"}
                   </div>
                 ) : (
-                  <CustomSelect
-                    value={sA.offenceType ?? ""}
-                    onChange={(val) =>
-                      setFormData((f) => ({
-                        ...f,
-                        sectionA: { ...f.sectionA, offenceType: val },
-                      }))
-                    }
-                    options={OFFENCE_TYPES}
-                    placeholder="D / GCR"
-                  />
+                  <div className="grid grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                    {OFFENCE_TYPES.map((option) => (
+                      <label
+                        key={option.value}
+                        className="inline-flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="radio"
+                          name="offenceType"
+                          checked={(sA.offenceType ?? "") === option.value}
+                          onChange={() =>
+                            setFormData((f) => ({
+                              ...f,
+                              sectionA: {
+                                ...f.sectionA,
+                                offenceType: option.value,
+                                offenceTypeOther:
+                                  option.value === "Other"
+                                    ? f.sectionA.offenceTypeOther
+                                    : "",
+                              },
+                            }))
+                          }
+                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
                 )}
               </FieldGroup>
+
+              {(sA.offenceType ?? "") === "Other" && (
+                <FieldGroup
+                  label="Other Offence Type"
+                  className="md:col-start-2 lg:col-start-2"
+                >
+                  <TextInput
+                    isReadOnly={locked}
+                    value={sA.offenceTypeOther ?? offenceTypeOther}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setOffenceTypeOther(next);
+                      setFormData((f) => ({
+                        ...f,
+                        sectionA: {
+                          ...f.sectionA,
+                          offenceType: "Other",
+                          offenceTypeOther: next,
+                        },
+                      }));
+                    }}
+                    placeholder="Specify offence type"
+                  />
+                </FieldGroup>
+              )}
 
               {/* <FieldGroup
                 label="Reason"
@@ -807,29 +890,51 @@ export default function CrimeVisitForm({
               <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
               Vehicle & Driver Details
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-              {/* Vehicle Number - Spans 1 column */}
-              <div className="md:col-span-1">
-                <FieldGroup label="Vehicle Number">
-                  <TextInput
-                    isReadOnly={ro}
-                    value={sC.vehicleNo ?? ""}
-                    onChange={(e) => updateC({ vehicleNo: e.target.value })}
-                    placeholder="e.g. CAB-1234"
-                  />
-                </FieldGroup>
-              </div>
-
-              {/* Driver Details - Spans 2 columns */}
-              <div className="md:col-span-2">
-                <OfficerRow
-                  label="Driver"
-                  value={sC.driver ?? emptyOfficer()}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
+              <FieldGroup label="Vehicle Number">
+                <TextInput
                   isReadOnly={ro}
-                  onChange={(v) => updateC({ driver: v })}
-                  compact
+                  value={sC.vehicleNo ?? ""}
+                  onChange={(e) => updateC({ vehicleNo: e.target.value })}
+                  placeholder="e.g. CAB-1234"
                 />
-              </div>
+              </FieldGroup>
+              <FieldGroup label="Driver Name">
+                <TextInput
+                  isReadOnly={ro}
+                  value={sC.driver?.name ?? ""}
+                  onChange={(e) =>
+                    updateC({
+                      driver: { ...(sC.driver ?? emptyOfficer()), name: e.target.value },
+                    })
+                  }
+                  placeholder="Full name"
+                />
+              </FieldGroup>
+              <FieldGroup label="Driver Reg. Number">
+                <TextInput
+                  isReadOnly={ro}
+                  value={sC.driver?.regNo ?? ""}
+                  onChange={(e) =>
+                    updateC({
+                      driver: { ...(sC.driver ?? emptyOfficer()), regNo: e.target.value },
+                    })
+                  }
+                  placeholder="Reg. No."
+                />
+              </FieldGroup>
+              <FieldGroup label="Driver Rank">
+                <TextInput
+                  isReadOnly={ro}
+                  value={sC.driver?.rank ?? ""}
+                  onChange={(e) =>
+                    updateC({
+                      driver: { ...(sC.driver ?? emptyOfficer()), rank: e.target.value },
+                    })
+                  }
+                  placeholder="Rank"
+                />
+              </FieldGroup>
             </div>
           </div>
 
@@ -841,6 +946,20 @@ export default function CrimeVisitForm({
             <SupportOfficersEditor
               rows={supportRows}
               isReadOnly={locked}
+              otherRoleLabel={supportOtherRole}
+              onOtherRoleLabelChange={(next) => {
+                setSupportOtherRole(next);
+                setFormData((f) => ({
+                  ...f,
+                  sectionB: {
+                    ...f.sectionB,
+                    socoOfficers: {
+                      ...f.sectionB?.socoOfficers,
+                      supportOtherRole: next,
+                    },
+                  },
+                }));
+              }}
               onChange={updateSupportRows}
             />
           </div>
@@ -854,7 +973,12 @@ export default function CrimeVisitForm({
         {/* Centre actions */}
         {!readOnlyAll ? (
           <div className="flex items-center gap-2">
-            <Button variant="ghost" type="button" onClick={onCancel}>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={onCancel}
+              className="min-h-[30px] px-2.5 py-1 text-[11px]"
+            >
               Cancel
             </Button>
             {!appendMode && (

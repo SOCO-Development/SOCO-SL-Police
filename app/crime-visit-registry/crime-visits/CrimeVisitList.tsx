@@ -11,6 +11,7 @@ interface CrimeVisitListProps {
     visits: CrimeVisit[];
     onDelete?: (id: string) => void;
     showStatusBadge?: boolean;
+    draftDetailBasePath?: '/crime-visit-registry/drafts' | '/crime-visit-registry/crime-visits';
     sortKey?: keyof CrimeVisit | string | null;
     sortAsc?: boolean;
     onSort?: (key: keyof CrimeVisit | string) => void;
@@ -46,6 +47,7 @@ export default function CrimeVisitList({
     visits,
     onDelete,
     showStatusBadge = true,
+    draftDetailBasePath = '/crime-visit-registry/drafts',
     sortKey = null,
     sortAsc = true,
     onSort,
@@ -110,7 +112,7 @@ export default function CrimeVisitList({
             render: (_, row) => {
                 const isDraft = row.status === 'DRAFT';
                 const detailHref = isDraft
-                    ? `/crime-visit-registry/drafts?id=${row.id}`
+                    ? `${draftDetailBasePath}?id=${row.id}`
                     : `/crime-visit-registry/crime-visits?id=${row.id}`;
                 return (
                     <div className="flex items-center justify-end gap-2">

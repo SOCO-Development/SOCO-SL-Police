@@ -22,7 +22,10 @@ export default function CreateCrimeScenePage() {
   function handleSaved(payload: { cvrNo: string }) {
     try {
       showToast(`Crime scene saved — ${payload.cvrNo}`);
-      setTimeout(() => router.push(`/crime-visit-registry/view?cvrNo=${payload.cvrNo}`), 1500);
+      setTimeout(
+        () => router.push(`/crime-visit-registry/submitted-crime-scenes?cvrNo=${encodeURIComponent(payload.cvrNo)}`),
+        1500
+      );
     } catch {
       showToast('Failed to save.', 'error');
     }

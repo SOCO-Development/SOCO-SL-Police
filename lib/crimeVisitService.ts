@@ -47,6 +47,11 @@ export const crimeVisitService = {
         return loadAll().filter((v) => v.status === 'DRAFT');
     },
 
+    /** Retrieve only submitted visits */
+    getSubmitted(): CrimeVisit[] {
+        return loadAll().filter((v) => v.status === 'SUBMITTED');
+    },
+
     /** Retrieve by id */
     getById(id: string): CrimeVisit | undefined {
         return loadAll().find((v) => v.id === id);
