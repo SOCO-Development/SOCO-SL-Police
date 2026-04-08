@@ -300,18 +300,18 @@ export default function HomePage() {
                 </div>
 
                 {/* Primary CTA */}
-                <div
-                  className={`inline-flex items-center gap-3 px-8 py-4 font-semibold rounded-xl border cursor-not-allowed transition-colors duration-500 ${
+                <Link
+                  href="/crime-visit-registry"
+                  className={`inline-flex items-center gap-3 px-8 py-4 font-semibold rounded-xl border transition-colors duration-500 ${
                     d
-                      ? 'bg-slate-700/60 text-slate-400 border-slate-600/50'
-                      : 'bg-gray-100 text-gray-400 border-gray-200'
+                      ? 'bg-blue-600/20 text-blue-200 border-blue-500/40 hover:bg-blue-600/30'
+                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
                   }`}
-                  aria-disabled="true"
                 >
                   <Shield className="w-5 h-5" />
                   <span className="tracking-wide">Access Platform</span>
                   <ArrowRight className="w-5 h-5" />
-                </div>
+                </Link>
               </div>
 
               {/* Right Radar Component */}
