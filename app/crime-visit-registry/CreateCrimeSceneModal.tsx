@@ -95,6 +95,7 @@ const SPECIALIST_ROLE_OPTIONS = [
 const TEAM_ROLE_OPTIONS = [
   { value: 'Photographer', label: 'Photographer' },
   { value: 'Sketcher', label: 'Sketcher' },
+  { value: 'Evidence Collector', label: 'Evidence Collector' },
   { value: 'Other', label: 'Other' },
 ];
 
@@ -484,36 +485,43 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Team Role</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
-                          {TEAM_ROLE_OPTIONS.map((option) => (
-                            <label key={option.value} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                              <input
-                                type="radio"
-                                name={`team-role-${index}`}
-                                checked={(officer.teamRole ?? 'Other') === option.value}
-                                onChange={() =>
-                                  updateOfficer(index, {
-                                    teamRole: option.value,
-                                    teamRoleOther: option.value === 'Other' ? (officer.teamRoleOther ?? '') : '',
-                                  })
-                                }
-                                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                              />
-                              {option.label}
-                            </label>
-                          ))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
+                        <div className="min-w-0">
+                          <div className="grid w-full grid-cols-4 gap-x-2 sm:gap-x-3 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                            {TEAM_ROLE_OPTIONS.map((option) => (
+                              <label
+                                key={option.value}
+                                className="flex min-w-0 w-full items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                              >
+                                <input
+                                  type="radio"
+                                  name={`team-role-${index}`}
+                                  checked={(officer.teamRole ?? 'Other') === option.value}
+                                  onChange={() =>
+                                    updateOfficer(index, {
+                                      teamRole: option.value,
+                                      teamRoleOther: option.value === 'Other' ? (officer.teamRoleOther ?? '') : '',
+                                    })
+                                  }
+                                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                />
+                                {option.label}
+                              </label>
+                            ))}
+                          </div>
                         </div>
-                        {(officer.teamRole ?? 'Other') === 'Other' ? (
-                          <FormInput
-                            label="Other Team Role"
-                            value={officer.teamRoleOther ?? ''}
-                            onChange={(e) => updateOfficer(index, { teamRoleOther: e.target.value })}
-                            placeholder="Specify team role"
-                          />
-                        ) : (
-                          <div />
-                        )}
+                        <div className="min-w-0 w-full">
+                          {(officer.teamRole ?? 'Other') === 'Other' ? (
+                            <FormInput
+                              label="Other Team Role"
+                              value={officer.teamRoleOther ?? ''}
+                              onChange={(e) => updateOfficer(index, { teamRoleOther: e.target.value })}
+                              placeholder="Specify team role"
+                            />
+                          ) : (
+                            <div className="min-h-10" />
+                          )}
+                        </div>
                       </div>
                     </div>
                     <CustomSelect

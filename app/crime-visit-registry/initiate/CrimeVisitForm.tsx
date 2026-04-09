@@ -415,55 +415,57 @@ function SupportOfficersEditor({
             key={row.id}
             className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-3"
           >
-            <FieldGroup label="Role">
+            <FieldGroup label="Team Role">
               {isReadOnly ? (
                 <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                   {SUPPORT_ROLE_OPTIONS.find((o) => o.value === row.role)?.label ??
                     (row.role || "—")}
                 </div>
               ) : (
-                <div
-                  className={`grid gap-2 ${
-                    row.role === "otherOfficer"
-                      ? "grid-cols-1 md:grid-cols-4"
-                      : "grid-cols-1"
-                  }`}
-                >
-                  <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
-                    {SUPPORT_ROLE_OPTIONS.map((opt) => (
-                      <label
-                        key={opt.value}
-                        className="inline-flex items-center gap-2 text-sm text-gray-700"
-                      >
-                        <input
-                          type="radio"
-                          name={`support-role-${row.id}`}
-                          checked={row.role === opt.value}
-                          onChange={() =>
-                            updateRow(row.id, { role: opt.value as SupportRole })
-                          }
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        {opt.label}
-                      </label>
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
+                  <div className="min-w-0">
+                    <div className="grid w-full grid-cols-4 gap-x-2 sm:gap-x-3 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                      {SUPPORT_ROLE_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="flex min-w-0 w-full items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name={`support-role-${row.id}`}
+                            checked={row.role === opt.value}
+                            onChange={() => {
+                              const nextRole = opt.value as SupportRole;
+                              updateRow(row.id, { role: nextRole });
+                              if (nextRole !== "otherOfficer") {
+                                onOtherRoleLabelChange("");
+                              }
+                            }}
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          />
+                          {opt.label}
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                  {row.role === "otherOfficer" && (
-                    <div className="md:col-span-1">
+                  <div className="min-w-0 w-full">
+                    {row.role === "otherOfficer" ? (
                       <TextInput
                         isReadOnly={isReadOnly}
                         value={otherRoleLabel}
                         onChange={(e) => onOtherRoleLabelChange(e.target.value)}
-                        placeholder="Specify role"
+                        placeholder="Specify team role"
                       />
-                    </div>
-                  )}
+                    ) : (
+                      <div className="min-h-10" />
+                    )}
+                  </div>
                 </div>
               )}
             </FieldGroup>
 
             <div className="flex items-end gap-3">
-              <FieldGroup label="Name" className="flex-1">
+              <FieldGroup label="Name" className="mb-0 flex-1">
                 <TextInput
                   isReadOnly={isReadOnly}
                   value={row.officer.name ?? ""}
@@ -475,7 +477,7 @@ function SupportOfficersEditor({
                   placeholder="Full name"
                 />
               </FieldGroup>
-              <FieldGroup label="Reg. Number" className="flex-1">
+              <FieldGroup label="Reg. No" className="mb-0 flex-1">
                 <TextInput
                   isReadOnly={isReadOnly}
                   value={row.officer.regNo ?? ""}
@@ -484,10 +486,10 @@ function SupportOfficersEditor({
                       officer: { ...row.officer, regNo: e.target.value },
                     })
                   }
-                  placeholder="Reg. No."
+                  placeholder="Reg. No"
                 />
               </FieldGroup>
-              <FieldGroup label="Rank" className="flex-1">
+              <FieldGroup label="Rank" className="mb-0 flex-1">
                 <TextInput
                   isReadOnly={isReadOnly}
                   value={row.officer.rank ?? ""}
@@ -504,7 +506,7 @@ function SupportOfficersEditor({
                   <button
                     type="button"
                     onClick={() => removeRow(row.id)}
-                    className="h-10 w-auto self-end whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-2 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-[11px] font-semibold"
+                    className="h-10 self-end whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
                     aria-label="Remove officer"
                   >
                     Remove
@@ -940,7 +942,7 @@ export default function CrimeVisitForm({
 
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+              <span className="w-1.5 h-4 rounded-full bg-pink-500 inline-block flex-shrink-0" />
               Support Officers
             </h4>
             <SupportOfficersEditor
