@@ -87,9 +87,27 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
           <DisplayField label="Team Leader Name" value={readValue(scene.inChargeOfficer?.name)} />
           <DisplayField label="Team Leader Reg. Number" value={readValue(scene.inChargeOfficer?.regNo)} />
           <DisplayField label="Team Leader Rank" value={readValue(scene.inChargeOfficer?.rank)} />
-          <DisplayField label="Investigation Officer Name" value={readValue(scene.investigationOfficer?.name)} />
-          <DisplayField label="Investigation Officer Reg. Number" value={readValue(scene.investigationOfficer?.regNo)} />
-          <DisplayField label="Investigation Officer Rank" value={readValue(scene.investigationOfficer?.rank)} />
+        </div>
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Investigation Officers
+          </div>
+          {(scene.investigationOfficers ?? []).length > 0 ? (
+            <div className="mt-3 space-y-3">
+              {(scene.investigationOfficers ?? []).map((io, idx) => (
+                <div
+                  key={`io-${idx}-${io.name}`}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-3 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2"
+                >
+                  <DisplayField label="Name" value={readValue(io.name)} />
+                  <DisplayField label="Reg. Number" value={readValue(io.regNo)} />
+                  <DisplayField label="Rank" value={readValue(io.rank)} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-1 text-sm text-gray-500">—</div>
+          )}
         </div>
       </div>
     </div>

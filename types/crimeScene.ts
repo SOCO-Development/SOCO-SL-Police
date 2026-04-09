@@ -15,6 +15,7 @@ export interface CrimeSceneOfficer {
   regNo?: string;
   rank?: string;
   teamRole?: string;
+  teamRoleOther?: string;
   socoRole?: string;
 }
 
@@ -59,7 +60,7 @@ export interface CrimeScene {
   socoOfficers: CrimeSceneOfficer[];
   specialistTeams: CrimeSceneSpecialistTeam[];
 
-  investigationOfficer?: CrimeSceneOfficer;
+  investigationOfficers?: CrimeSceneOfficer[];
   sceneGuards?: CrimeSceneOfficer[];
 
   photoZipName?: string;

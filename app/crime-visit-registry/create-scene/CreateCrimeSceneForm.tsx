@@ -126,14 +126,15 @@ const SPECIALIST_ROLE_OPTIONS = [
 ].map((value) => ({ value, label: value }));
 
 const TEAM_ROLE_OPTIONS = [
-  { value: 'Team Leader', label: 'Team Leader' },
-  { value: 'Other SOCO Officer', label: 'Other SOCO Officer' },
+  { value: 'Photographer', label: 'Photographer' },
+  { value: 'Sketcher', label: 'Sketcher' },
+  { value: 'Other', label: 'Other' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function emptyOfficer(): CrimeSceneOfficer {
-  return { name: '', regNo: '', rank: '', teamRole: 'Other SOCO Officer', socoRole: 'Other' };
+  return { name: '', regNo: '', rank: '', teamRole: 'Other', teamRoleOther: '', socoRole: 'Other' };
 }
 
 function emptySpecialist(): CrimeSceneSpecialistTeam {
@@ -159,7 +160,7 @@ function defaultForm(): CrimeSceneFormData {
     inChargeOfficer: emptyOfficer(),
     socoOfficers: [emptyOfficer()],
     specialistTeams: [emptySpecialist()],
-    investigationOfficer: emptyOfficer(),
+    investigationOfficers: [emptyOfficer()],
     sceneGuards: [emptyOfficer()],
     photoZipName: '',
     sketchFileName: '',
@@ -223,6 +224,15 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
     setForm((prev) => ({
       ...prev,
       sceneGuards: (prev.sceneGuards ?? []).map((g, i) => (i === index ? { ...g, ...patch } : g)),
+    }));
+  }, []);
+
+  const updateInvestigationOfficer = useCallback((index: number, patch: Partial<CrimeSceneOfficer>) => {
+    setForm((prev) => ({
+      ...prev,
+      investigationOfficers: (prev.investigationOfficers ?? []).map((o, i) =>
+        i === index ? { ...o, ...patch } : o
+      ),
     }));
   }, []);
 
@@ -307,6 +317,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
         .map((t) => ({ ...t, members: (t.members || []).filter((m) => m.name.trim()) }))
         .filter((t) => t.role.trim() || (t.members && t.members.length > 0)),
       sceneGuards: (form.sceneGuards ?? []).filter((g) => g.name.trim()),
+      investigationOfficers: (form.investigationOfficers ?? []).filter((o) => o.name.trim()),
     };
 
     const created = crimeSceneService.create(payload);
@@ -502,6 +513,16 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
               </FieldGroup>
             </div>
 
+            {/* Offences */}
+            <FieldGroup label="Offences">
+              <MultiSelect
+                value={offenceArray}
+                onChange={(val) => setForm((f) => ({ ...f, offence: val }))}
+                options={OFFENCE_OPTIONS}
+                placeholder="Select one or more offences"
+              />
+            </FieldGroup>
+
             {/* Offence Type */}
             <FieldGroup label="Offence Type">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -536,24 +557,13 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
               </div>
             </FieldGroup>
 
-            {/* Offences */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <FieldGroup label="Offences">
-                <MultiSelect
-                  value={offenceArray}
-                  onChange={(val) => setForm((f) => ({ ...f, offence: val }))}
-                  options={OFFENCE_OPTIONS}
-                  placeholder="Select one or more offences"
-                />
-              </FieldGroup>
-              <FieldGroup label="Place of Crime Scene">
-                <TextInput
-                  value={form.placeOfCrimeScene}
-                  onChange={(e) => setForm((prev) => ({ ...prev, placeOfCrimeScene: e.target.value }))}
-                  placeholder="Enter location details"
-                />
-              </FieldGroup>
-            </div>
+            <FieldGroup label="Place of Crime Scene">
+              <TextInput
+                value={form.placeOfCrimeScene}
+                onChange={(e) => setForm((prev) => ({ ...prev, placeOfCrimeScene: e.target.value }))}
+                placeholder="Enter location details"
+              />
+            </FieldGroup>
 
             {offenceArray.length > 0 && (
               <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/50">
@@ -621,31 +631,41 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </h4>
             <div className="space-y-3">
               {form.socoOfficers.map((officer, index) => {
-                const hasOtherTeamLeader = form.socoOfficers.some(
-                  (o, i) => i !== index && o.teamRole === 'Team Leader'
-                );
-                const roleOptions = TEAM_ROLE_OPTIONS.filter(
-                  (opt) => opt.value !== 'Team Leader' || !hasOtherTeamLeader || officer.teamRole === 'Team Leader'
-                );
                 return (
                   <div key={`officer-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-3">
                     <FieldGroup label="Team Role">
-                      <div className="grid grid-cols-2 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
-                        {roleOptions.map((option) => (
-                          <label
-                            key={option.value}
-                            className="inline-flex items-center gap-2 text-sm text-gray-700"
-                          >
-                            <input
-                              type="radio"
-                              name={`team-role-${index}`}
-                              checked={(officer.teamRole ?? 'Other SOCO Officer') === option.value}
-                              onChange={() => updateOfficer(index, { teamRole: option.value })}
-                              className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                            />
-                            {option.label}
-                          </label>
-                        ))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                          {TEAM_ROLE_OPTIONS.map((option) => (
+                            <label
+                              key={option.value}
+                              className="inline-flex items-center gap-2 text-sm text-gray-700"
+                            >
+                              <input
+                                type="radio"
+                                name={`team-role-${index}`}
+                                checked={(officer.teamRole ?? 'Other') === option.value}
+                                onChange={() =>
+                                  updateOfficer(index, {
+                                    teamRole: option.value,
+                                    teamRoleOther: option.value === 'Other' ? (officer.teamRoleOther ?? '') : '',
+                                  })
+                                }
+                                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                              />
+                              {option.label}
+                            </label>
+                          ))}
+                        </div>
+                        {(officer.teamRole ?? 'Other') === 'Other' ? (
+                          <TextInput
+                            value={officer.teamRoleOther ?? ''}
+                            onChange={(e) => updateOfficer(index, { teamRoleOther: e.target.value })}
+                            placeholder="Specify team role"
+                          />
+                        ) : (
+                          <div />
+                        )}
                       </div>
                     </FieldGroup>
 
@@ -790,35 +810,67 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </button>
           </div>
 
-          {/* ── Investigation Officer ── */}
+          {/* ── Investigation Officers ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-fuchsia-500 inline-block flex-shrink-0" />
               Investigation Officer
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <FieldGroup label="Name">
-                <TextInput
-                  value={form.investigationOfficer?.name ?? ''}
-                  onChange={(e) => setForm((prev) => ({ ...prev, investigationOfficer: { ...(prev.investigationOfficer || emptyOfficer()), name: e.target.value } }))}
-                  placeholder="Full name"
-                />
-              </FieldGroup>
-              <FieldGroup label="Reg. Number">
-                <TextInput
-                  value={form.investigationOfficer?.regNo ?? ''}
-                  onChange={(e) => setForm((prev) => ({ ...prev, investigationOfficer: { ...(prev.investigationOfficer || emptyOfficer()), regNo: e.target.value } }))}
-                  placeholder="Reg. No"
-                />
-              </FieldGroup>
-              <FieldGroup label="Rank">
-                <TextInput
-                  value={form.investigationOfficer?.rank ?? ''}
-                  onChange={(e) => setForm((prev) => ({ ...prev, investigationOfficer: { ...(prev.investigationOfficer || emptyOfficer()), rank: e.target.value } }))}
-                  placeholder="Rank"
-                />
-              </FieldGroup>
+            <div className="space-y-3">
+              {(form.investigationOfficers ?? []).map((officer, index) => (
+                <div key={`inv-officer-${index}`} className="flex items-end gap-3">
+                  <FieldGroup label="Name" className="mb-0 flex-1">
+                    <TextInput
+                      value={officer.name}
+                      onChange={(e) => updateInvestigationOfficer(index, { name: e.target.value })}
+                      placeholder="Officer name"
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Reg. Number" className="mb-0 flex-1">
+                    <TextInput
+                      value={officer.regNo ?? ''}
+                      onChange={(e) => updateInvestigationOfficer(index, { regNo: e.target.value })}
+                      placeholder="Reg. No"
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Rank" className="mb-0 flex-1">
+                    <TextInput
+                      value={officer.rank ?? ''}
+                      onChange={(e) => updateInvestigationOfficer(index, { rank: e.target.value })}
+                      placeholder="Rank"
+                    />
+                  </FieldGroup>
+                  <div className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          investigationOfficers: (prev.investigationOfficers ?? []).filter((_, i) => i !== index),
+                        }))
+                      }
+                      className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
+                      disabled={(form.investigationOfficers ?? []).length <= 1}
+                      aria-label="Remove investigation officer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
+            <button
+              type="button"
+              onClick={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  investigationOfficers: [...(prev.investigationOfficers ?? []), emptyOfficer()],
+                }))
+              }
+              className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+            >
+              <span className="text-base leading-none">+</span> Add Investigation Officer
+            </button>
           </div>
 
           {/* ── Scene Guards ── */}
