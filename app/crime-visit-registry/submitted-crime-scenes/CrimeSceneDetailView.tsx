@@ -31,7 +31,13 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <DisplayField
             label="Visit Type"
-            value={scene.visitType === 'REVISIT' ? 'Revisit' : 'New Crime Scene'}
+            value={
+              scene.visitType === 'REVISIT'
+                ? 'Revisit'
+                : scene.visitType === 'COURT_VISIT'
+                  ? 'Court Visit'
+                  : 'New Crime Scene'
+            }
           />
           <DisplayField label="CVR No" value={readValue(scene.cvrNo)} />
           <DisplayField label="Police Station" value={readValue(scene.policeStation)} />

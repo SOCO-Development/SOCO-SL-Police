@@ -39,9 +39,10 @@ export const crimeSceneService = {
   create(data: CrimeSceneFormData): CrimeScene {
     const all = loadAll();
     const id = generateId();
-    const cvrNo = data.visitType === 'REVISIT'
-      ? (data.revisitCvrNo || data.cvrNo || '')
-      : (data.cvrNo || '');
+    const cvrNo =
+      data.visitType === 'REVISIT' || data.visitType === 'COURT_VISIT'
+        ? (data.revisitCvrNo || data.cvrNo || '')
+        : (data.cvrNo || '');
 
     const created: CrimeScene = {
       ...data,

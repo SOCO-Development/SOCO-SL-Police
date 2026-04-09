@@ -11,7 +11,14 @@ import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeVisit } from '@/types/crimeVisit';
-import type { CrimeSceneFormData, CrimeSceneOfficer, CrimeSceneSpecialistTeam, CrimeSceneVisitType } from '@/types/crimeScene';
+import {
+  crimeSceneUsesNewVisitFields,
+  crimeSceneUsesRevisitFields,
+  type CrimeSceneFormData,
+  type CrimeSceneOfficer,
+  type CrimeSceneSpecialistTeam,
+  type CrimeSceneVisitType,
+} from '@/types/crimeScene';
 
 interface CreateCrimeSceneModalProps {
   isOpen: boolean;
@@ -71,6 +78,7 @@ const OFFENCE_OPTIONS = [
 
 const VISIT_TYPES: { value: CrimeSceneVisitType; label: string }[] = [
   { value: 'NEW_VISIT', label: 'New Visit' },
+  { value: 'COURT_VISIT', label: 'Court Visit' },
   { value: 'REVISIT', label: 'Revisit' },
 ];
 
@@ -251,9 +259,14 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
   };
 
   const validate = (): string => {
-    if (form.visitType === 'NEW_VISIT' && !form.visitId) return 'Please select a Visit ID.';
-    if (form.visitType === 'NEW_VISIT' && !form.cvrNo?.trim()) return 'Please enter a CVR number for the new visit.';
-    if (form.visitType === 'REVISIT' && !form.revisitCvrNo) return 'Please select a CVR number for revisit.';
+    if (crimeSceneUsesNewVisitFields(form.visitType) && !form.visitId) return 'Please select a Visit ID.';
+    if (crimeSceneUsesNewVisitFields(form.visitType) && !form.cvrNo?.trim())
+      return 'Please enter a CVR number for the new visit.';
+    if (crimeSceneUsesRevisitFields(form.visitType) && !form.revisitCvrNo) {
+      return form.visitType === 'COURT_VISIT'
+        ? 'Please select a CVR number for court visit.'
+        : 'Please select a CVR number for revisit.';
+    }
     if (!form.policeStation) return 'Please select a police station.';
     if (!form.reportedToPoliceStation.date || !form.reportedToPoliceStation.time) return 'Please add date and time reported to Police station.';
     if (!form.reportedToSocoLab.date || !form.reportedToSocoLab.time) return 'Please add date and time reported to SOCO lab.';
@@ -280,9 +293,9 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
 
     const payload: CrimeSceneFormData = {
       ...form,
-      cvrNo: form.visitType === 'NEW_VISIT' ? (form.cvrNo?.trim() ?? '') : form.revisitCvrNo,
-      visitId: form.visitType === 'NEW_VISIT' ? form.visitId : '',
-      revisitCvrNo: form.visitType === 'REVISIT' ? form.revisitCvrNo : '',
+      cvrNo: crimeSceneUsesNewVisitFields(form.visitType) ? (form.cvrNo?.trim() ?? '') : form.revisitCvrNo,
+      visitId: crimeSceneUsesNewVisitFields(form.visitType) ? form.visitId : '',
+      revisitCvrNo: crimeSceneUsesRevisitFields(form.visitType) ? form.revisitCvrNo : '',
       socoOfficers: filteredOfficers,
       specialistTeams: filteredSpecialists,
       sceneGuards: filteredSceneGuards,
@@ -321,7 +334,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
               placeholder="Select visit type"
             />
 
-            {form.visitType === 'NEW_VISIT' ? (
+            {crimeSceneUsesNewVisitFields(form.visitType) ? (
               <CustomSelect
                 label="Visit ID with Date"
                 value={form.visitId}
@@ -340,23 +353,23 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             )}
 
             <CustomSelect
-              label="Requested Police Station"
-              value={form.policeStation}
-              onChange={(value) => setForm((prev) => ({ ...prev, policeStation: value }))}
-              options={POLICE_STATIONS}
-              placeholder="Select police station"
-            />
-
-            <CustomSelect
               label="Police Division"
               value={form.division}
               onChange={(value) => setForm((prev) => ({ ...prev, division: value }))}
               options={DIVISIONS}
               placeholder="Select police division"
             />
+
+            <CustomSelect
+              label="Requested Police Station"
+              value={form.policeStation}
+              onChange={(value) => setForm((prev) => ({ ...prev, policeStation: value }))}
+              options={POLICE_STATIONS}
+              placeholder="Select police station"
+            />
           </div>
 
-          {form.visitType === 'NEW_VISIT' ? (
+          {crimeSceneUsesNewVisitFields(form.visitType) ? (
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
               <FormInput
                 label="CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)"

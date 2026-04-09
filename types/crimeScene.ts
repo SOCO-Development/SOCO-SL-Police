@@ -1,4 +1,14 @@
-export type CrimeSceneVisitType = 'NEW_VISIT' | 'REVISIT';
+export type CrimeSceneVisitType = 'NEW_VISIT' | 'REVISIT' | 'COURT_VISIT';
+
+/** New crime scene only: initiated visit + new CVR text (not selecting an existing CVR). */
+export function crimeSceneUsesNewVisitFields(visitType: CrimeSceneVisitType): boolean {
+  return visitType === 'NEW_VISIT';
+}
+
+/** Revisit and court visit (for now): pick an existing CVR like revisit. */
+export function crimeSceneUsesRevisitFields(visitType: CrimeSceneVisitType): boolean {
+  return visitType === 'REVISIT' || visitType === 'COURT_VISIT';
+}
 
 export interface CrimeSceneOfficer {
   name: string;

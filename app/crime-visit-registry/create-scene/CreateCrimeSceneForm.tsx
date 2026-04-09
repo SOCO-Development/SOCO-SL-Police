@@ -1,6 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import type { CrimeSceneFormData, CrimeSceneOfficer, CrimeSceneSpecialistTeam, CrimeSceneVisitType } from '@/types/crimeScene';
+import {
+  crimeSceneUsesNewVisitFields,
+  crimeSceneUsesRevisitFields,
+  type CrimeSceneFormData,
+  type CrimeSceneOfficer,
+  type CrimeSceneSpecialistTeam,
+  type CrimeSceneVisitType,
+} from '@/types/crimeScene';
 import type { CrimeVisit } from '@/types/crimeVisit';
 import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
@@ -109,6 +116,7 @@ const OFFENCE_TYPES = [
 
 const VISIT_TYPES: { value: CrimeSceneVisitType; label: string }[] = [
   { value: 'NEW_VISIT', label: 'New Crime Scene' },
+  { value: 'COURT_VISIT', label: 'Court Visit' },
   { value: 'REVISIT', label: 'Revisit' },
 ];
 
@@ -265,9 +273,14 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
   // ── Validation & Save ─────────────────────────────────────────────────────
 
   const validate = (): string => {
-    if (form.visitType === 'NEW_VISIT' && !form.visitId) return 'Please select a Visit ID.';
-    if (form.visitType === 'NEW_VISIT' && !form.cvrNo?.trim()) return 'Please enter a CVR number for the new visit.';
-    if (form.visitType === 'REVISIT' && !form.revisitCvrNo) return 'Please select a CVR number for revisit.';
+    if (crimeSceneUsesNewVisitFields(form.visitType) && !form.visitId) return 'Please select a Visit ID.';
+    if (crimeSceneUsesNewVisitFields(form.visitType) && !form.cvrNo?.trim())
+      return 'Please enter a CVR number for the new visit.';
+    if (crimeSceneUsesRevisitFields(form.visitType) && !form.revisitCvrNo) {
+      return form.visitType === 'COURT_VISIT'
+        ? 'Please select a CVR number for court visit.'
+        : 'Please select a CVR number for revisit.';
+    }
     if (!form.policeStation) return 'Please select a police station.';
     if (!form.reportedToPoliceStation.date || !form.reportedToPoliceStation.time)
       return 'Please add date and time reported to Police station.';
@@ -286,9 +299,9 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
 
     const payload: CrimeSceneFormData = {
       ...form,
-      cvrNo: form.visitType === 'NEW_VISIT' ? (form.cvrNo?.trim() ?? '') : form.revisitCvrNo,
-      visitId: form.visitType === 'NEW_VISIT' ? form.visitId : '',
-      revisitCvrNo: form.visitType === 'REVISIT' ? form.revisitCvrNo : '',
+      cvrNo: crimeSceneUsesNewVisitFields(form.visitType) ? (form.cvrNo?.trim() ?? '') : form.revisitCvrNo,
+      visitId: crimeSceneUsesNewVisitFields(form.visitType) ? form.visitId : '',
+      revisitCvrNo: crimeSceneUsesRevisitFields(form.visitType) ? form.revisitCvrNo : '',
       socoOfficers: form.socoOfficers.filter((o) => o.name.trim()),
       specialistTeams: form.specialistTeams
         .map((t) => ({ ...t, members: (t.members || []).filter((m) => m.name.trim()) }))
@@ -328,7 +341,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
             </h4>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <FieldGroup label="Visit Type">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                   {VISIT_TYPES.map((option) => (
                     <label
                       key={option.value}
@@ -349,7 +362,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 </div>
               </FieldGroup>
 
-              {form.visitType === 'NEW_VISIT' ? (
+              {crimeSceneUsesNewVisitFields(form.visitType) ? (
                 <FieldGroup label="Visit ID with Date">
                   <CustomSelect
                     value={form.visitId}
@@ -370,7 +383,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
               )}
             </div>
 
-            {form.visitType === 'NEW_VISIT' && (
+            {crimeSceneUsesNewVisitFields(form.visitType) && (
               <div className="mt-3">
                 <FieldGroup label="CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)">
                   <TextInput
@@ -390,20 +403,20 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
               Location
             </h4>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <FieldGroup label="Police Station">
-                <CustomSelect
-                  value={form.policeStation}
-                  onChange={(value) => setForm((prev) => ({ ...prev, policeStation: value }))}
-                  options={POLICE_STATIONS}
-                  placeholder="Select police station"
-                />
-              </FieldGroup>
               <FieldGroup label="Police Division">
                 <CustomSelect
                   value={form.division}
                   onChange={(value) => setForm((prev) => ({ ...prev, division: value }))}
                   options={DIVISIONS}
                   placeholder="Select police division"
+                />
+              </FieldGroup>
+              <FieldGroup label="Police Station">
+                <CustomSelect
+                  value={form.policeStation}
+                  onChange={(value) => setForm((prev) => ({ ...prev, policeStation: value }))}
+                  options={POLICE_STATIONS}
+                  placeholder="Select police station"
                 />
               </FieldGroup>
             </div>
