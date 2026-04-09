@@ -33,6 +33,7 @@ const emptyExpert = (): Expert => ({
   outTime: "",
 });
 
+/* Initiate Visit: support officers UI removed — uncomment block + SupportOfficersEditor + state + JSX below to restore.
 type SupportOfficerMap = NonNullable<
   NonNullable<SectionB["socoOfficers"]>["support"]
 >;
@@ -50,6 +51,7 @@ const SUPPORT_ROLE_OPTIONS: { value: SupportRole; label: string }[] = [
   { value: "evidenceCollector", label: "Evidence Collector" },
   { value: "otherOfficer", label: "Other" },
 ];
+*/
 
 const REQUEST_STATION_OPTIONS = [
   {
@@ -111,7 +113,7 @@ const OFFENCE_TYPES = [
 ];
 const OFFENCE_TYPE_PRESETS = OFFENCE_TYPES.map((item) => item.value);
 
-let supportOfficerRowSeed = 1;
+/* let supportOfficerRowSeed = 1;
 
 const newSupportOfficerRow = (
   role: SupportRole = "photographer",
@@ -164,6 +166,7 @@ const rowsToSupport = (rows: SupportOfficerRow[]): SupportOfficerMap => {
   });
   return support;
 };
+*/
 
 function defaultFormData(): CrimeVisitFormData {
   return {
@@ -377,9 +380,9 @@ function DateTimeRow({
   );
 }
 
-// ─── Experts table ────────────────────────────────────────────────────────────
+// ─── Support officers editor (commented out — Initiate Visit) ─────────────────
 
-interface SupportOfficersEditorProps {
+/* interface SupportOfficersEditorProps {
   rows: SupportOfficerRow[];
   isReadOnly?: boolean;
   otherRoleLabel: string;
@@ -531,7 +534,7 @@ function SupportOfficersEditor({
       )}
     </div>
   );
-}
+} */
 
 // ─── Form Props ───────────────────────────────────────────────────────────────
 
@@ -564,6 +567,7 @@ export default function CrimeVisitForm({
     const value = defaults.sectionA?.offenceType ?? "";
     return defaults.sectionA?.offenceTypeOther ?? (OFFENCE_TYPE_PRESETS.includes(value) ? "" : value);
   });
+  /* Initiate Visit: support officers — uncomment with SupportOfficersEditor + types/helpers above
   const [supportOtherRole, setSupportOtherRole] = useState<string>(
     () => (initialData ?? defaultFormData()).sectionB?.socoOfficers?.supportOtherRole ?? "",
   );
@@ -572,6 +576,7 @@ export default function CrimeVisitForm({
       (initialData ?? defaultFormData()).sectionB?.socoOfficers?.support,
     ),
   );
+  */
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const updateA = useCallback(
@@ -592,7 +597,7 @@ export default function CrimeVisitForm({
     [],
   );
 
-  const updateSupportRows = useCallback((rows: SupportOfficerRow[]) => {
+  /* const updateSupportRows = useCallback((rows: SupportOfficerRow[]) => {
     setSupportRows(rows);
     setFormData((f) => ({
       ...f,
@@ -604,7 +609,7 @@ export default function CrimeVisitForm({
         },
       },
     }));
-  }, []);
+  }, []); */
 
   const updateC = useCallback(
     (patch: Partial<SectionC>) =>
@@ -940,6 +945,7 @@ export default function CrimeVisitForm({
             </div>
           </div>
 
+          {/* Initiate Visit: Support Officers section — uncomment with state + SupportOfficersEditor above
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-pink-500 inline-block flex-shrink-0" />
@@ -965,6 +971,7 @@ export default function CrimeVisitForm({
               onChange={updateSupportRows}
             />
           </div>
+          */}
         </div>
       </div>
 
