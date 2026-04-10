@@ -8,7 +8,12 @@ import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
-import { groupScenesByCvr, normalizeCvrKey, type CrimeSceneCvrGroup } from '@/lib/crimeSceneGrouping';
+import {
+  flattenGroupChronological,
+  groupScenesByCvr,
+  normalizeCvrKey,
+  type CrimeSceneCvrGroup,
+} from '@/lib/crimeSceneGrouping';
 import { ArrowLeft, CheckCircle, ExternalLink, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 
 type FilterTab = 'ALL' | 'TODAY';
@@ -75,6 +80,14 @@ function sceneSearchHaystack(scene: CrimeScene): string {
     scene.policeStation,
     scene.division,
     scene.placeOfCrimeScene,
+    scene.crimeSceneType,
+    scene.crimeSceneType === 'Others' ? scene.crimeSceneTypeOther : '',
+    scene.incidentKnown?.date,
+    scene.incidentKnown?.time,
+    scene.incidentFrom?.date,
+    scene.incidentFrom?.time,
+    scene.incidentTo?.date,
+    scene.incidentTo?.time,
     scene.offenceType === 'Other' ? scene.offenceTypeOther : scene.offenceType,
     offenceText,
   ]
@@ -86,10 +99,10 @@ function sceneSearchHaystack(scene: CrimeScene): string {
 function visitTypePill(scene: CrimeScene) {
   const pill =
     scene.visitType === 'REVISIT'
-      ? 'bg-amber-100 text-amber-700 border-amber-200'
+      ? 'bg-amber-100 text-amber-800 border-amber-300'
       : scene.visitType === 'COURT_VISIT'
-        ? 'bg-violet-100 text-violet-800 border-violet-200'
-        : 'bg-blue-100 text-blue-700 border-blue-200';
+        ? 'bg-violet-100 text-violet-900 border-violet-300'
+        : 'bg-blue-100 text-blue-800 border-blue-300';
   const label =
     scene.visitType === 'REVISIT'
       ? 'Revisit'
@@ -101,6 +114,27 @@ function visitTypePill(scene: CrimeScene) {
       {label}
     </span>
   );
+}
+
+/** Expanded list row: strong left stripe + tint by visit type so visits are easy to tell apart. */
+function visitTypeListRowClasses(scene: CrimeScene) {
+  if (scene.visitType === 'REVISIT') {
+    return 'border-amber-200 bg-amber-50/80 ring-1 ring-amber-200/70 border-l-[5px] border-l-amber-500';
+  }
+  if (scene.visitType === 'COURT_VISIT') {
+    return 'border-violet-200 bg-violet-50/80 ring-1 ring-violet-200/70 border-l-[5px] border-l-violet-500';
+  }
+  return 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500';
+}
+
+function visitTypeVisitBadgeClasses(scene: CrimeScene) {
+  if (scene.visitType === 'REVISIT') {
+    return 'bg-amber-200 text-amber-950 border-amber-400';
+  }
+  if (scene.visitType === 'COURT_VISIT') {
+    return 'bg-violet-200 text-violet-950 border-violet-400';
+  }
+  return 'bg-blue-200 text-blue-950 border-blue-400';
 }
 
 const tableClasses = {
@@ -231,7 +265,7 @@ export default function SubmittedCrimeScenesPage() {
   if (isDetailMode) {
     if (relatedScenesForDetail.length === 0) {
       return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
+        <div className="min-h-screen flex flex-col">
           <Header />
           <div className="flex flex-1 relative z-10 w-full pt-14">
             <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
@@ -251,7 +285,7 @@ export default function SubmittedCrimeScenesPage() {
     }
 
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
+      <div className="min-h-screen flex flex-col">
         <Header />
         <div className="flex flex-1 relative z-10 w-full pt-14">
           <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
@@ -301,7 +335,7 @@ export default function SubmittedCrimeScenesPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
+    <div className="min-h-screen flex flex-col">
       <Header />
       <div className="flex flex-1 relative z-10 w-full pt-14">
         <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
@@ -440,6 +474,10 @@ export default function SubmittedCrimeScenesPage() {
                       const { primary, children, groupKey } = group;
                       const hasChildren = children.length > 0;
                       const open = expandedKeys.has(groupKey);
+                      const chron = hasChildren ? flattenGroupChronological(group) : [];
+                      const primaryVisitNo = chron.length
+                        ? chron.findIndex((c) => c.id === primary.id) + 1
+                        : 1;
                       return (
                         <Fragment key={groupKey}>
                           <tr
@@ -464,6 +502,14 @@ export default function SubmittedCrimeScenesPage() {
                             </td>
                             <td className={tableClasses.td}>
                               <div className="flex flex-wrap items-center gap-1.5">
+                                {hasChildren ? (
+                                  <span
+                                    className={`inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md border text-[10px] font-bold tabular-nums ${visitTypeVisitBadgeClasses(primary)}`}
+                                    title="Visit order (by created date) for this CVR"
+                                  >
+                                    {primaryVisitNo}
+                                  </span>
+                                ) : null}
                                 {visitTypePill(primary)}
                                 {hasChildren ? (
                                   <span className="text-[10px] font-medium text-gray-500">
@@ -497,32 +543,41 @@ export default function SubmittedCrimeScenesPage() {
                             </td>
                           </tr>
                           {open && hasChildren ? (
-                            <tr className="bg-gray-50/90 border-b border-gray-100">
-                              <td colSpan={8} className="px-4 py-3">
-                                <div className="pl-6 border-l-2 border-blue-200 space-y-2">
-                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                                    Other visits (same CVR)
+                            <tr className="bg-slate-50/95 border-b border-slate-200">
+                              <td colSpan={8} className="px-4 py-4">
+                                <div className="space-y-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                    Other visits (same CVR) — color matches visit type
                                   </p>
-                                  <ul className="space-y-2">
-                                    {children.map((child) => (
-                                      <li
-                                        key={child.id}
-                                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-                                      >
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          {visitTypePill(child)}
-                                          <span className="text-xs text-gray-600">
-                                            Submitted {formatDateTimeDDMMYYYY(child.updatedAt)}
-                                          </span>
-                                        </div>
-                                        <Link
-                                          href={viewHrefForGroup(group)}
-                                          className="text-xs font-semibold text-blue-600 hover:underline shrink-0"
+                                  <ul className="space-y-2.5">
+                                    {chron.slice(1).map((child) => {
+                                      const visitNo = chron.findIndex((c) => c.id === child.id) + 1;
+                                      return (
+                                        <li
+                                          key={child.id}
+                                          className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm shadow-sm ${visitTypeListRowClasses(child)}`}
                                         >
-                                          Open with all visits
-                                        </Link>
-                                      </li>
-                                    ))}
+                                          <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                            <span
+                                              className={`inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border text-[11px] font-bold tabular-nums shrink-0 ${visitTypeVisitBadgeClasses(child)}`}
+                                              title="Visit order for this CVR"
+                                            >
+                                              {visitNo}
+                                            </span>
+                                            {visitTypePill(child)}
+                                            <span className="text-xs text-gray-700 font-medium">
+                                              Submitted {formatDateTimeDDMMYYYY(child.updatedAt)}
+                                            </span>
+                                          </div>
+                                          <Link
+                                            href={viewHrefForGroup(group)}
+                                            className="text-xs font-semibold text-blue-700 hover:text-blue-900 hover:underline shrink-0"
+                                          >
+                                            Open with all visits
+                                          </Link>
+                                        </li>
+                                      );
+                                    })}
                                   </ul>
                                 </div>
                               </td>

@@ -55,6 +55,15 @@ export interface CrimeScene {
   offenceType: string;
   offenceTypeOther?: string;
   placeOfCrimeScene: string;
+  /** House, Institutions, Buildings, Shop, Highway, Others — use crimeSceneTypeOther when Others. */
+  crimeSceneType?: string;
+  crimeSceneTypeOther?: string;
+  /** Exactly known date & time when the incident occurred (single moment). */
+  incidentKnown?: CrimeSceneDateTime;
+  /** Duration / period — start (date & time). */
+  incidentFrom?: CrimeSceneDateTime;
+  /** Duration / period — end (date & time). */
+  incidentTo?: CrimeSceneDateTime;
 
   inChargeOfficer: CrimeSceneOfficer;
   socoOfficers: CrimeSceneOfficer[];

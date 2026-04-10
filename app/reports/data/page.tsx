@@ -5,7 +5,7 @@ import Footer from '@/components/layout/Footer';
 
 export default function ReportDataPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col">
       <Header />
       <div className="flex flex-1 w-full relative z-10 pt-14">
         <main className="flex-1 overflow-x-hidden overflow-y-auto min-w-0 flex flex-col min-h-screen main-scrollable">

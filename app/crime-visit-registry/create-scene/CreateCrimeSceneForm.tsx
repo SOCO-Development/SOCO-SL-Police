@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   crimeSceneUsesNewVisitFields,
   crimeSceneUsesRevisitFields,
@@ -16,7 +16,7 @@ import MultiSelect from '@/components/forms/MultiSelect';
 import Button from '@/components/buttons/Button';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
+import { formatDateTimeDDMMYYYY, formatIncidentDuration, parseDateTimeParts } from '@/lib/dateUtils';
 
 interface CreateCrimeSceneFormProps {
   onSaved?: (payload: { cvrNo: string }) => void;
@@ -132,6 +132,15 @@ const TEAM_ROLE_OPTIONS = [
   { value: 'Other', label: 'Other' },
 ];
 
+const CRIME_SCENE_TYPE_OPTIONS = [
+  { value: 'House', label: 'House' },
+  { value: 'Institutions', label: 'Institutions' },
+  { value: 'Buildings', label: 'Buildings' },
+  { value: 'Shop', label: 'Shop' },
+  { value: 'Highway', label: 'Highway' },
+  { value: 'Others', label: 'Others' },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function emptyOfficer(): CrimeSceneOfficer {
@@ -158,6 +167,11 @@ function defaultForm(): CrimeSceneFormData {
     offenceType: '',
     offenceTypeOther: '',
     placeOfCrimeScene: '',
+    crimeSceneType: '',
+    crimeSceneTypeOther: '',
+    incidentKnown: { date: '', time: '' },
+    incidentFrom: { date: '', time: '' },
+    incidentTo: { date: '', time: '' },
     inChargeOfficer: emptyOfficer(),
     socoOfficers: [emptyOfficer()],
     specialistTeams: [emptySpecialist()],
@@ -211,6 +225,14 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
 
   const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr, label: cvr }));
   const sceneDuration = formatDuration(form.sceneInTime, form.sceneOutTime);
+  const incidentDuration = useMemo(
+    () =>
+      formatIncidentDuration(
+        form.incidentFrom ?? { date: '', time: '' },
+        form.incidentTo ?? { date: '', time: '' },
+      ),
+    [form.incidentFrom, form.incidentTo],
+  );
 
   // ── Update helpers ────────────────────────────────────────────────────────
 
@@ -300,6 +322,29 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
     if (!form.sceneInTime || !form.sceneOutTime) return 'Please provide scene in and out times.';
     if (!form.division) return 'Please select division.';
     if (!form.placeOfCrimeScene.trim()) return 'Please enter place of crime scene.';
+    if (!form.crimeSceneType?.trim()) return 'Please select type of crime scene.';
+    if (form.crimeSceneType === 'Others' && !form.crimeSceneTypeOther?.trim()) {
+      return 'Please specify type of crime scene when “Others” is selected.';
+    }
+    const known = form.incidentKnown ?? { date: '', time: '' };
+    if (!known.date?.trim() || !known.time?.trim()) {
+      return 'Please enter the exactly known date and time of the incident.';
+    }
+    if (!parseDateTimeParts(known)) return 'Invalid date or time for the incident.';
+    const incFrom = form.incidentFrom ?? { date: '', time: '' };
+    const incTo = form.incidentTo ?? { date: '', time: '' };
+    if (!incFrom.date?.trim() || !incFrom.time?.trim()) {
+      return 'Please enter duration start: date and time (from).';
+    }
+    if (!incTo.date?.trim() || !incTo.time?.trim()) {
+      return 'Please enter duration end: date and time (to).';
+    }
+    const fromD = parseDateTimeParts(incFrom);
+    const toD = parseDateTimeParts(incTo);
+    if (!fromD || !toD) return 'Invalid incidence date or time.';
+    if (toD.getTime() < fromD.getTime()) {
+      return 'Incidence end date and time must be the same as or after the start.';
+    }
     if (!form.inChargeOfficer.name.trim()) return 'Please enter the in-charge officer.';
     return '';
   };
@@ -565,6 +610,115 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
                 placeholder="Enter location details"
               />
             </FieldGroup>
+
+            <FieldGroup label="Type of Crime Scene">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
+                <div className="min-w-0">
+                  <CustomSelect
+                    value={form.crimeSceneType ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        crimeSceneType: value,
+                        crimeSceneTypeOther: value === 'Others' ? prev.crimeSceneTypeOther : '',
+                      }))
+                    }
+                    options={CRIME_SCENE_TYPE_OPTIONS}
+                    placeholder="Select type"
+                    className="w-full"
+                  />
+                </div>
+                <div className="min-w-0">
+                  {(form.crimeSceneType ?? '') === 'Others' ? (
+                    <TextInput
+                      value={form.crimeSceneTypeOther ?? ''}
+                      onChange={(e) => setForm((prev) => ({ ...prev, crimeSceneTypeOther: e.target.value }))}
+                      placeholder="Specify type of crime scene"
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </FieldGroup>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <FieldGroup label="Incident date (exactly known)">
+                  <DatePicker
+                    value={form.incidentKnown?.date ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), date: value },
+                      }))
+                    }
+                  />
+                </FieldGroup>
+                <FieldGroup label="Incident time (exactly known)">
+                  <TimePicker
+                    value={form.incidentKnown?.time ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), time: value },
+                      }))
+                    }
+                  />
+                </FieldGroup>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <FieldGroup label="Duration from — date">
+                  <DatePicker
+                    value={form.incidentFrom?.date ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), date: value },
+                      }))
+                    }
+                  />
+                </FieldGroup>
+                <FieldGroup label="Duration from — time">
+                  <TimePicker
+                    value={form.incidentFrom?.time ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), time: value },
+                      }))
+                    }
+                  />
+                </FieldGroup>
+                <FieldGroup label="Duration to — date">
+                  <DatePicker
+                    value={form.incidentTo?.date ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), date: value },
+                      }))
+                    }
+                  />
+                </FieldGroup>
+                <FieldGroup label="Duration to — time">
+                  <TimePicker
+                    value={form.incidentTo?.time ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), time: value },
+                      }))
+                    }
+                  />
+                </FieldGroup>
+              </div>
+
+              <FieldGroup label="Duration (from → to)">
+                <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-blue-50 border-blue-200 text-blue-800">
+                  {incidentDuration}
+                </div>
+              </FieldGroup>
+            </div>
 
             {offenceArray.length > 0 && (
               <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/50">

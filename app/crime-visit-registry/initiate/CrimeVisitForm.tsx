@@ -361,9 +361,11 @@ function DateTimeRow({
     return (
       <div className={label ? "space-y-2" : ""}>
         {label && (
-          <div className="text-sm font-medium text-gray-700">{label}</div>
+          <div className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+            {label}
+          </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {fields}
         </div>
       </div>
@@ -867,7 +869,7 @@ export default function CrimeVisitForm({
               OUT & IN Details
             </h4>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-start">
               <DateTimeRow
                 label="OUT"
                 value={sA.out ?? emptyDatetime()}
@@ -875,20 +877,18 @@ export default function CrimeVisitForm({
                 onChange={(v) => updateA("out", v)}
                 layout="stack"
               />
-
-              <div className="border-t border-dashed border-gray-300 relative my-2">
-                <span className="absolute left-4 -top-3 bg-gray-50 px-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+              <div className="min-w-0 border-t border-dashed border-gray-300 pt-6 mt-2 lg:border-t-0 lg:pt-0 lg:mt-0 relative">
+                <span className="lg:hidden absolute left-0 -top-2.5 text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-50 pr-2">
                   Return Details
                 </span>
+                <DateTimeRow
+                  label="IN"
+                  value={sA.in ?? emptyDatetime()}
+                  isReadOnly={ro}
+                  onChange={(v) => updateA("in", v)}
+                  layout="stack"
+                />
               </div>
-
-              <DateTimeRow
-                label="IN"
-                value={sA.in ?? emptyDatetime()}
-                isReadOnly={ro}
-                onChange={(v) => updateA("in", v)}
-                layout="stack"
-              />
             </div>
           </div>
 

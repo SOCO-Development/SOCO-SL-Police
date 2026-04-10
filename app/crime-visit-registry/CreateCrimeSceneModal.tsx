@@ -9,7 +9,7 @@ import FormInput from '@/components/forms/FormInput';
 import Button from '@/components/buttons/Button';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
+import { formatDateTimeDDMMYYYY, formatIncidentDuration, parseDateTimeParts } from '@/lib/dateUtils';
 import type { CrimeVisit } from '@/types/crimeVisit';
 import {
   crimeSceneUsesNewVisitFields,
@@ -99,6 +99,15 @@ const TEAM_ROLE_OPTIONS = [
   { value: 'Other', label: 'Other' },
 ];
 
+const CRIME_SCENE_TYPE_OPTIONS = [
+  { value: 'House', label: 'House' },
+  { value: 'Institutions', label: 'Institutions' },
+  { value: 'Buildings', label: 'Buildings' },
+  { value: 'Shop', label: 'Shop' },
+  { value: 'Highway', label: 'Highway' },
+  { value: 'Others', label: 'Others' },
+];
+
 const SOCO_ROLE_OPTIONS = [
   { value: 'Photographer', label: 'Photographer' },
   { value: 'Sketcher', label: 'Sketcher' },
@@ -134,6 +143,11 @@ function defaultForm(): CrimeSceneFormData {
     offence: {},
     offenceType: '',
     placeOfCrimeScene: '',
+    crimeSceneType: '',
+    crimeSceneTypeOther: '',
+    incidentKnown: { date: '', time: '' },
+    incidentFrom: { date: '', time: '' },
+    incidentTo: { date: '', time: '' },
     inChargeOfficer: emptyOfficer(),
     socoOfficers: [emptyOfficer()],
     specialistTeams: [emptySpecialist()],
@@ -201,6 +215,15 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
   const sceneDuration = useMemo(
     () => formatDuration(form.sceneInTime, form.sceneOutTime),
     [form.sceneInTime, form.sceneOutTime]
+  );
+
+  const incidentDuration = useMemo(
+    () =>
+      formatIncidentDuration(
+        form.incidentFrom ?? { date: '', time: '' },
+        form.incidentTo ?? { date: '', time: '' },
+      ),
+    [form.incidentFrom, form.incidentTo],
   );
 
   if (!isOpen) return null;
@@ -284,6 +307,29 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
     if (!form.sceneInTime || !form.sceneOutTime) return 'Please provide scene in and out times.';
     if (!form.division) return 'Please select division.';
     if (!form.placeOfCrimeScene.trim()) return 'Please enter place of crime scene.';
+    if (!form.crimeSceneType?.trim()) return 'Please select type of crime scene.';
+    if (form.crimeSceneType === 'Others' && !form.crimeSceneTypeOther?.trim()) {
+      return 'Please specify type of crime scene when “Others” is selected.';
+    }
+    const known = form.incidentKnown ?? { date: '', time: '' };
+    if (!known.date?.trim() || !known.time?.trim()) {
+      return 'Please enter the exactly known date and time of the incident.';
+    }
+    if (!parseDateTimeParts(known)) return 'Invalid date or time for the incident.';
+    const incFrom = form.incidentFrom ?? { date: '', time: '' };
+    const incTo = form.incidentTo ?? { date: '', time: '' };
+    if (!incFrom.date?.trim() || !incFrom.time?.trim()) {
+      return 'Please enter duration start: date and time (from).';
+    }
+    if (!incTo.date?.trim() || !incTo.time?.trim()) {
+      return 'Please enter duration end: date and time (to).';
+    }
+    const fromD = parseDateTimeParts(incFrom);
+    const toD = parseDateTimeParts(incTo);
+    if (!fromD || !toD) return 'Invalid incidence date or time.';
+    if (toD.getTime() < fromD.getTime()) {
+      return 'Incidence end date and time must be the same as or after the start.';
+    }
     if (!form.inChargeOfficer.name.trim()) return 'Please enter the in-charge officer.';
     return '';
   };
@@ -452,6 +498,104 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                 onChange={(e) => setForm((prev) => ({ ...prev, placeOfCrimeScene: e.target.value }))}
                 placeholder="Enter location details"
               />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
+                <div className="min-w-0">
+                  <CustomSelect
+                    label="Type of Crime Scene"
+                    value={form.crimeSceneType ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        crimeSceneType: value,
+                        crimeSceneTypeOther: value === 'Others' ? prev.crimeSceneTypeOther : '',
+                      }))
+                    }
+                    options={CRIME_SCENE_TYPE_OPTIONS}
+                    placeholder="Select type"
+                    className="w-full"
+                  />
+                </div>
+                <div className="min-w-0">
+                  {(form.crimeSceneType ?? '') === 'Others' ? (
+                    <FormInput
+                      label="Specify type"
+                      value={form.crimeSceneTypeOther ?? ''}
+                      onChange={(e) => setForm((prev) => ({ ...prev, crimeSceneTypeOther: e.target.value }))}
+                      placeholder="Specify type of crime scene"
+                    />
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <DatePicker
+                    label="Incident date (known)"
+                    value={form.incidentKnown?.date ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), date: value },
+                      }))
+                    }
+                  />
+                  <TimePicker
+                    label="Incident time (known)"
+                    value={form.incidentKnown?.time ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), time: value },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <DatePicker
+                    label="Duration from — date"
+                    value={form.incidentFrom?.date ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), date: value },
+                      }))
+                    }
+                  />
+                  <TimePicker
+                    label="Duration from — time"
+                    value={form.incidentFrom?.time ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), time: value },
+                      }))
+                    }
+                  />
+                  <DatePicker
+                    label="Duration to — date"
+                    value={form.incidentTo?.date ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), date: value },
+                      }))
+                    }
+                  />
+                  <TimePicker
+                    label="Duration to — time"
+                    value={form.incidentTo?.time ?? ''}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), time: value },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                  Duration (from → to): <span className="font-semibold font-mono tabular-nums">{incidentDuration}</span>
+                </div>
+              </div>
             </div>
           </div>
 

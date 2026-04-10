@@ -1,4 +1,4 @@
-import type { CrimeVisit, DateTimeEntry, OfficerInfo } from '@/types/crimeVisit';
+import type { CrimeVisit, DateTimeEntry } from '@/types/crimeVisit';
 
 interface CrimeVisitDetailViewProps {
   visit: CrimeVisit;
@@ -17,10 +17,6 @@ function formatDateTime(entry?: DateTimeEntry) {
   };
 }
 
-function hasOfficerValue(officer?: OfficerInfo) {
-  return !!(officer?.name?.trim() || officer?.regNo?.trim() || officer?.rank?.trim());
-}
-
 function DisplayField({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5">
@@ -35,9 +31,9 @@ function DisplayField({ label, value }: { label: string; value: string }) {
 function DateTimeSummary({ label, entry }: { label: string; entry?: DateTimeEntry }) {
   const value = formatDateTime(entry);
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-semibold text-gray-700">{label}</div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="space-y-2 min-w-0">
+      <div className="text-sm font-semibold text-gray-800 uppercase tracking-wide">{label}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <DisplayField label="Date (DD-MM-YYYY)" value={value.date} />
         <DisplayField label="Time" value={value.time} />
         <DisplayField label="Page" value={value.page} />
@@ -48,14 +44,7 @@ function DateTimeSummary({ label, entry }: { label: string; entry?: DateTimeEntr
 }
 
 export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProps) {
-  const { sectionA, sectionB, sectionC } = visit;
-  const support = sectionB?.socoOfficers?.support;
-  const supportRows = [
-    { role: 'Photographer', officer: support?.photographer },
-    { role: 'Sketcher', officer: support?.sketcher },
-    { role: 'Evidence Collector', officer: support?.evidenceCollector },
-    { role: sectionB?.socoOfficers?.supportOtherRole?.trim() || 'Other', officer: support?.otherOfficer },
-  ].filter((row) => hasOfficerValue(row.officer));
+  const { sectionA, sectionC } = visit;
 
   const offenceList = Array.isArray(sectionA?.offence)
     ? sectionA.offence
@@ -108,8 +97,15 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
           <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
           OUT & IN Details
         </h4>
-        <DateTimeSummary label="OUT" entry={sectionA?.out} />
-        <DateTimeSummary label="IN" entry={sectionA?.in} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-start">
+          <DateTimeSummary label="OUT" entry={sectionA?.out} />
+          <div className="min-w-0 border-t border-dashed border-gray-300 pt-6 mt-2 lg:border-t-0 lg:pt-0 lg:mt-0 relative">
+            <span className="lg:hidden absolute left-0 -top-2.5 text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-50/70 pr-2">
+              Return Details
+            </span>
+            <DateTimeSummary label="IN" entry={sectionA?.in} />
+          </div>
+        </div>
       </div>
 
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
@@ -126,40 +122,6 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
           />
           <DisplayField label="Driver Rank" value={readValue(sectionC?.driver?.rank)} />
         </div>
-      </div>
-
-      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-4">
-        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
-          <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
-          Support Officers
-        </h4>
-
-        {supportRows.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Role</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Name</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Reg. Number</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Rank</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {supportRows.map((row, idx) => (
-                  <tr key={`${row.role}-${idx}`}>
-                    <td className="px-3 py-2.5 text-gray-900">{row.role}</td>
-                    <td className="px-3 py-2.5 text-gray-900">{readValue(row.officer?.name)}</td>
-                    <td className="px-3 py-2.5 text-gray-700">{readValue(row.officer?.regNo)}</td>
-                    <td className="px-3 py-2.5 text-gray-700">{readValue(row.officer?.rank)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-500 italic">No support officers recorded</div>
-        )}
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { UserGear } from 'phosphor-react';
 
 export default function UserConfigPage() {
     return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
+        <div className="min-h-screen flex flex-col">
             <Header />
             <div className="flex flex-1 relative z-10 w-full pt-14">
                 <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">

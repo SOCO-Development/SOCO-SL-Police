@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthGuard from "@/components/auth/AuthGuard";
+import PageBackground from "@/components/layout/PageBackground";
 import { publicAssetSrc } from "@/lib/publicAsset";
 
 const logoPath = publicAssetSrc("/logo.png");
@@ -50,7 +51,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthGuard>
-          {children}
+          <PageBackground>{children}</PageBackground>
         </AuthGuard>
       </body>
     </html>

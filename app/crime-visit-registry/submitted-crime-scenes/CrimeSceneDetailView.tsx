@@ -1,4 +1,6 @@
 import type { CrimeScene } from '@/types/crimeScene';
+import { crimeSceneUsesRevisitFields } from '@/types/crimeScene';
+import { formatIncidentDuration } from '@/lib/dateUtils';
 
 interface CrimeSceneDetailViewProps {
   scene: CrimeScene;
@@ -17,6 +19,16 @@ function DisplayField({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Coloured stripe in section titles — matches Create Crime Scene form. */
+function SectionTitle({ stripeClass, children }: { stripeClass: string; children: React.ReactNode }) {
+  return (
+    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+      <span className={`w-1.5 h-4 rounded-full inline-block flex-shrink-0 ${stripeClass}`} aria-hidden />
+      {children}
+    </h4>
+  );
+}
+
 export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProps) {
   const offenceList = Array.isArray(scene.offence)
     ? scene.offence
@@ -27,7 +39,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
   return (
     <div className="space-y-5">
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3">Scene Basics</h4>
+        <SectionTitle stripeClass="bg-violet-500">Scene Basics</SectionTitle>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <DisplayField
             label="Visit Type"
@@ -40,23 +52,90 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             }
           />
           <DisplayField label="CVR No" value={readValue(scene.cvrNo)} />
+          {scene.visitType === 'NEW_VISIT' && scene.visitId?.trim() ? (
+            <DisplayField label="Initiated visit ID" value={readValue(scene.visitId)} />
+          ) : null}
+          {crimeSceneUsesRevisitFields(scene.visitType) && scene.revisitCvrNo?.trim() ? (
+            <DisplayField label="Existing CVR" value={readValue(scene.revisitCvrNo)} />
+          ) : null}
+        </div>
+      </div>
+
+      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+        <SectionTitle stripeClass="bg-indigo-500">Location</SectionTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <DisplayField label="Police Station" value={readValue(scene.policeStation)} />
           <DisplayField label="Division" value={readValue(scene.division)} />
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-3">
+          <SectionTitle stripeClass="bg-slate-500">Reported to Police</SectionTitle>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <DisplayField label="Date" value={readValue(scene.reportedToPoliceStation?.date)} />
+            <DisplayField label="Time" value={readValue(scene.reportedToPoliceStation?.time)} />
+          </div>
+        </div>
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-3">
+          <SectionTitle stripeClass="bg-blue-500">Reported to SOCO Lab</SectionTitle>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <DisplayField label="Date" value={readValue(scene.reportedToSocoLab?.date)} />
+            <DisplayField label="Time" value={readValue(scene.reportedToSocoLab?.time)} />
+          </div>
+        </div>
+      </div>
+
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3">
-          Reporting & Scene Times
-        </h4>
+        <SectionTitle stripeClass="bg-cyan-500">Scene Times & Details</SectionTitle>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <DisplayField label="Reported to Police Date" value={readValue(scene.reportedToPoliceStation?.date)} />
-          <DisplayField label="Reported to Police Time" value={readValue(scene.reportedToPoliceStation?.time)} />
-          <DisplayField label="Reported to SOCO Date" value={readValue(scene.reportedToSocoLab?.date)} />
-          <DisplayField label="Reported to SOCO Time" value={readValue(scene.reportedToSocoLab?.time)} />
           <DisplayField label="Scene In Time" value={readValue(scene.sceneInTime)} />
           <DisplayField label="Scene Out Time" value={readValue(scene.sceneOutTime)} />
           <DisplayField label="Place of Crime Scene" value={readValue(scene.placeOfCrimeScene)} />
+          <DisplayField
+            label="Type of Crime Scene"
+            value={
+              scene.crimeSceneType === 'Others'
+                ? readValue(
+                    scene.crimeSceneTypeOther?.trim()
+                      ? `Others — ${scene.crimeSceneTypeOther.trim()}`
+                      : 'Others',
+                  )
+                : readValue(scene.crimeSceneType)
+            }
+          />
+          <DisplayField
+            label="Date & time of incident (exactly known)"
+            value={
+              scene.incidentKnown?.date?.trim() && scene.incidentKnown?.time?.trim()
+                ? `${readValue(scene.incidentKnown.date)} ${readValue(scene.incidentKnown.time)}`
+                : '—'
+            }
+          />
+          <DisplayField
+            label="Duration — from (date & time)"
+            value={
+              scene.incidentFrom?.date?.trim() && scene.incidentFrom?.time?.trim()
+                ? `${readValue(scene.incidentFrom.date)} ${readValue(scene.incidentFrom.time)}`
+                : '—'
+            }
+          />
+          <DisplayField
+            label="Duration — to (date & time)"
+            value={
+              scene.incidentTo?.date?.trim() && scene.incidentTo?.time?.trim()
+                ? `${readValue(scene.incidentTo.date)} ${readValue(scene.incidentTo.time)}`
+                : '—'
+            }
+          />
+          <DisplayField
+            label="Duration (from → to)"
+            value={
+              scene.incidentFrom && scene.incidentTo
+                ? formatIncidentDuration(scene.incidentFrom, scene.incidentTo)
+                : '—'
+            }
+          />
           <DisplayField
             label="Offence Type"
             value={scene.offenceType === 'Other' ? readValue(scene.offenceTypeOther) : readValue(scene.offenceType)}
@@ -82,13 +161,17 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       </div>
 
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3">Officers</h4>
+        <SectionTitle stripeClass="bg-green-500">Team Leader</SectionTitle>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <DisplayField label="Team Leader Name" value={readValue(scene.inChargeOfficer?.name)} />
           <DisplayField label="Team Leader Reg. Number" value={readValue(scene.inChargeOfficer?.regNo)} />
           <DisplayField label="Team Leader Rank" value={readValue(scene.inChargeOfficer?.rank)} />
         </div>
-        <div className="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+      </div>
+
+      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+        <SectionTitle stripeClass="bg-fuchsia-500">Investigation Officer</SectionTitle>
+        <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Investigation Officers
           </div>
@@ -113,4 +196,3 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
     </div>
   );
 }
-

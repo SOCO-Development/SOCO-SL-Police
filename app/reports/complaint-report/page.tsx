@@ -189,7 +189,7 @@ export default function ComplaintReportPage() {
   };
 
   return (
-    <div className="complaint-report-page min-h-screen flex flex-col bg-gray-50 print:bg-white">
+    <div className="complaint-report-page min-h-screen flex flex-col print:bg-white">
       <Header />
       <div className="flex flex-1 w-full relative z-10 pt-14 print:pt-0">
         <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen print:ml-0">
