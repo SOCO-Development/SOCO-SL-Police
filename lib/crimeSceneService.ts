@@ -1,6 +1,13 @@
 'use client';
 
-import type { CrimeScene, CrimeSceneFormData, CrimeSceneOfficer } from '@/types/crimeScene';
+import type {
+  CrimeScene,
+  CrimeSceneCourtDetails,
+  CrimeSceneFormData,
+  CrimeSceneOfficer,
+  ProductionSentToCourtRow,
+  SentToAnalysisRow,
+} from '@/types/crimeScene';
 
 const STORAGE_KEY = 'crime_scenes';
 
@@ -10,6 +17,59 @@ function now(): string {
 
 function generateId(): string {
   return `cs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+type LegacyCourtDetails = CrimeSceneCourtDetails &
+  Record<string, unknown> & {
+    productionSentToCourt?: string;
+    productionSentToCourtDate?: string;
+    productionSentToCourtCaseNo?: string;
+    sentToAnalysisInstitute?: string;
+    sentToAnalysisInstituteDate?: string;
+    analysisRefNo?: string;
+  };
+
+/** Migrate flat “sent to court / analysis” fields into repeatable rows. */
+function normalizeCourtDetails(cd: CrimeSceneCourtDetails | undefined): CrimeSceneCourtDetails | undefined {
+  if (!cd) return undefined;
+  const r = cd as LegacyCourtDetails;
+  let out: CrimeSceneCourtDetails = { ...cd };
+
+  if (!Array.isArray(r.productionSentToCourtRows)) {
+    const rows: ProductionSentToCourtRow[] = [];
+    const types = (r.productionPRTypes as string[] | undefined) ?? [];
+    const legacyDate = String(r.productionSentToCourtDate ?? '').trim();
+    const legacyCase = String(r.productionSentToCourtCaseNo ?? '').trim();
+    const hadYes = r.productionSentToCourt === 'Yes';
+    if (hadYes || legacyDate || legacyCase) {
+      rows.push({
+        productionRef: types[0] ?? '',
+        date: legacyDate,
+        courtCaseNo: legacyCase,
+      });
+    }
+    out = { ...out, productionSentToCourtRows: rows };
+  }
+
+  if (!Array.isArray(r.sentToAnalysisRows)) {
+    const rows: SentToAnalysisRow[] = [];
+    const types = (r.productionPRTypes as string[] | undefined) ?? [];
+    const legacyDate = String(r.sentToAnalysisInstituteDate ?? '').trim();
+    const legacyRef = String(r.analysisRefNo ?? '').trim();
+    const hadYes = r.sentToAnalysisInstitute === 'Yes';
+    if (hadYes || legacyDate || legacyRef) {
+      rows.push({
+        productionRef: types[0] ?? '',
+        institution: '',
+        institutionOtherDetail: '',
+        date: legacyDate,
+        refNo: legacyRef,
+      });
+    }
+    out = { ...out, sentToAnalysisRows: rows };
+  }
+
+  return out;
 }
 
 /** Legacy records used `investigationOfficer`; normalize to `investigationOfficers`. */
@@ -23,6 +83,7 @@ function normalizeScene(raw: CrimeScene & { investigationOfficer?: CrimeSceneOff
   return {
     ...rest,
     investigationOfficers: list.length ? list : undefined,
+    courtDetails: normalizeCourtDetails(rest.courtDetails),
   };
 }
 

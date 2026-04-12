@@ -1,6 +1,8 @@
 import type { CrimeScene } from '@/types/crimeScene';
 import { crimeSceneUsesRevisitFields } from '@/types/crimeScene';
 import { formatIncidentDuration } from '@/lib/dateUtils';
+import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
+import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
 
 interface CrimeSceneDetailViewProps {
   scene: CrimeScene;
@@ -192,6 +194,94 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             <div className="mt-1 text-sm text-gray-500">—</div>
           )}
         </div>
+      </div>
+
+      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+        <SectionTitle stripeClass="bg-amber-500">Court details</SectionTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          <DisplayField label="Court name" value={readValue(scene.courtDetails?.courtName)} />
+          <DisplayField label="Court case no." value={readValue(scene.courtDetails?.courtCaseNo)} />
+        </div>
+        {scene.courtDetails?.productionPR === 'Yes' &&
+        (scene.courtDetails?.productionPRTypes?.length ?? 0) > 0 ? (
+          <div className="mb-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Production types (P.R.)
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(scene.courtDetails.productionPRTypes ?? []).map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-sm leading-snug font-medium text-amber-900"
+                >
+                  {getProductionPRDisplayLabel(t)}
+                </span>
+              ))}
+            </div>
+            {productionPRHasOthersSelected(scene.courtDetails.productionPRTypes) &&
+            scene.courtDetails.productionPROtherDetail?.trim() ? (
+              <div className="mt-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  Others — specify
+                </div>
+                <div className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
+                  {scene.courtDetails.productionPROtherDetail.trim()}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        <DisplayField label="Production (P.R.)" value={readValue(scene.courtDetails?.productionPR)} />
+
+        {(scene.courtDetails?.productionSentToCourtRows ?? []).length > 0 ? (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">
+              Production sent to court
+            </div>
+            <div className="divide-y divide-gray-200">
+              {(scene.courtDetails?.productionSentToCourtRows ?? []).map((row, idx) => (
+                <div
+                  key={`psc-${idx}-${row.productionRef}`}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-2 py-4 first:pt-0"
+                >
+                  <DisplayField
+                    label="Production"
+                    value={readValue(getProductionPRDisplayLabel(row.productionRef))}
+                  />
+                  <DisplayField label="Date" value={readValue(row.date)} />
+                  <DisplayField label="Court case no." value={readValue(row.courtCaseNo)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {(scene.courtDetails?.sentToAnalysisRows ?? []).length > 0 ? (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">
+              Sent to analysis institute
+            </div>
+            <div className="divide-y divide-gray-200">
+              {(scene.courtDetails?.sentToAnalysisRows ?? []).map((row, idx) => (
+                <div
+                  key={`sa-${idx}-${row.productionRef}-${row.institution}`}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 py-4 first:pt-0"
+                >
+                  <DisplayField
+                    label="Production"
+                    value={readValue(getProductionPRDisplayLabel(row.productionRef))}
+                  />
+                  <DisplayField
+                    label="Institution"
+                    value={readValue(formatAnalysisInstitutionDisplay(row))}
+                  />
+                  <DisplayField label="Date" value={readValue(row.date)} />
+                  <DisplayField label="Ref. no." value={readValue(row.refNo)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -38,6 +38,61 @@ export interface CrimeSceneDateTime {
   time: string;
 }
 
+/** One production item sent to court (repeatable). */
+export interface ProductionSentToCourtRow {
+  /** Value from Production (P.R.) selection. */
+  productionRef: string;
+  date?: string;
+  courtCaseNo?: string;
+}
+
+/** One production sent to an analysis institute (repeatable). */
+export interface SentToAnalysisRow {
+  productionRef: string;
+  institution?: string;
+  /** When institution is Others — free text. */
+  institutionOtherDetail?: string;
+  date?: string;
+  refNo?: string;
+}
+
+export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
+  return { productionRef: '', date: '', courtCaseNo: '' };
+}
+
+export function emptySentToAnalysisRow(): SentToAnalysisRow {
+  return { productionRef: '', institution: '', institutionOtherDetail: '', date: '', refNo: '' };
+}
+
+/** Court / production tracking for samples from the scene (hair, blood, fingerprints, etc.). */
+export interface CrimeSceneCourtDetails {
+  /** Optional at initial submission — selected from court list. */
+  courtName?: string;
+  /** Optional at initial submission — typed case reference. */
+  courtCaseNo?: string;
+  productionPR?: '' | 'Yes' | 'No';
+  /** When Production (P.R.) is Yes — multi-select item values. */
+  productionPRTypes?: string[];
+  /** Free text when “Others” is included in productionPRTypes. */
+  productionPROtherDetail?: string;
+  /** Per-production: sent to court with date & case no. */
+  productionSentToCourtRows?: ProductionSentToCourtRow[];
+  /** Per-production: analysis institute, date, ref. */
+  sentToAnalysisRows?: SentToAnalysisRow[];
+}
+
+export function emptyCrimeSceneCourtDetails(): CrimeSceneCourtDetails {
+  return {
+    courtName: '',
+    courtCaseNo: '',
+    productionPR: '',
+    productionPRTypes: [],
+    productionPROtherDetail: '',
+    productionSentToCourtRows: [],
+    sentToAnalysisRows: [],
+  };
+}
+
 export interface CrimeScene {
   id: string;
   cvrNo: string;
@@ -75,6 +130,8 @@ export interface CrimeScene {
   photoZipName?: string;
   sketchFileName?: string;
   reportFileName?: string;
+
+  courtDetails?: CrimeSceneCourtDetails;
 
   createdAt: string;
   updatedAt: string;

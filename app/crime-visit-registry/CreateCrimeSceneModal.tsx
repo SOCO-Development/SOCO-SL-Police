@@ -9,11 +9,26 @@ import FormInput from '@/components/forms/FormInput';
 import Button from '@/components/buttons/Button';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { COURT_NAME_OPTIONS } from '@/lib/courtNames';
+import {
+  ANALYSIS_INSTITUTION_OPTIONS,
+  analysisInstitutionIsOthers,
+} from '@/lib/analysisInstitutions';
+import MultiSelect from '@/components/forms/MultiSelect';
+import {
+  PRODUCTION_PR_OPTIONS,
+  PRODUCTION_PR_OTHERS_VALUE,
+  productionOptionsForSelection,
+  productionPRHasOthersSelected,
+} from '@/lib/productionPROptions';
 import { formatDateTimeDDMMYYYY, formatIncidentDuration, parseDateTimeParts } from '@/lib/dateUtils';
 import type { CrimeVisit } from '@/types/crimeVisit';
 import {
   crimeSceneUsesNewVisitFields,
   crimeSceneUsesRevisitFields,
+  emptyCrimeSceneCourtDetails,
+  emptyProductionSentToCourtRow,
+  emptySentToAnalysisRow,
   type CrimeSceneFormData,
   type CrimeSceneOfficer,
   type CrimeSceneSpecialistTeam,
@@ -156,6 +171,7 @@ function defaultForm(): CrimeSceneFormData {
     photoZipName: '',
     sketchFileName: '',
     reportFileName: '',
+    courtDetails: emptyCrimeSceneCourtDetails(),
   };
 }
 
@@ -905,6 +921,433 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             >
               Add Scene Guard
             </Button>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-800">Court details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <span className="block text-sm font-semibold text-gray-700 mb-2">Court name (optional)</span>
+                <CustomSelect
+                  value={form.courtDetails?.courtName ?? ''}
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      courtDetails: {
+                        ...emptyCrimeSceneCourtDetails(),
+                        ...prev.courtDetails,
+                        courtName: value,
+                      },
+                    }))
+                  }
+                  options={COURT_NAME_OPTIONS}
+                  placeholder="Select court"
+                  searchable
+                  searchPlaceholder="Search court…"
+                />
+              </div>
+              <FormInput
+                label="Court case no. (optional)"
+                value={form.courtDetails?.courtCaseNo ?? ''}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    courtDetails: {
+                      ...emptyCrimeSceneCourtDetails(),
+                      ...prev.courtDetails,
+                      courtCaseNo: e.target.value,
+                    },
+                  }))
+                }
+                placeholder="Type case number if known"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+              <div>
+                <span className="block text-sm font-semibold text-gray-700 mb-2">Production (P.R.)</span>
+                <div className="flex flex-wrap gap-4 items-center rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2">
+                  {(['Yes', 'No'] as const).map((opt) => (
+                    <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="radio"
+                        name="modalCourtProductionPR"
+                        checked={(form.courtDetails?.productionPR ?? '') === opt}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            courtDetails: {
+                              ...emptyCrimeSceneCourtDetails(),
+                              ...prev.courtDetails,
+                              productionPR: opt,
+                              ...(opt === 'No'
+                                ? {
+                                    productionPRTypes: [],
+                                    productionPROtherDetail: '',
+                                    productionSentToCourtRows: [],
+                                    sentToAnalysisRows: [],
+                                  }
+                                : {}),
+                            },
+                          }))
+                        }
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      {opt}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {form.courtDetails?.productionPR === 'Yes' ? (
+                <>
+                  <div
+                    className={
+                      productionPRHasOthersSelected(form.courtDetails?.productionPRTypes)
+                        ? ''
+                        : 'md:col-span-2'
+                    }
+                  >
+                    <MultiSelect
+                      label="Production types"
+                      labelClassName="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1"
+                      optionRowClassName="text-[15px] leading-relaxed text-gray-800"
+                      value={form.courtDetails?.productionPRTypes ?? []}
+                      onChange={(next) => {
+                        const sel = new Set(next);
+                        setForm((prev) => ({
+                          ...prev,
+                          courtDetails: {
+                            ...emptyCrimeSceneCourtDetails(),
+                            ...prev.courtDetails,
+                            productionPRTypes: next,
+                            ...(!next.includes(PRODUCTION_PR_OTHERS_VALUE)
+                              ? { productionPROtherDetail: '' }
+                              : {}),
+                            productionSentToCourtRows: (
+                              prev.courtDetails?.productionSentToCourtRows ?? []
+                            ).filter((row) => sel.has(row.productionRef)),
+                            sentToAnalysisRows: (prev.courtDetails?.sentToAnalysisRows ?? []).filter((row) =>
+                              sel.has(row.productionRef),
+                            ),
+                          },
+                        }));
+                      }}
+                      options={PRODUCTION_PR_OPTIONS}
+                      placeholder="Select one or more"
+                    />
+                  </div>
+                  {productionPRHasOthersSelected(form.courtDetails?.productionPRTypes) ? (
+                    <FormInput
+                      label={`${PRODUCTION_PR_OTHERS_VALUE} — specify`}
+                      value={form.courtDetails?.productionPROtherDetail ?? ''}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          courtDetails: {
+                            ...emptyCrimeSceneCourtDetails(),
+                            ...prev.courtDetails,
+                            productionPROtherDetail: e.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Describe other items"
+                    />
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+            <div className="space-y-3 pt-2 border-t border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-800">Production sent to court</h3>
+              {!(form.courtDetails?.productionPRTypes ?? []).length ? (
+                <p className="text-xs text-gray-500">Select production types under Production (P.R.) first.</p>
+              ) : null}
+              <div className="divide-y divide-gray-200">
+                {(form.courtDetails?.productionSentToCourtRows ?? []).map((row, index) => (
+                  <div
+                    key={`m-court-${index}`}
+                    className="grid grid-cols-1 gap-3 py-4 first:pt-0 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end"
+                  >
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Production</span>
+                      <CustomSelect
+                        value={row.productionRef}
+                        onChange={(value) =>
+                          setForm((prev) => {
+                            const rows = [...(prev.courtDetails?.productionSentToCourtRows ?? [])];
+                            rows[index] = { ...rows[index], productionRef: value };
+                            return {
+                              ...prev,
+                              courtDetails: {
+                                ...emptyCrimeSceneCourtDetails(),
+                                ...prev.courtDetails,
+                                productionSentToCourtRows: rows,
+                              },
+                            };
+                          })
+                        }
+                        options={productionOptionsForSelection(form.courtDetails?.productionPRTypes)}
+                        placeholder="Select production"
+                        searchable
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Date (DD/MM/YY)</span>
+                      <DatePicker
+                        value={row.date ?? ''}
+                        onChange={(value) =>
+                          setForm((prev) => {
+                            const rows = [...(prev.courtDetails?.productionSentToCourtRows ?? [])];
+                            rows[index] = { ...rows[index], date: value };
+                            return {
+                              ...prev,
+                              courtDetails: {
+                                ...emptyCrimeSceneCourtDetails(),
+                                ...prev.courtDetails,
+                                productionSentToCourtRows: rows,
+                              },
+                            };
+                          })
+                        }
+                      />
+                    </div>
+                    <FormInput
+                      label="Court case no."
+                      value={row.courtCaseNo ?? ''}
+                      onChange={(e) =>
+                        setForm((prev) => {
+                          const rows = [...(prev.courtDetails?.productionSentToCourtRows ?? [])];
+                          rows[index] = { ...rows[index], courtCaseNo: e.target.value };
+                          return {
+                            ...prev,
+                            courtDetails: {
+                              ...emptyCrimeSceneCourtDetails(),
+                              ...prev.courtDetails,
+                              productionSentToCourtRows: rows,
+                            },
+                          };
+                        })
+                      }
+                      placeholder="Case number"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          courtDetails: {
+                            ...emptyCrimeSceneCourtDetails(),
+                            ...prev.courtDetails,
+                            productionSentToCourtRows: (prev.courtDetails?.productionSentToCourtRows ?? []).filter(
+                              (_, i) => i !== index,
+                            ),
+                          },
+                        }))
+                      }
+                      className="h-10 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 text-xs font-semibold self-end"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={!(form.courtDetails?.productionPRTypes ?? []).length}
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    courtDetails: {
+                      ...emptyCrimeSceneCourtDetails(),
+                      ...prev.courtDetails,
+                      productionSentToCourtRows: [
+                        ...(prev.courtDetails?.productionSentToCourtRows ?? []),
+                        emptyProductionSentToCourtRow(),
+                      ],
+                    },
+                  }))
+                }
+              >
+                + Add production sent to court
+              </Button>
+            </div>
+
+            <div className="space-y-3 pt-2 border-t border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-800">Sent to analysis institute</h3>
+              {!(form.courtDetails?.productionPRTypes ?? []).length ? (
+                <p className="text-xs text-gray-500">Select production types under Production (P.R.) first.</p>
+              ) : null}
+              <div className="divide-y divide-gray-200">
+                {(form.courtDetails?.sentToAnalysisRows ?? []).map((row, index) => (
+                  <div
+                    key={`m-an-${index}`}
+                    className="grid grid-cols-1 gap-3 py-4 first:pt-0 md:grid-cols-[1fr_1fr_1fr_1fr_auto] md:items-end"
+                  >
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Production</span>
+                      <CustomSelect
+                        value={row.productionRef}
+                        onChange={(value) =>
+                          setForm((prev) => {
+                            const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
+                            rows[index] = { ...rows[index], productionRef: value };
+                            return {
+                              ...prev,
+                              courtDetails: {
+                                ...emptyCrimeSceneCourtDetails(),
+                                ...prev.courtDetails,
+                                sentToAnalysisRows: rows,
+                              },
+                            };
+                          })
+                        }
+                        options={productionOptionsForSelection(form.courtDetails?.productionPRTypes)}
+                        placeholder="Select production"
+                        searchable
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                        Institution
+                      </span>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <div className="min-w-0 flex-1">
+                          <CustomSelect
+                            value={row.institution ?? ''}
+                            onChange={(value) =>
+                              setForm((prev) => {
+                                const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
+                                rows[index] = {
+                                  ...rows[index],
+                                  institution: value,
+                                  institutionOtherDetail: analysisInstitutionIsOthers(value)
+                                    ? rows[index].institutionOtherDetail
+                                    : '',
+                                };
+                                return {
+                                  ...prev,
+                                  courtDetails: {
+                                    ...emptyCrimeSceneCourtDetails(),
+                                    ...prev.courtDetails,
+                                    sentToAnalysisRows: rows,
+                                  },
+                                };
+                              })
+                            }
+                            options={ANALYSIS_INSTITUTION_OPTIONS}
+                            placeholder="Select institute"
+                            searchable
+                            searchPlaceholder="Search…"
+                          />
+                        </div>
+                        {analysisInstitutionIsOthers(row.institution) ? (
+                          <div className="min-w-0 flex-1">
+                            <FormInput
+                              label=""
+                              value={row.institutionOtherDetail ?? ''}
+                              onChange={(e) =>
+                                setForm((prev) => {
+                                  const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
+                                  rows[index] = { ...rows[index], institutionOtherDetail: e.target.value };
+                                  return {
+                                    ...prev,
+                                    courtDetails: {
+                                      ...emptyCrimeSceneCourtDetails(),
+                                      ...prev.courtDetails,
+                                      sentToAnalysisRows: rows,
+                                    },
+                                  };
+                                })
+                              }
+                              placeholder="Specify institute"
+                              aria-label="Institution (other)"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Date (DD/MM/YY)</span>
+                      <DatePicker
+                        value={row.date ?? ''}
+                        onChange={(value) =>
+                          setForm((prev) => {
+                            const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
+                            rows[index] = { ...rows[index], date: value };
+                            return {
+                              ...prev,
+                              courtDetails: {
+                                ...emptyCrimeSceneCourtDetails(),
+                                ...prev.courtDetails,
+                                sentToAnalysisRows: rows,
+                              },
+                            };
+                          })
+                        }
+                      />
+                    </div>
+                    <FormInput
+                      label="Ref. no."
+                      value={row.refNo ?? ''}
+                      onChange={(e) =>
+                        setForm((prev) => {
+                          const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
+                          rows[index] = { ...rows[index], refNo: e.target.value };
+                          return {
+                            ...prev,
+                            courtDetails: {
+                              ...emptyCrimeSceneCourtDetails(),
+                              ...prev.courtDetails,
+                              sentToAnalysisRows: rows,
+                            },
+                          };
+                        })
+                      }
+                      placeholder="Reference number"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          courtDetails: {
+                            ...emptyCrimeSceneCourtDetails(),
+                            ...prev.courtDetails,
+                            sentToAnalysisRows: (prev.courtDetails?.sentToAnalysisRows ?? []).filter(
+                              (_, i) => i !== index,
+                            ),
+                          },
+                        }))
+                      }
+                      className="h-10 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 text-xs font-semibold self-end"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={!(form.courtDetails?.productionPRTypes ?? []).length}
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    courtDetails: {
+                      ...emptyCrimeSceneCourtDetails(),
+                      ...prev.courtDetails,
+                      sentToAnalysisRows: [
+                        ...(prev.courtDetails?.sentToAnalysisRows ?? []),
+                        emptySentToAnalysisRow(),
+                      ],
+                    },
+                  }))
+                }
+              >
+                + Add analysis institute row
+              </Button>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
