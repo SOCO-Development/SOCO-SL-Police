@@ -133,10 +133,23 @@ export interface CrimeScene {
 
   courtDetails?: CrimeSceneCourtDetails;
 
+  /**
+   * CVR amendment workflow (client-side until backend; fields mirror expected API).
+   * - requestStatus: officer asks to edit a submitted CVR; approver grants "approved".
+   * - revisionPending: edited CVR submitted and awaits approval; baselineJson holds prior approved copy.
+   */
+  cvrAmendment?: CvrAmendmentState;
+
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CrimeSceneFormData extends Omit<CrimeScene, 'id' | 'createdAt' | 'updatedAt' | 'cvrNo'> {
+export interface CvrAmendmentState {
+  requestStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  revisionPending?: boolean;
+  baselineJson?: string;
+}
+
+export interface CrimeSceneFormData extends Omit<CrimeScene, 'id' | 'createdAt' | 'updatedAt' | 'cvrNo' | 'cvrAmendment'> {
   cvrNo?: string;
 }

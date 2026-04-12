@@ -5,7 +5,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FeatureCard from '@/components/cards/FeatureCard';
 import { Clipboard, FileText, List, MapPin } from 'phosphor-react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, FileEdit, ListChecks, Scale, UserSearch } from 'lucide-react';
 
 export default function CrimeVisitRegistryPage() {
     const [toast, setToast] = useState<string>('');
@@ -45,6 +45,34 @@ export default function CrimeVisitRegistryPage() {
             icon: <FileText className="w-12 h-12" weight="fill" style={{ color: '#0891b2' }} />,
             href: '/crime-visit-registry/submitted-crime-scenes',
         },
+        {
+            title: 'CVR Update Request',
+            subtitle: 'CVR යාවත්කාලීන කිරීමට අවසර ඉල්ලීම',
+            description: 'Request permission to amend a submitted CVR, then edit and send for re-approval.',
+            icon: <FileEdit className="w-12 h-12" style={{ color: '#7c3aed' }} />,
+            href: '/crime-visit-registry/cvr-update-request',
+        },
+        {
+            title: 'Pending CVR Approvals',
+            subtitle: 'අනුමැතිය බලාපොරොත්තු',
+            description: 'Approve update requests and review amended records (changes highlighted in green).',
+            icon: <ListChecks className="w-12 h-12" style={{ color: '#059669' }} />,
+            href: '/crime-visit-registry/pending-cvr-approvals',
+        },
+        {
+            title: 'Update Investigation Details',
+            subtitle: 'පරීක්ෂණ තොරතුරු යාවත්කාලීන කිරීම',
+            description: 'Jump to investigation officers for an approved CVR amendment.',
+            icon: <UserSearch className="w-12 h-12" style={{ color: '#c2410c' }} />,
+            href: '/crime-visit-registry/update-investigation-details',
+        },
+        {
+            title: 'Update Court Details',
+            subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
+            description: 'Jump to court and production details for an approved CVR amendment.',
+            icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
+            href: '/crime-visit-registry/update-court-details',
+        },
     ];
 
     return (
@@ -58,7 +86,7 @@ export default function CrimeVisitRegistryPage() {
                             <p className="text-sm text-gray-500 mb-6">
                                 Manage scene-of-crime visits, officer assignments, and evidence examination records.
                             </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                                 {cards.map((card) => (
                                     <FeatureCard
                                         key={card.href ?? card.title}

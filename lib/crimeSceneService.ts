@@ -5,9 +5,14 @@ import type {
   CrimeSceneCourtDetails,
   CrimeSceneFormData,
   CrimeSceneOfficer,
+  CvrAmendmentState,
   ProductionSentToCourtRow,
   SentToAnalysisRow,
 } from '@/types/crimeScene';
+import {
+  applyPayloadToScene,
+  buildCrimeScenePayloadFromForm,
+} from '@/lib/crimeSceneFormMapping';
 
 const STORAGE_KEY = 'crime_scenes';
 
@@ -104,6 +109,19 @@ function saveAll(scenes: CrimeScene[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes));
 }
 
+/** Snapshot for diff / reject-restore — strip nested baseline to avoid bloat. */
+function cloneBaselineSnapshot(scene: CrimeScene): CrimeScene {
+  const a = scene.cvrAmendment;
+  const amendment: CvrAmendmentState | undefined = a
+    ? {
+        requestStatus: a.requestStatus,
+        revisionPending: false,
+        baselineJson: undefined,
+      }
+    : undefined;
+  return JSON.parse(JSON.stringify({ ...scene, cvrAmendment: amendment })) as CrimeScene;
+}
+
 export const crimeSceneService = {
   getAll(): CrimeScene[] {
     return loadAll();
@@ -111,6 +129,152 @@ export const crimeSceneService = {
 
   getById(id: string): CrimeScene | undefined {
     return loadAll().find((scene) => scene.id === id);
+  },
+
+  /** Crime scenes with a pending “may I edit?” request. */
+  getPendingAmendmentRequests(): CrimeScene[] {
+    return loadAll().filter((s) => s.cvrAmendment?.requestStatus === 'pending');
+  },
+
+  /** Crime scenes with submitted edits awaiting approval. */
+  getPendingRevisionApprovals(): CrimeScene[] {
+    return loadAll().filter((s) => s.cvrAmendment?.revisionPending === true);
+  },
+
+  /** Officer asks to amend a submitted CVR (backend will mirror). */
+  requestAmendmentPermission(sceneId: string): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    if (scene.cvrAmendment?.revisionPending) return null;
+    const next: CrimeScene = {
+      ...scene,
+      updatedAt: now(),
+      cvrAmendment: {
+        ...scene.cvrAmendment,
+        requestStatus: 'pending',
+        revisionPending: false,
+        baselineJson: undefined,
+      },
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
+
+  approveAmendmentRequest(sceneId: string): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    if (scene.cvrAmendment?.requestStatus !== 'pending') return null;
+    const next: CrimeScene = {
+      ...scene,
+      updatedAt: now(),
+      cvrAmendment: {
+        ...scene.cvrAmendment,
+        requestStatus: 'approved',
+        revisionPending: false,
+        baselineJson: undefined,
+      },
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
+
+  rejectAmendmentRequest(sceneId: string): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    if (scene.cvrAmendment?.requestStatus !== 'pending') return null;
+    const next: CrimeScene = {
+      ...scene,
+      updatedAt: now(),
+      cvrAmendment: {
+        ...scene.cvrAmendment,
+        requestStatus: 'rejected',
+        revisionPending: false,
+        baselineJson: undefined,
+      },
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
+
+  /**
+   * Save amended CVR and send for re-approval (stores baseline for diff).
+   */
+  submitRevisionForApproval(sceneId: string, form: CrimeSceneFormData): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    if (scene.cvrAmendment?.requestStatus !== 'approved' || scene.cvrAmendment.revisionPending) {
+      return null;
+    }
+    const baselineJson = JSON.stringify(cloneBaselineSnapshot(scene));
+    const payload = buildCrimeScenePayloadFromForm(form);
+    const merged = applyPayloadToScene(scene, payload);
+    const next: CrimeScene = {
+      ...merged,
+      updatedAt: now(),
+      cvrAmendment: {
+        requestStatus: 'approved',
+        revisionPending: true,
+        baselineJson,
+      },
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
+
+  approveRevision(sceneId: string): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    if (!scene.cvrAmendment?.revisionPending) return null;
+    const next: CrimeScene = {
+      ...scene,
+      updatedAt: now(),
+      cvrAmendment: {
+        requestStatus: 'none',
+        revisionPending: false,
+        baselineJson: undefined,
+      },
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
+
+  rejectRevision(sceneId: string): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    const raw = scene.cvrAmendment?.baselineJson;
+    if (!scene.cvrAmendment?.revisionPending || !raw) return null;
+    const restored = JSON.parse(raw) as CrimeScene;
+    const next: CrimeScene = {
+      ...restored,
+      id: scene.id,
+      createdAt: scene.createdAt,
+      updatedAt: now(),
+      cvrAmendment: {
+        requestStatus: 'approved',
+        revisionPending: false,
+        baselineJson: undefined,
+      },
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
   },
 
   create(data: CrimeSceneFormData): CrimeScene {

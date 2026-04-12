@@ -19,6 +19,7 @@ import MultiSelect from '@/components/forms/MultiSelect';
 import Button from '@/components/buttons/Button';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { buildCrimeScenePayloadFromForm, crimeSceneToFormData } from '@/lib/crimeSceneFormMapping';
 import { COURT_NAME_OPTIONS } from '@/lib/courtNames';
 import {
   ANALYSIS_INSTITUTION_OPTIONS,
@@ -35,6 +36,12 @@ import { formatDateTimeDDMMYYYY, formatIncidentDuration, parseDateTimeParts } fr
 interface CreateCrimeSceneFormProps {
   onSaved?: (payload: { cvrNo: string }) => void;
   onCancel?: () => void;
+  /** Edit an existing submitted scene (requires amendment flow). */
+  editSceneId?: string;
+  /** When true with editSceneId, save calls submitRevisionForApproval. */
+  amendmentMode?: boolean;
+  /** Scroll to section after load (edit flows). */
+  focusSection?: 'investigation' | 'court';
 }
 
 // ─── UI Helper Components ─────────────────────────────────────────────────────
@@ -216,11 +223,18 @@ function formatDuration(inTime: string, outTime: string): string {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeSceneFormProps) {
+export default function CreateCrimeSceneForm({
+  onSaved,
+  onCancel,
+  editSceneId,
+  amendmentMode = false,
+  focusSection,
+}: CreateCrimeSceneFormProps) {
   const [form, setForm] = useState<CrimeSceneFormData>(defaultForm());
   const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
   const [existingCvrs, setExistingCvrs] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
     setAllVisits(crimeVisitService.getAll());
@@ -229,6 +243,22 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
     ).filter(Boolean);
     setExistingCvrs(cvrs);
   }, []);
+
+  useEffect(() => {
+    if (!editSceneId) return;
+    const scene = crimeSceneService.getById(editSceneId);
+    if (scene) setForm(crimeSceneToFormData(scene));
+  }, [editSceneId]);
+
+  useEffect(() => {
+    if (!focusSection || !editSceneId) return;
+    const elId =
+      focusSection === 'investigation' ? 'cvr-section-investigation' : 'cvr-section-court';
+    const t = window.setTimeout(() => {
+      document.getElementById(elId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 350);
+    return () => window.clearTimeout(t);
+  }, [focusSection, editSceneId, form.cvrNo]);
 
   const visitOptions = allVisits
     .slice()
@@ -366,22 +396,32 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
 
   const handleSave = () => {
     const validation = validate();
-    if (validation) { setError(validation); return; }
+    if (validation) {
+      setError(validation);
+      return;
+    }
 
-    const payload: CrimeSceneFormData = {
-      ...form,
-      cvrNo: crimeSceneUsesNewVisitFields(form.visitType) ? (form.cvrNo?.trim() ?? '') : form.revisitCvrNo,
-      visitId: crimeSceneUsesNewVisitFields(form.visitType) ? form.visitId : '',
-      revisitCvrNo: crimeSceneUsesRevisitFields(form.visitType) ? form.revisitCvrNo : '',
-      socoOfficers: form.socoOfficers.filter((o) => o.name.trim()),
-      specialistTeams: form.specialistTeams
-        .map((t) => ({ ...t, members: (t.members || []).filter((m) => m.name.trim()) }))
-        .filter((t) => t.role.trim() || (t.members && t.members.length > 0)),
-      sceneGuards: (form.sceneGuards ?? []).filter((g) => g.name.trim()),
-      investigationOfficers: (form.investigationOfficers ?? []).filter((o) => o.name.trim()),
-    };
+    const payload = buildCrimeScenePayloadFromForm(form);
 
-    const created = crimeSceneService.create(payload);
+    if (editSceneId && amendmentMode) {
+      const updated = crimeSceneService.submitRevisionForApproval(editSceneId, form);
+      if (!updated) {
+        setError(
+          'Cannot submit for approval. You need an approved update request, and no revision may already be pending.',
+        );
+        return;
+      }
+      onSaved?.({ cvrNo: updated.cvrNo });
+      setError('');
+      return;
+    }
+
+    if (editSceneId) {
+      setError('This screen is for submitting an amended CVR for approval.');
+      return;
+    }
+
+    const created = crimeSceneService.create({ ...form, ...payload } as CrimeSceneFormData);
     onSaved?.({ cvrNo: created.cvrNo });
     setError('');
     setForm(defaultForm());
@@ -402,71 +442,95 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
         <div className="animate-fade-in space-y-5">
 
           <h3 className="text-base font-semibold text-gray-700 uppercase tracking-widest pb-2 border-b border-gray-200">
-            Create Crime Scene
+            {isEditMode
+              ? amendmentMode
+                ? 'Update crime scene (submit for approval)'
+                : 'Edit crime scene'
+              : 'Create Crime Scene'}
           </h3>
 
           {/* ── Scene Basics ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
-              Scene Basics
-            </h4>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <FieldGroup label="Visit Type">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
-                  {VISIT_TYPES.map((option) => (
-                    <label
-                      key={option.value}
-                      className="inline-flex items-center gap-2 text-sm text-gray-700"
-                    >
-                      <input
-                        type="radio"
-                        name="crimeSceneVisitType"
-                        checked={form.visitType === option.value}
-                        onChange={() =>
-                          setForm((prev) => ({ ...prev, visitType: option.value as CrimeSceneVisitType }))
-                        }
-                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      {option.label}
-                    </label>
-                  ))}
-                </div>
-              </FieldGroup>
+          {isEditMode ? (
+            <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/80">
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
+                Visit reference (locked)
+              </h4>
+              <p className="text-sm text-gray-800">
+                <span className="font-semibold text-gray-900">CVR: </span>
+                <span className="font-mono">{(form.cvrNo || form.revisitCvrNo || '—').trim()}</span>
+              </p>
+              <p className="text-sm text-gray-700 mt-1">
+                <span className="font-semibold">Visit type: </span>
+                {VISIT_TYPES.find((v) => v.value === form.visitType)?.label ?? form.visitType}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                CVR and visit type cannot be changed here. Use other registry actions for new visits.
+              </p>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
+                Scene Basics
+              </h4>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <FieldGroup label="Visit Type">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                    {VISIT_TYPES.map((option) => (
+                      <label
+                        key={option.value}
+                        className="inline-flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="radio"
+                          name="crimeSceneVisitType"
+                          checked={form.visitType === option.value}
+                          onChange={() =>
+                            setForm((prev) => ({ ...prev, visitType: option.value as CrimeSceneVisitType }))
+                          }
+                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
+                </FieldGroup>
 
-              {crimeSceneUsesNewVisitFields(form.visitType) ? (
-                <FieldGroup label="Visit ID with Date">
-                  <CustomSelect
-                    value={form.visitId}
-                    onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
-                    options={visitOptions}
-                    placeholder={visitOptions.length ? 'Select initiated visit' : 'No visits found'}
-                  />
-                </FieldGroup>
-              ) : (
-                <FieldGroup label="CVR Number">
-                  <CustomSelect
-                    value={form.revisitCvrNo}
-                    onChange={(value) => setForm((prev) => ({ ...prev, revisitCvrNo: value }))}
-                    options={cvrOptions}
-                    placeholder={cvrOptions.length ? 'Select existing CVR' : 'No CVR numbers found'}
-                  />
-                </FieldGroup>
+                {crimeSceneUsesNewVisitFields(form.visitType) ? (
+                  <FieldGroup label="Visit ID with Date">
+                    <CustomSelect
+                      value={form.visitId}
+                      onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
+                      options={visitOptions}
+                      placeholder={visitOptions.length ? 'Select initiated visit' : 'No visits found'}
+                    />
+                  </FieldGroup>
+                ) : (
+                  <FieldGroup label="CVR Number">
+                    <CustomSelect
+                      value={form.revisitCvrNo}
+                      onChange={(value) => setForm((prev) => ({ ...prev, revisitCvrNo: value }))}
+                      options={cvrOptions}
+                      placeholder={cvrOptions.length ? 'Select existing CVR' : 'No CVR numbers found'}
+                    />
+                  </FieldGroup>
+                )}
+              </div>
+
+              {crimeSceneUsesNewVisitFields(form.visitType) && (
+                <div className="mt-3">
+                  <FieldGroup label="CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)">
+                    <TextInput
+                      value={form.cvrNo ?? ''}
+                      onChange={(e) => setForm((prev) => ({ ...prev, cvrNo: e.target.value }))}
+                      placeholder="Ampara/01/2026"
+                    />
+                  </FieldGroup>
+                </div>
               )}
             </div>
-
-            {crimeSceneUsesNewVisitFields(form.visitType) && (
-              <div className="mt-3">
-                <FieldGroup label="CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)">
-                  <TextInput
-                    value={form.cvrNo ?? ''}
-                    onChange={(e) => setForm((prev) => ({ ...prev, cvrNo: e.target.value }))}
-                    placeholder="Ampara/01/2026"
-                  />
-                </FieldGroup>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* ── Location ── */}
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
@@ -985,7 +1049,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
           </div>
 
           {/* ── Investigation Officers ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div id="cvr-section-investigation" className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 scroll-mt-24">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-fuchsia-500 inline-block flex-shrink-0" />
               Investigation Officer
@@ -1101,7 +1165,7 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
           </div>
 
           {/* ── Court details ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div id="cvr-section-court" className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 scroll-mt-24">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
               Court details
@@ -1595,7 +1659,9 @@ export default function CreateCrimeSceneForm({ onSaved, onCancel }: CreateCrimeS
         <div />
         <div className="flex items-center gap-2">
           <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
-          <Button variant="success" type="button" onClick={handleSave}>Save Crime Scene</Button>
+          <Button variant="success" type="button" onClick={handleSave}>
+            {isEditMode && amendmentMode ? 'Submit for approval' : 'Save Crime Scene'}
+          </Button>
         </div>
         <div />
       </div>
