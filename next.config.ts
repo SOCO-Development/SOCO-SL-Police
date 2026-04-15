@@ -5,6 +5,7 @@ const basePath = getNextBasePath();
 
 const nextConfig: NextConfig = {
   /* config options here */
+  output: 'export', // enables static export
   ...(basePath ? { basePath } : {}),
   // Serve images directly from /public so deployments without Next image optimizer still work.
   images: {

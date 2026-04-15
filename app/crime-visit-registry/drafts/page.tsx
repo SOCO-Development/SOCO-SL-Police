@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer';
 import CrimeVisitList from '../crime-visits/CrimeVisitList';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import type { CrimeVisit } from '@/types/crimeVisit';
+import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import { ArrowLeft, Plus } from 'lucide-react';
 
 export default function DraftedCrimeVisitsPage() {
@@ -36,10 +37,11 @@ export default function DraftedCrimeVisitsPage() {
               <div className="flex items-center gap-3">
                 <Link
                   href="/crime-visit-registry"
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className={registryBackLinkClass}
                   aria-label="Back"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
                 </Link>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Drafted Crime Visits</h2>

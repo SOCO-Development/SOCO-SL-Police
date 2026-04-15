@@ -8,7 +8,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'min-h-[42px] px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 rounded-lg transition-colors shadow-sm',
   secondary:
-    'min-h-[42px] px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 active:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
+    'min-h-[42px] px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-amber-50 hover:text-amber-800 hover:border-amber-200 active:bg-amber-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
   success:
     'min-h-[42px] px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:opacity-60 rounded-lg transition-colors shadow-sm',
   danger:

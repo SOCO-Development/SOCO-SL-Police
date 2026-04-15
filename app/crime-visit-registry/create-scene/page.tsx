@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer';
 import CreateCrimeSceneForm from './CreateCrimeSceneForm';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import type { CrimeSceneFormData } from '@/types/crimeScene';
+import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -45,10 +46,11 @@ export default function CreateCrimeScenePage() {
             <div className="flex items-center gap-3 mb-6">
               <Link
                 href="/crime-visit-registry"
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className={registryBackLinkClass}
                 aria-label="Back"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
               </Link>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Create Crime Scene</h2>

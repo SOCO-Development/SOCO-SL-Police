@@ -51,7 +51,7 @@ export default function SystemConfigPage() {
                                 පද්ධති වින්‍යාස කළමනාකරණය
                             </p>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 max-w-3xl lg:max-w-none">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-3xl lg:max-w-none">
                                 {cards.map((card) => (
                                     <FeatureCard
                                         key={card.href}
