@@ -983,10 +983,10 @@ export default function CrimeVisitForm({
         {!readOnlyAll ? (
           <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
+              variant="secondary"
               type="button"
               onClick={onCancel}
-              className="min-h-[30px] px-2.5 py-1 text-[11px]"
+              className="min-h-[42px] px-4 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>

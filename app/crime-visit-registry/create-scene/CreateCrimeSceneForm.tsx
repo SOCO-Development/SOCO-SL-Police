@@ -1658,7 +1658,7 @@ export default function CreateCrimeSceneForm({
       <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
         <div />
         <div className="flex items-center gap-2">
-          <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
+          <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
           <Button variant="success" type="button" onClick={handleSave}>
             {isEditMode && amendmentMode ? 'Submit for approval' : 'Save Crime Scene'}
           </Button>

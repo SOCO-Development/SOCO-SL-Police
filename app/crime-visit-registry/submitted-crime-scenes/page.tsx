@@ -8,6 +8,7 @@ import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
+import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import {
   flattenGroupChronological,
   groupScenesByCvr,
@@ -293,10 +294,11 @@ export default function SubmittedCrimeScenesPage() {
               <div className="flex items-center gap-3 mb-6 flex-wrap">
                 <Link
                   href="/crime-visit-registry/submitted-crime-scenes"
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className={registryBackLinkClass}
                   aria-label="Back"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
                 </Link>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 flex-wrap">
@@ -345,10 +347,11 @@ export default function SubmittedCrimeScenesPage() {
               <div className="flex items-center gap-3">
                 <Link
                   href="/crime-visit-registry"
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className={registryBackLinkClass}
                   aria-label="Back"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
                 </Link>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Submitted Crime Scenes</h2>
