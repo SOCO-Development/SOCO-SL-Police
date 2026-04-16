@@ -142,18 +142,16 @@ function calcDuration(from: string, to: string): string {
 
 // ─── Shared UI Components ─────────────────────────────────────────────────────
 
-function SectionHeader({ tableRef, title, titleSi }: { tableRef?: string; title: string; titleSi?: string }) {
+function SectionHeader({ sectionNo, title, titleSi }: { sectionNo: number; title: string; titleSi?: string }) {
     return (
-        <div className="flex items-start justify-between gap-3 mb-6 pb-3 border-b border-gray-200">
-            <div>
-                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{title}</h3>
+        <div className="flex items-start gap-3 mb-6 pb-3 border-b border-slate-200">
+            <span className="h-8 w-8 shrink-0 rounded-full border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold flex items-center justify-center shadow-sm">
+                {sectionNo}
+            </span>
+            <div className="pt-0.5">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{title}</h3>
                 {titleSi && <p className="text-xs text-gray-500 mt-1 font-noto-sinhala">{titleSi}</p>}
             </div>
-            {tableRef && (
-                <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full whitespace-nowrap">
-                    {tableRef}
-                </span>
-            )}
         </div>
     );
 }
@@ -353,118 +351,124 @@ export default function AddOfficerPage() {
                             </div>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
+                        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
                             {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
+                            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50/80 to-white">
                                 <SectionHeader
-                                    tableRef="Table : 01"
+                                    sectionNo={1}
                                     title="PERSONNEL DETAILS OF SCENE OF CRIME OFFICER"
                                     titleSi="අපරාධ ස්ථාන නිලධාරිගේ පුද්ගලික තොරතුරු"
                                 />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
-                                    {/* SOCO Lab */}
-                                    <div>
-                                        <AnnexLabel>Annex . 01</AnnexLabel>
-                                        <FieldLabel label="SOCO Lab" si="SOCO රසායනාගාරය" />
-                                        <CustomSelect value={form.socoLab} onChange={(v) => set('socoLab', v)}
-                                            options={SOCO_LABS_OPTIONS} placeholder="-- Select SOCO Lab --" />
+                                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                                    <div className="xl:col-span-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+                                            {/* SOCO Lab */}
+                                            <div>
+                                                <AnnexLabel>Annex . 01</AnnexLabel>
+                                                <FieldLabel label="SOCO Lab" si="SOCO රසායනාගාරය" />
+                                                <CustomSelect value={form.socoLab} onChange={(v) => set('socoLab', v)}
+                                                    options={SOCO_LABS_OPTIONS} placeholder="-- Select SOCO Lab --" />
+                                            </div>
+
+                                            {/* Rank & Reg No */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
+                                                <div>
+                                                    <AnnexLabel>Annex . 12</AnnexLabel>
+                                                    <FieldLabel label="Rank" si="තනතුර" />
+                                                    <CustomSelect value={form.rankDropdown} onChange={(v) => set('rankDropdown', v)}
+                                                        options={RANK_OPTIONS} placeholder="-- Rank --" />
+                                                </div>
+                                                <div>
+                                                    <AnnexLabel>&nbsp;</AnnexLabel>
+                                                    <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
+                                                    <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
+                                                </div>
+                                            </div>
+
+                                            {/* Full Name */}
+                                            <div className="md:col-span-2 xl:col-span-3">
+                                                <FieldLabel label="Full Name" si="සම්පූර්ණ නම (max 50)" />
+                                                <GInput value={form.fullName} onChange={(v) => set('fullName', v)}
+                                                    placeholder="Full name" maxLength={50} />
+                                                <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
+                                            </div>
+
+                                            {/* Dates */}
+                                            <div>
+                                                <FieldLabel label="Reported Date / වාර්තා දිනය" />
+                                                <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Date of Birth / උපන් දිනය" />
+                                                <DatePicker value={form.dob} onChange={(v) => set('dob', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Date Joined SOCO Project / SOCO ව්‍යාපෘතියට එකතු වූ දිනය" />
+                                                <DatePicker value={form.dateJoinedSoco} onChange={(v) => set('dateJoinedSoco', v)} />
+                                            </div>
+
+                                            {/* Course & Service */}
+                                            <div>
+                                                <FieldLabel label="SOCO Course Number / SOCO පාඨමාලා අංකය" />
+                                                <GInput value={form.socoCourseNo} onChange={(v) => set('socoCourseNo', v)} placeholder="Course Number" />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="SOCO Service / SOCO සේවය" />
+                                                <GInput value={form.socoService} onChange={(v) => set('socoService', v)} placeholder="Service details" />
+                                            </div>
+
+                                            {/* Telephone */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2 xl:col-span-3">
+                                                <div>
+                                                    <FieldLabel label="Office Tel. / කාර්යාල දුරකථනය" />
+                                                    <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Residence Tel. / නිවාස දුරකථනය" />
+                                                    <GInput value={form.telResidence} onChange={(v) => set('telResidence', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Mobile / ජංගම දුරකථනය" />
+                                                    <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {/* Rank & Reg No */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
+                                    {/* Photo upload — top right */}
+                                    <div className="xl:col-span-1">
                                         <div>
-                                            <AnnexLabel>Annex . 12</AnnexLabel>
-                                            <FieldLabel label="Rank" si="තනතුර" />
-                                            <CustomSelect value={form.rankDropdown} onChange={(v) => set('rankDropdown', v)}
-                                                options={RANK_OPTIONS} placeholder="-- Rank --" />
+                                            <FieldLabel label='Photo (2" × 2.5") / ඡායාරූපය' />
+                                            <div className="rounded-xl border border-sky-200 bg-white p-3 xl:sticky xl:top-24 shadow-sm">
+                                                <div
+                                                    className="w-[120px] h-[150px] mx-auto border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
+                                                    onClick={() => fileRef.current?.click()}
+                                                >
+                                                    {photoPreview
+                                                        ? <img src={photoPreview} alt="Photo" className="w-full h-full object-cover" />
+                                                        : <span className="text-xs text-gray-400 text-center px-1">Click to upload<br />2″ × 2.5″</span>
+                                                    }
+                                                </div>
+                                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileRef.current?.click()}
+                                                    className="mt-3 w-full text-xs text-blue-700 hover:text-blue-800 font-semibold transition-colors"
+                                                >
+                                                    Upload Photo
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <AnnexLabel>&nbsp;</AnnexLabel>
-                                            <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
-                                            <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
-                                        </div>
-                                    </div>
-
-                                    {/* Full Name */}
-                                    <div className="md:col-span-2 xl:col-span-3">
-                                        <FieldLabel label="Full Name" si="සම්පූර්ණ නම (max 50)" />
-                                        <GInput value={form.fullName} onChange={(v) => set('fullName', v)}
-                                            placeholder="Full name" maxLength={50} />
-                                        <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
-                                    </div>
-
-                                    {/* Dates */}
-                                    <div>
-                                        <FieldLabel label="Reported Date / වාර්තා දිනය" />
-                                        <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Date of Birth / උපන් දිනය" />
-                                        <DatePicker value={form.dob} onChange={(v) => set('dob', v)} />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Date Joined SOCO Project / SOCO ව්‍යාපෘතියට එකතු වූ දිනය" />
-                                        <DatePicker value={form.dateJoinedSoco} onChange={(v) => set('dateJoinedSoco', v)} />
-                                    </div>
-
-                                    {/* Course & Service */}
-                                    <div>
-                                        <FieldLabel label="SOCO Course Number / SOCO පාඨමාලා අංකය" />
-                                        <GInput value={form.socoCourseNo} onChange={(v) => set('socoCourseNo', v)} placeholder="Course Number" />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="SOCO Service / SOCO සේවය" />
-                                        <GInput value={form.socoService} onChange={(v) => set('socoService', v)} placeholder="Service details" />
-                                    </div>
-
-                                    {/* Telephone */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2 xl:col-span-3">
-                                        <div>
-                                            <FieldLabel label="Office Tel. / කාර්යාල දුරකථනය" />
-                                            <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
-                                        </div>
-                                        <div>
-                                            <FieldLabel label="Residence Tel. / නිවාස දුරකථනය" />
-                                            <GInput value={form.telResidence} onChange={(v) => set('telResidence', v)} placeholder="0XX-XXXXXXX" type="tel" />
-                                        </div>
-                                        <div>
-                                            <FieldLabel label="Mobile / ජංගම දුරකථනය" />
-                                            <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Photo upload — 2" x 2.5" */}
-                                <div className="mt-6 flex items-start gap-6">
-                                    <div>
-                                        <FieldLabel label='Photo (2" × 2.5") / ඡායාරූපය' />
-                                        <div
-                                            className="w-[96px] h-[120px] border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
-                                            onClick={() => fileRef.current?.click()}
-                                        >
-                                            {photoPreview
-                                                ? <img src={photoPreview} alt="Photo" className="w-full h-full object-cover" />
-                                                : <span className="text-xs text-gray-400 text-center px-1">Click to upload<br />2″ × 2.5″</span>
-                                            }
-                                        </div>
-                                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-                                        <button
-                                            type="button"
-                                            onClick={() => fileRef.current?.click()}
-                                            className="mt-2 text-xs text-blue-700 hover:text-blue-800 font-semibold transition-colors"
-                                        >
-                                            Upload Photo
-                                        </button>
                                     </div>
                                 </div>
                             </div>
 
                             {/* ─── SECTION 2: Family Details ───────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Family Details" titleSi="පවුල් තොරතුරු" />
+                            <div className="p-4 sm:p-5 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-white">
+                                <SectionHeader sectionNo={2} title="Family Details" titleSi="පවුල් තොරතුරු" />
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                                     <div>
@@ -547,8 +551,8 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Official Information" titleSi="නිල තොරතුරු" />
+                            <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/65 to-white">
+                                <SectionHeader sectionNo={3} title="Official Information" titleSi="නිල තොරතුරු" />
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
                                     <div>
@@ -612,9 +616,9 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 4: Served SOCO Labs ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
+                            <div className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50/70 to-white">
                                 <SectionHeader
-                                    tableRef="Table : 04"
+                                    sectionNo={4}
                                     title="SERVED SOCO LABS AFTER FOLLOWED THE SOCO COURSE"
                                     titleSi="SOCO පාඨමාලාවෙන් පසු සේවය කළ SOCO රසායනාගාර"
                                 />
@@ -668,8 +672,8 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 5: Willing to Serve ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Willing to Serve SOCO Labs" titleSi="සේවය කිරීමට කැමති SOCO රසායනාගාර" />
+                            <div className="p-4 sm:p-5 rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50/70 to-white">
+                                <SectionHeader sectionNo={5} title="Willing to Serve SOCO Labs" titleSi="සේවය කිරීමට කැමති SOCO රසායනාගාර" />
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
                                     {([1, 2, 3] as const).map((n) => {
@@ -691,8 +695,8 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 6: Disciplinary Inquiries ───────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                            <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50/65 to-white">
+                                <SectionHeader sectionNo={6} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                                     <div>
@@ -727,8 +731,8 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 7: Transfer Details ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Transfer Details" titleSi="මාරුවීම් තොරතුරු" />
+                            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/65 to-white">
+                                <SectionHeader sectionNo={7} title="Transfer Details" titleSi="මාරුවීම් තොරතුරු" />
 
                                 <div className="space-y-4">
                                     {[
