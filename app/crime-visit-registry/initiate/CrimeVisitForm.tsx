@@ -643,12 +643,12 @@ export default function CrimeVisitForm({
             Initiate Visit
           </h3>
 
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
               Request Details
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FieldGroup label="Division">
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
@@ -731,7 +731,7 @@ export default function CrimeVisitForm({
 
               {Array.isArray(sA.offence) && sA.offence.length > 0 && (
                 <div className="md:col-span-2 lg:col-span-3 mt-1 animate-in fade-in slide-in-from-top-1">
-                  <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/50">
+                  <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/65">
                     <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-2 px-1">
                       Selected Offences
                     </p>
@@ -863,13 +863,13 @@ export default function CrimeVisitForm({
           </div>
 
           {/* OUT & IN Section */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-4">
+          <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65 space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
               OUT & IN Details
             </h4>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 lg:items-start">
               <DateTimeRow
                 label="OUT"
                 value={sA.out ?? emptyDatetime()}
@@ -878,7 +878,7 @@ export default function CrimeVisitForm({
                 layout="stack"
               />
               <div className="min-w-0 border-t border-dashed border-gray-300 pt-6 mt-2 lg:border-t-0 lg:pt-0 lg:mt-0 relative">
-                <span className="lg:hidden absolute left-0 -top-2.5 text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-50 pr-2">
+                <span className="lg:hidden absolute left-0 -top-2.5 text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-indigo-50/65 pr-2">
                   Return Details
                 </span>
                 <DateTimeRow
@@ -892,12 +892,12 @@ export default function CrimeVisitForm({
             </div>
           </div>
 
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-4">
+          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/80 space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
               Vehicle & Driver Details
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
               <FieldGroup label="Vehicle Number">
                 <TextInput
                   isReadOnly={ro}
@@ -946,7 +946,7 @@ export default function CrimeVisitForm({
           </div>
 
           {/* Initiate Visit: Support Officers section — uncomment with state + SupportOfficersEditor above
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-pink-500 inline-block flex-shrink-0" />
               Support Officers

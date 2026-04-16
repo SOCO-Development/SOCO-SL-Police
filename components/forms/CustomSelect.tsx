@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useId, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { FaChevronDown, FaCheck } from 'react-icons/fa';
 
 interface CustomSelectProps {
@@ -38,6 +39,8 @@ export default function CustomSelect({
   const listboxId = useId();
   const buttonId = useId();
   const portalId = listboxId.replace(/:/g, '');
+
+  useDropdownBodyScrollLock(isOpen);
 
   const filteredOptions = useMemo(() => {
     if (!searchable || !filterQuery.trim()) return options;
@@ -267,6 +270,7 @@ export default function CustomSelect({
 
         {isOpen && dropdownStyle && typeof document !== 'undefined' && createPortal(
           <div
+            data-scroll-lock-exempt
             id={`custom-select-portal-${portalId}`}
             style={{
               position: 'fixed',

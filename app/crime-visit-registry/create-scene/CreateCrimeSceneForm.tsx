@@ -451,7 +451,7 @@ export default function CreateCrimeSceneForm({
 
           {/* ── Scene Basics ── */}
           {isEditMode ? (
-            <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/80">
+            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
                 <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
                 Visit reference (locked)
@@ -469,12 +469,12 @@ export default function CreateCrimeSceneForm({
               </p>
             </div>
           ) : (
-            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
                 <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
                 Scene Basics
               </h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FieldGroup label="Visit Type">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                     {VISIT_TYPES.map((option) => (
@@ -533,12 +533,12 @@ export default function CreateCrimeSceneForm({
           )}
 
           {/* ── Location ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
               Location
             </h4>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <FieldGroup label="Police Division">
                 <CustomSelect
                   value={form.division}
@@ -560,12 +560,12 @@ export default function CreateCrimeSceneForm({
 
           {/* ── Reporting Times ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+            <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/80 space-y-3">
               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
                 <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
                 Reported to Police
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FieldGroup label="Date">
                   <DatePicker
                     value={form.reportedToPoliceStation.date}
@@ -585,12 +585,12 @@ export default function CreateCrimeSceneForm({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80 space-y-3">
               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
                 <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
                 Reported to SOCO Lab
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FieldGroup label="Date">
                   <DatePicker
                     value={form.reportedToSocoLab.date}
@@ -612,13 +612,13 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── Scene Times & Details ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+          <div className="p-4 sm:p-5 rounded-xl border border-cyan-200 bg-cyan-50/70 space-y-3">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-cyan-500 inline-block flex-shrink-0" />
               Scene Times & Details
             </h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Scene In Time">
                 <TimePicker
                   value={form.sceneInTime}
@@ -800,7 +800,7 @@ export default function CreateCrimeSceneForm({
             </div>
 
             {offenceArray.length > 0 && (
-              <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/50">
+              <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/65">
                 <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-2 px-1">
                   Selected Offences
                 </p>
@@ -827,12 +827,12 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── In-Charge Officer ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-emerald-200 bg-emerald-50/70">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-green-500 inline-block flex-shrink-0" />
                 Team Leader
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Name">
                 <TextInput
                   value={form.inChargeOfficer.name}
@@ -858,7 +858,7 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── Support Officers ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-pink-500 inline-block flex-shrink-0" />
               Support Officers
@@ -955,7 +955,7 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── Expert Teams ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-orange-200 bg-orange-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-orange-500 inline-block flex-shrink-0" />
               Expert Teams
@@ -1049,7 +1049,7 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── Investigation Officers ── */}
-          <div id="cvr-section-investigation" className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 scroll-mt-24">
+          <div id="cvr-section-investigation" className="p-4 sm:p-5 rounded-xl border border-fuchsia-200 bg-fuchsia-50/65 scroll-mt-24">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-fuchsia-500 inline-block flex-shrink-0" />
               Investigation Officer
@@ -1112,7 +1112,7 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── Scene Guards ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-yellow-200 bg-yellow-50/70">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-yellow-500 inline-block flex-shrink-0" />
               Scene Guard
@@ -1165,13 +1165,13 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── Court details ── */}
-          <div id="cvr-section-court" className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 scroll-mt-24">
+          <div id="cvr-section-court" className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70 scroll-mt-24">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
               Court details
             </h4>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FieldGroup label="Court name (optional)">
                   <CustomSelect
                     value={form.courtDetails?.courtName ?? ''}
@@ -1621,7 +1621,7 @@ export default function CreateCrimeSceneForm({
           </div>
 
           {/* ── Attachments ── */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-red-200 bg-red-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-red-500 inline-block flex-shrink-0" />
               Attachments

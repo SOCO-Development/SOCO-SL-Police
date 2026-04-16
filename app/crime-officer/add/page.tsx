@@ -2,9 +2,12 @@
 
 import { useState, useRef, useCallback, useId } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
+import Button from '@/components/buttons/Button';
 import { ArrowLeft } from 'lucide-react';
 import Footer from '@/components/layout/Footer';
+import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import {
@@ -16,7 +19,6 @@ import {
 
 const SOCO_LABS_OPTIONS = ANNEX_01_SOCO_LABS.map((s) => ({ value: s, label: s }));
 const RANK_OPTIONS = ANNEX_12_RANK.map((s) => ({ value: s, label: s }));
-const CIVIL_STATUS_OPTIONS = ANNEX_06_CIVIL_STATUS.map((s) => ({ value: s, label: s }));
 const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ interface FormData {
     // Section 2
     civilStatus: string;
     spouseDesignation: string;
+    spouseDesignationOther: string;
     spouseNameAddress: string;
     children: ChildRow[];
     // Section 3
@@ -100,7 +103,7 @@ function defaultForm(): FormData {
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
-        civilStatus: '', spouseDesignation: '', spouseNameAddress: '',
+        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseNameAddress: '',
         children: [{ id: newId(), name: '', age: '', school: '' }],
         dateJoinedPolice: '', appointedRank: '', presentRank: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
@@ -153,12 +156,6 @@ function SectionHeader({ sectionNo, title, titleSi }: { sectionNo: number; title
                 {titleSi && <p className="text-xs text-gray-500 mt-1 font-noto-sinhala">{titleSi}</p>}
             </div>
         </div>
-    );
-}
-
-function AnnexLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <span className="inline-block text-[11px] text-gray-400 font-semibold mb-1 uppercase tracking-wide">{children}</span>
     );
 }
 
@@ -245,26 +242,16 @@ function AddRowBtn({ onClick, label }: { onClick: () => void; label?: string }) 
     );
 }
 
-function RemoveBtn({ onClick }: { onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="text-red-400 hover:text-red-600 text-lg leading-none transition-colors self-end pb-2"
-            aria-label="Remove row"
-        >
-            ×
-        </button>
-    );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AddOfficerPage() {
+    const router = useRouter();
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const [submitted, setSubmitted] = useState(false);
+    const civilStatusRadioName = useId();
+    const showSpouseAndChildren = form.civilStatus === 'Married';
 
     const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
         setForm((f) => ({ ...f, [key]: val }));
@@ -333,10 +320,11 @@ export default function AddOfficerPage() {
                         <div className="flex items-center gap-3 mb-6">
                             <Link
                                 href="/crime-officer"
-                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                                className={registryBackLinkClass}
                                 aria-label="Back"
                             >
-                                <ArrowLeft className="w-5 h-5" />
+                                <ArrowLeft className="w-4 h-4" />
+                                <span>Back</span>
                             </Link>
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900">Add SOCO Officer</h2>
@@ -355,34 +343,31 @@ export default function AddOfficerPage() {
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
                             {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50/80 to-white">
+                            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
                                 <SectionHeader
                                     sectionNo={1}
                                     title="PERSONNEL DETAILS OF SCENE OF CRIME OFFICER"
                                     titleSi="අපරාධ ස්ථාන නිලධාරිගේ පුද්ගලික තොරතුරු"
                                 />
 
-                                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                                    <div className="xl:col-span-3">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+                                <div className="flex flex-col xl:flex-row xl:items-start gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                             {/* SOCO Lab */}
                                             <div>
-                                                <AnnexLabel>Annex . 01</AnnexLabel>
                                                 <FieldLabel label="SOCO Lab" si="SOCO රසායනාගාරය" />
                                                 <CustomSelect value={form.socoLab} onChange={(v) => set('socoLab', v)}
-                                                    options={SOCO_LABS_OPTIONS} placeholder="-- Select SOCO Lab --" />
+                                                    options={SOCO_LABS_OPTIONS} placeholder="Select SOCO Lab" />
                                             </div>
 
                                             {/* Rank & Reg No */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:col-span-2">
                                                 <div>
-                                                    <AnnexLabel>Annex . 12</AnnexLabel>
                                                     <FieldLabel label="Rank" si="තනතුර" />
                                                     <CustomSelect value={form.rankDropdown} onChange={(v) => set('rankDropdown', v)}
-                                                        options={RANK_OPTIONS} placeholder="-- Rank --" />
+                                                        options={RANK_OPTIONS} placeholder="Rank" />
                                                 </div>
                                                 <div>
-                                                    <AnnexLabel>&nbsp;</AnnexLabel>
                                                     <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
                                                     <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
                                                 </div>
@@ -406,7 +391,7 @@ export default function AddOfficerPage() {
                                                 <DatePicker value={form.dob} onChange={(v) => set('dob', v)} />
                                             </div>
                                             <div>
-                                                <FieldLabel label="Date Joined SOCO Project / SOCO ව්‍යාපෘතියට එකතු වූ දිනය" />
+                                                <FieldLabel label="Date Joined SOCO Project / ව්‍යාපෘතියට එකතු වූ දිනය" />
                                                 <DatePicker value={form.dateJoinedSoco} onChange={(v) => set('dateJoinedSoco', v)} />
                                             </div>
 
@@ -421,7 +406,7 @@ export default function AddOfficerPage() {
                                             </div>
 
                                             {/* Telephone */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2 xl:col-span-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
                                                 <div>
                                                     <FieldLabel label="Office Tel. / කාර්යාල දුරකථනය" />
                                                     <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
@@ -439,24 +424,56 @@ export default function AddOfficerPage() {
                                     </div>
 
                                     {/* Photo upload — top right */}
-                                    <div className="xl:col-span-1">
-                                        <div>
-                                            <FieldLabel label='Photo (2" × 2.5") / ඡායාරූපය' />
-                                            <div className="rounded-xl border border-sky-200 bg-white p-3 xl:sticky xl:top-24 shadow-sm">
+                                    <div className="shrink-0 w-full xl:w-auto flex flex-col items-center">
+                                        <div className="w-full max-w-[calc(2in+2.5rem)] mx-auto flex flex-col items-center">
+                                            <label className="block w-full text-center text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide leading-snug font-noto-sinhala">
+                                                Photo (2&quot; × 2.5&quot;) / ඡායාරූපය
+                                            </label>
+                                            <div className="rounded-xl border border-sky-200 bg-white pt-3 px-4 pb-4 xl:sticky xl:top-24 shadow-sm w-full flex flex-col items-stretch gap-4 transition-shadow duration-200 hover:shadow-md hover:border-sky-300/80">
                                                 <div
-                                                    className="w-[120px] h-[150px] mx-auto border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    className="group relative border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/80 flex items-center justify-center overflow-hidden cursor-pointer box-border max-w-full mx-auto
+                                                        transition-all duration-200 ease-out
+                                                        hover:border-sky-500 hover:bg-sky-50 hover:shadow-md hover:ring-2 hover:ring-sky-200/70
+                                                        active:scale-[0.99]
+                                                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                                                    style={{
+                                                        width: 'min(2in, 100%)',
+                                                        aspectRatio: '2 / 2.5',
+                                                        height: 'auto',
+                                                        boxSizing: 'border-box',
+                                                    }}
                                                     onClick={() => fileRef.current?.click()}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            fileRef.current?.click();
+                                                        }
+                                                    }}
                                                 >
                                                     {photoPreview
-                                                        ? <img src={photoPreview} alt="Photo" className="w-full h-full object-cover" />
-                                                        : <span className="text-xs text-gray-400 text-center px-1">Click to upload<br />2″ × 2.5″</span>
-                                                    }
+                                                        ? <img src={photoPreview} alt="Photo" className="w-full h-full min-h-0 object-cover" />
+                                                        : (
+                                                            <div className="flex h-full w-full min-h-0 flex-col items-center justify-center gap-1.5 px-3 py-2 text-center pointer-events-none">
+                                                                <span className="text-xs font-medium text-gray-500 group-hover:text-sky-800 transition-colors duration-200">
+                                                                    Click to upload
+                                                                </span>
+                                                                <span className="text-[11px] text-gray-400 group-hover:text-sky-700/90 transition-colors duration-200 font-noto-sinhala">
+                                                                    2″ × 2.5″
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                 </div>
                                                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
                                                 <button
                                                     type="button"
                                                     onClick={() => fileRef.current?.click()}
-                                                    className="mt-3 w-full text-xs text-blue-700 hover:text-blue-800 font-semibold transition-colors"
+                                                    className="w-full min-w-0 rounded-lg border border-sky-200/60 bg-sky-50/50 px-3 py-2.5 text-xs font-semibold text-sky-800
+                                                        transition-all duration-200 ease-out
+                                                        hover:border-sky-400 hover:bg-sky-100 hover:text-sky-900 hover:shadow-sm
+                                                        active:scale-[0.98]
+                                                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
                                                 >
                                                     Upload Photo
                                                 </button>
@@ -467,32 +484,102 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 2: Family Details ───────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-white">
+                            <div className="p-4 sm:p-5 rounded-xl border border-emerald-200 bg-emerald-50/70">
                                 <SectionHeader sectionNo={2} title="Family Details" titleSi="පවුල් තොරතුරු" />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-                                    <div>
-                                        <AnnexLabel>Annex . 06</AnnexLabel>
+                                <div
+                                    className={`grid grid-cols-1 gap-4 ${
+                                        showSpouseAndChildren ? 'md:grid-cols-3' : 'md:grid-cols-1'
+                                    }`}
+                                >
+                                    <div className="min-w-0">
                                         <FieldLabel label="Civil Status / සිවිල් තත්වය" />
-                                        <CustomSelect value={form.civilStatus} onChange={(v) => set('civilStatus', v)}
-                                            options={CIVIL_STATUS_OPTIONS} placeholder="-- Select --" />
+                                        <div className="grid grid-cols-2 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                                            {ANNEX_06_CIVIL_STATUS.map((option) => (
+                                                <label
+                                                    key={option}
+                                                    className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name={civilStatusRadioName}
+                                                        value={option}
+                                                        checked={form.civilStatus === option}
+                                                        onChange={() => {
+                                                            if (option === 'Unmarried') {
+                                                                setForm((f) => ({
+                                                                    ...f,
+                                                                    civilStatus: 'Unmarried',
+                                                                    spouseDesignation: '',
+                                                                    spouseDesignationOther: '',
+                                                                    spouseNameAddress: '',
+                                                                    children: [
+                                                                        {
+                                                                            id: newId(),
+                                                                            name: '',
+                                                                            age: '',
+                                                                            school: '',
+                                                                        },
+                                                                    ],
+                                                                }));
+                                                            } else {
+                                                                set('civilStatus', option);
+                                                            }
+                                                        }}
+                                                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 shrink-0"
+                                                    />
+                                                    {option}
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <AnnexLabel>Annex . 07</AnnexLabel>
-                                        <FieldLabel label="Spouse Designation / කලත්‍රයාගේ තනතුර" />
-                                        <CustomSelect value={form.spouseDesignation} onChange={(v) => set('spouseDesignation', v)}
-                                            options={SPOUSE_DESIGNATION_OPTIONS} placeholder="-- Select --" />
-                                    </div>
+                                    {showSpouseAndChildren ? (
+                                        <>
+                                            <div className="min-w-0">
+                                                <FieldLabel label="Spouse Designation / කලත්‍රයාගේ තනතුර" />
+                                                <CustomSelect
+                                                    value={form.spouseDesignation}
+                                                    onChange={(v) => {
+                                                        set('spouseDesignation', v);
+                                                        if (v !== 'Other') set('spouseDesignationOther', '');
+                                                    }}
+                                                    options={SPOUSE_DESIGNATION_OPTIONS}
+                                                    placeholder="Select"
+                                                />
+                                            </div>
 
-                                    <div className="md:col-span-2">
-                                        <FieldLabel label="Spouse Name & Address of Institute / කලත්‍රයාගේ නම හා ආයතනයේ ලිපිනය" />
-                                        <GInput value={form.spouseNameAddress} onChange={(v) => set('spouseNameAddress', v)}
-                                            placeholder="Name and institute address" />
-                                    </div>
+                                            <div
+                                                className={`min-w-0 ${
+                                                    form.spouseDesignation === 'Other' ? '' : 'hidden md:block'
+                                                }`}
+                                            >
+                                                {form.spouseDesignation === 'Other' ? (
+                                                    <>
+                                                        <FieldLabel label="Specify designation / තනතුර දක්වන්න" />
+                                                        <GInput
+                                                            value={form.spouseDesignationOther}
+                                                            onChange={(v) => set('spouseDesignationOther', v)}
+                                                            placeholder="Enter designation"
+                                                        />
+                                                    </>
+                                                ) : null}
+                                            </div>
+
+                                            <div className="md:col-span-3 min-w-0">
+                                                <FieldLabel label="Spouse Name & Address of Institute / කලත්‍රයාගේ නම හා ආයතනයේ ලිපිනය" />
+                                                <GInput
+                                                    value={form.spouseNameAddress}
+                                                    onChange={(v) => set('spouseNameAddress', v)}
+                                                    placeholder="Name and institute address"
+                                                />
+                                            </div>
+                                        </>
+                                    ) : null}
                                 </div>
 
                                 {/* Children table */}
+                                {showSpouseAndChildren ? (
                                 <div className="mt-6">
                                     <FieldLabel label="Details of Children / දරුවන්ගේ තොරතුරු" />
                                     <div className="overflow-x-auto rounded-xl border border-gray-200 mt-2">
@@ -502,7 +589,9 @@ export default function AddOfficerPage() {
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Name of the Child / දරුවාගේ නම</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28 font-noto-sinhala">Age / වයස</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">School / University / පාසල / විශ්ව.</th>
-                                                    <th className="w-8" />
+                                                    <th className="px-2 py-2.5 text-right w-px whitespace-nowrap">
+                                                        <span className="sr-only">Actions</span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -533,8 +622,17 @@ export default function AddOfficerPage() {
                                                         <td className="px-2 py-1.5">
                                                             <GInput value={child.school} onChange={(v) => updateChild(child.id, { school: v })} placeholder="School / University" />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            {form.children.length > 1 && <RemoveBtn onClick={() => removeChild(child.id)} />}
+                                                        <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                            {form.children.length > 1 ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeChild(child.id)}
+                                                                    className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                                                                    aria-label="Remove child row"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            ) : null}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -548,28 +646,27 @@ export default function AddOfficerPage() {
                                         <p className="text-xs text-gray-400 mt-1">Maximum 4 children reached.</p>
                                     )}
                                 </div>
+                                ) : null}
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/65 to-white">
+                            <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
                                 <SectionHeader sectionNo={3} title="Official Information" titleSi="නිල තොරතුරු" />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
                                         <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
                                         <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
                                     </div>
                                     <div>
-                                        <AnnexLabel>Annex . 12</AnnexLabel>
                                         <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
                                         <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
-                                            options={RANK_OPTIONS} placeholder="-- Select --" />
+                                            options={RANK_OPTIONS} placeholder="Select" />
                                     </div>
                                     <div>
-                                        <AnnexLabel>Annex . 12</AnnexLabel>
                                         <FieldLabel label="Present Rank / වත්මන් තනතුර" />
                                         <CustomSelect value={form.presentRank} onChange={(v) => set('presentRank', v)}
-                                            options={RANK_OPTIONS} placeholder="-- Select --" />
+                                            options={RANK_OPTIONS} placeholder="Select" />
                                     </div>
                                 </div>
 
@@ -581,11 +678,12 @@ export default function AddOfficerPage() {
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48">
-                                                        <span className="text-gray-400 text-xs">Annex . 12</span><br />
                                                         Rank / තනතුර
                                                     </th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Date / දිනය (DD-MM-YYYY)</th>
-                                                    <th className="w-8" />
+                                                    <th className="px-2 py-2.5 text-right w-px whitespace-nowrap">
+                                                        <span className="sr-only">Actions</span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -593,13 +691,22 @@ export default function AddOfficerPage() {
                                                     <tr key={promo.id} className="border-b border-gray-100 last:border-0">
                                                         <td className="px-2 py-1.5">
                                                             <CustomSelect value={promo.rank} onChange={(v) => updatePromotion(promo.id, { rank: v })}
-                                                                options={RANK_OPTIONS} placeholder="-- Rank --" />
+                                                                options={RANK_OPTIONS} placeholder="Rank" />
                                                         </td>
                                                         <td className="px-2 py-1.5">
                                                             <DatePicker value={promo.date} onChange={(v) => updatePromotion(promo.id, { date: v })} />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            {form.promotions.length > 1 && <RemoveBtn onClick={() => removePromotion(promo.id)} />}
+                                                        <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                            {form.promotions.length > 1 ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removePromotion(promo.id)}
+                                                                    className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                                                                    aria-label="Remove promotion row"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            ) : null}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -616,7 +723,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 4: Served SOCO Labs ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50/70 to-white">
+                            <div className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
                                     sectionNo={4}
                                     title="SERVED SOCO LABS AFTER FOLLOWED THE SOCO COURSE"
@@ -624,43 +731,76 @@ export default function AddOfficerPage() {
                                 />
 
                                 <div className="overflow-x-auto rounded-xl border border-gray-200">
-                                    <table className="w-full text-sm">
+                                    <table className="w-full text-sm table-fixed">
+                                        <colgroup>
+                                            <col style={{ width: '18%' }} />
+                                            <col style={{ width: '14rem' }} />
+                                            <col style={{ width: '14rem' }} />
+                                            <col style={{ width: '7.5rem' }} />
+                                            <col />
+                                        </colgroup>
                                         <thead>
                                             <tr className="bg-gray-50 border-b border-gray-200">
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-40">
-                                                    <span className="text-gray-400 text-xs block">Annex . 01</span>
+                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                                     SOCO Lab
                                                 </th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">From (DD-MM-YYYY)</th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">To (DD-MM-YYYY)</th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Duration</th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">OIC / A-OIC</th>
-                                                <th className="w-8" />
+                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                                    From (DD-MM-YYYY)
+                                                </th>
+                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                                    To (DD-MM-YYYY)
+                                                </th>
+                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                                    Duration
+                                                </th>
+                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-0">
+                                                    OIC / A-OIC
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {form.servedLabs.map((row) => {
                                                 const dur = calcDuration(row.from, row.to);
+                                                const showRemoveLab = form.servedLabs.length > 1;
                                                 return (
                                                     <tr key={row.id} className="border-b border-gray-100 last:border-0">
-                                                        <td className="px-2 py-1.5">
+                                                        <td className="px-2 py-1.5 align-top min-w-0">
                                                             <CustomSelect value={row.lab} onChange={(v) => updateServedLab(row.id, { lab: v })}
-                                                                options={SOCO_LABS_OPTIONS} placeholder="-- Select Lab --" />
+                                                                options={SOCO_LABS_OPTIONS} placeholder="Select Lab" />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <DatePicker value={row.from} onChange={(v) => updateServedLab(row.id, { from: v })} />
+                                                        <td className="px-2 py-1.5 align-top">
+                                                            <DatePicker
+                                                                value={row.from}
+                                                                onChange={(v) => updateServedLab(row.id, { from: v })}
+                                                                className="min-w-0 w-full"
+                                                            />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <DatePicker value={row.to} onChange={(v) => updateServedLab(row.id, { to: v })} />
+                                                        <td className="px-2 py-1.5 align-top">
+                                                            <DatePicker
+                                                                value={row.to}
+                                                                onChange={(v) => updateServedLab(row.id, { to: v })}
+                                                                className="min-w-0 w-full"
+                                                            />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
+                                                        <td className="px-2 py-1.5 align-top">
                                                             <GInput value={dur} onChange={() => { }} readOnly placeholder="Auto" />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <GInput value={row.oic} onChange={(v) => updateServedLab(row.id, { oic: v })} placeholder="OIC / A-OIC" />
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
-                                                            {form.servedLabs.length > 1 && <RemoveBtn onClick={() => removeServedLab(row.id)} />}
+                                                        <td className="px-2 py-1.5 align-top min-w-0">
+                                                            <div className="flex items-center gap-4 min-w-0">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <GInput value={row.oic} onChange={(v) => updateServedLab(row.id, { oic: v })} placeholder="OIC / A-OIC" />
+                                                                </div>
+                                                                {showRemoveLab ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeServedLab(row.id)}
+                                                                        className="h-10 shrink-0 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                                                                        aria-label="Remove lab row"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                ) : null}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -672,21 +812,20 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 5: Willing to Serve ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50/70 to-white">
+                            <div className="p-4 sm:p-5 rounded-xl border border-cyan-200 bg-cyan-50/70">
                                 <SectionHeader sectionNo={5} title="Willing to Serve SOCO Labs" titleSi="සේවය කිරීමට කැමති SOCO රසායනාගාර" />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     {([1, 2, 3] as const).map((n) => {
                                         const key = `preferredLab${n}` as keyof FormData;
                                         return (
                                             <div key={n}>
-                                                <AnnexLabel>Annex . 01</AnnexLabel>
                                                 <FieldLabel label={`${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'} Preference / ${n} වන කැමැත්ත`} />
                                                 <CustomSelect
                                                     value={form[key] as string}
                                                     onChange={(v) => set(key, v)}
                                                     options={SOCO_LABS_OPTIONS}
-                                                    placeholder="-- Select Lab --"
+                                                    placeholder="Select Lab"
                                                 />
                                             </div>
                                         );
@@ -695,10 +834,10 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 6: Disciplinary Inquiries ───────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50/65 to-white">
+                            <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/65">
                                 <SectionHeader sectionNo={6} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <FieldLabel label="Nature / ස්වභාවය" />
                                         <GInput value={form.disciplinaryNature} onChange={(v) => set('disciplinaryNature', v)} placeholder="Nature of inquiry" />
@@ -731,7 +870,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 7: Transfer Details ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/65 to-white">
+                            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
                                 <SectionHeader sectionNo={7} title="Transfer Details" titleSi="මාරුවීම් තොරතුරු" />
 
                                 <div className="space-y-4">
@@ -764,29 +903,26 @@ export default function AddOfficerPage() {
 
                             </div>
 
-                            {/* ─── Action Bar ───────────────────────────────────────────────── */}
+                            {/* ─── Action Bar (matches Initiate Crime Visit) ───────────────── */}
                             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
-                                <Link
-                                    href="/crime-officer"
-                                    className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    Cancel
-                                </Link>
+                                <div />
                                 <div className="flex items-center gap-2">
-                                    <button
+                                    <Button
+                                        variant="secondary"
                                         type="button"
-                                        className="px-5 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors"
-                                        onClick={() => alert('Draft saved!')}
+                                        onClick={() => router.push('/crime-officer')}
+                                        className="min-h-[42px] px-4 py-2.5 text-sm font-medium"
                                     >
+                                        Cancel
+                                    </Button>
+                                    <Button variant="amber" type="button" onClick={() => alert('Draft saved!')}>
                                         Save as Draft
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors"
-                                    >
+                                    </Button>
+                                    <Button variant="primary" type="submit">
                                         Save Officer
-                                    </button>
+                                    </Button>
                                 </div>
+                                <div />
                             </div>
 
                         </form>

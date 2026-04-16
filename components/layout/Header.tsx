@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { publicAssetSrc } from '@/lib/publicAsset';
+import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
@@ -47,6 +48,9 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isHome = pathname === '/home';
   const isDark = isHome && homeTheme !== 'light';
+
+  useDropdownBodyScrollLock(userMenuOpen);
+  useDropdownBodyScrollLock(mobileMenuOpen);
 
   const updateDropdownPos = useCallback(() => {
     if (!triggerRef.current) return;
@@ -106,6 +110,7 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
     ? createPortal(
         <div
           ref={dropdownRef}
+          data-scroll-lock-exempt
           className={`${isDark ? 'dropdown-blur-dark' : 'dropdown-blur'} fixed w-52 rounded-xl border py-1.5 z-[99999] animate-fade-in ${
             isDark ? 'border-gray-600/50' : 'border-white/50'
           }`}
@@ -168,7 +173,8 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
 
   return (
     <>
-      <header className={`h-14 flex-shrink-0 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
+      <header
+        className={`h-14 flex-shrink-0 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
         isDark
           ? 'bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/50'
           : 'bg-white/70 backdrop-blur-2xl backdrop-saturate-150 shadow-sm border-b border-gray-200/50'
@@ -279,7 +285,10 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
 
         {/* Mobile nav overlay */}
         {mobileMenuOpen && (
-          <div className={`md:hidden absolute top-14 left-0 right-0 border-b shadow-lg animate-fade-in z-40 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div
+            data-scroll-lock-exempt
+            className={`md:hidden absolute top-14 left-0 right-0 border-b shadow-lg animate-fade-in z-40 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}
+          >
             <nav className="p-4 space-y-1">
               {NAV_LINKS.map(({ href, label, icon: Icon, isActive }) => {
                 const active = isActive(pathname);

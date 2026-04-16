@@ -59,9 +59,15 @@
   }
 }
 
+/* Light shell always: OS dark mode used to set --background ≈ black on html/body, which
+   showed as a vertical strip when the scrollbar disappeared under scroll lock. */
+html {
+  background-color: #f1f5f9;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: #f1f5f9;
+  color: #171717;
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

@@ -391,7 +391,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
         className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden border border-gray-200 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200 px-6 py-4 flex items-center justify-between">
+        <div className="bg-sky-50 border-b border-sky-200 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Create Crime Scene</h2>
             <p className="text-xs text-gray-600 mt-0.5">Attach scenes to morning visits and save each scene with a CVR.</p>
@@ -447,7 +447,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
           </div>
 
           {crimeSceneUsesNewVisitFields(form.visitType) ? (
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+            <div className="bg-violet-50/65 rounded-xl border border-violet-200 p-4 sm:p-5">
               <FormInput
                 label="CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)"
                 value={form.cvrNo ?? ''}
@@ -458,7 +458,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
           ) : null}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-4">
+            <div className="bg-slate-50/80 rounded-xl border border-slate-200 p-4 sm:p-5 space-y-4">
               <h3 className="text-sm font-semibold text-gray-800">Reporting Times</h3>
               <div className="grid grid-cols-2 gap-3">
                 <DatePicker
@@ -484,7 +484,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-4">
+            <div className="bg-cyan-50/70 rounded-xl border border-cyan-200 p-4 sm:p-5 space-y-4">
               <h3 className="text-sm font-semibold text-gray-800">Scene Details</h3>
               <div className="grid grid-cols-2 gap-3">
                 <TimePicker
@@ -615,7 +615,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+          <div className="bg-emerald-50/70 rounded-xl border border-emerald-200 p-4 sm:p-5 space-y-4">
             <h3 className="text-sm font-semibold text-gray-800">SOCO Officers</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <FormInput
@@ -641,7 +641,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             <div className="space-y-4">
               {form.socoOfficers.map((officer, index) => {
                 return (
-                <div key={`officer-${index}`} className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div key={`officer-${index}`} className="flex flex-col gap-3 p-3 bg-rose-50/50 rounded-lg border border-rose-200">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Team Role</label>
@@ -734,11 +734,11 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             </Button>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+          <div className="bg-orange-50/65 rounded-xl border border-orange-200 p-4 sm:p-5 space-y-4">
             <h3 className="text-sm font-semibold text-gray-800">Expert Assistant</h3>
             <div className="space-y-4">
               {form.specialistTeams.map((team, index) => (
-                <div key={`specialist-${index}`} className="p-4 bg-gray-50 border border-gray-100 rounded-xl space-y-3">
+                <div key={`specialist-${index}`} className="p-4 bg-orange-50/50 border border-orange-200 rounded-xl space-y-3">
                   <div className="flex justify-between items-start">
                     <h4 className="text-sm font-medium text-gray-700">Team {index + 1}</h4>
                     <button
@@ -819,13 +819,13 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             </Button>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+          <div className="bg-fuchsia-50/65 rounded-xl border border-fuchsia-200 p-4 sm:p-5 space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-semibold text-gray-800">Investigation Officer</h3>
             </div>
             <div className="space-y-3">
               {(form.investigationOfficers ?? []).map((officer, index) => (
-                <div key={`inv-officer-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr,44px] gap-3 items-end p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div key={`inv-officer-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr,44px] gap-3 items-end p-3 bg-white/70 rounded-lg border border-fuchsia-200">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <FormInput
                       label="Rank"
@@ -876,13 +876,13 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             </Button>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+          <div className="bg-yellow-50/70 rounded-xl border border-yellow-200 p-4 sm:p-5 space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-semibold text-gray-800">Scene Guard</h3>
             </div>
             <div className="space-y-3">
               {(form.sceneGuards ?? []).map((guard, index) => (
-                <div key={`snc-guard-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr,44px] gap-3 items-end p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div key={`snc-guard-${index}`} className="grid grid-cols-1 md:grid-cols-[1fr,44px] gap-3 items-end p-3 bg-white/70 rounded-lg border border-yellow-200">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <FormInput
                       label="Rank"
@@ -923,7 +923,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             </Button>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+          <div className="bg-amber-50/70 rounded-xl border border-amber-200 p-4 sm:p-5 space-y-4">
             <h3 className="text-sm font-semibold text-gray-800">Court details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -965,7 +965,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
               <div>
                 <span className="block text-sm font-semibold text-gray-700 mb-2">Production (P.R.)</span>
-                <div className="flex flex-wrap gap-4 items-center rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2">
+                <div className="flex flex-wrap gap-4 items-center rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2">
                   {(['Yes', 'No'] as const).map((opt) => (
                     <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
                       <input
@@ -1350,7 +1350,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
+          <div className="bg-red-50/65 rounded-xl border border-red-200 p-4 sm:p-5 space-y-2">
             <h3 className="text-sm font-semibold text-gray-800">Photo ZIP Attachment</h3>
             <input
               type="file"
@@ -1393,7 +1393,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
         </div>
 
-        <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+        <div className="border-t border-gray-200 bg-gray-50/70 px-6 py-4 flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="success" onClick={handleSave}>Save Crime Scene</Button>
         </div>

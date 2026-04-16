@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
+import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { FaCalendarAlt, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 interface DatePickerProps {
@@ -48,6 +49,8 @@ export default function DatePicker({
   const [popupStyle, setPopupStyle] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const portalId = useId().replace(/:/g, '');
+
+  useDropdownBodyScrollLock(isOpen);
 
   useEffect(() => {
     if (value !== undefined) {
@@ -320,7 +323,12 @@ export default function DatePicker({
         </button>
 
         {isOpen && popupStyle && typeof document !== 'undefined' && createPortal(
-          <div id={`date-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="dropdown-blur mt-1 border border-white/50 rounded-lg p-4 w-64">
+          <div
+            data-scroll-lock-exempt
+            id={`date-picker-portal-${portalId}`}
+            style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }}
+            className="dropdown-blur mt-1 border border-white/50 rounded-lg p-4 w-64"
+          >
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
               <button
