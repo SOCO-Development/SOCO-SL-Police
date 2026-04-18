@@ -6,6 +6,46 @@ import { publicAssetSrc } from "@/lib/publicAsset";
 import FormInput from "@/components/forms/FormInput";
 import { Lock, Shield, User, CheckCircle } from "lucide-react";
 
+const TAPE_REPEAT_COUNT = 18;
+
+function LoopingCrimeTape({
+  top,
+  rotateDeg,
+  idPrefix,
+}: {
+  top: string;
+  rotateDeg: number;
+  idPrefix: string;
+}) {
+  const labels = (suffix: string) =>
+    Array.from({ length: TAPE_REPEAT_COUNT }, (_, index) => (
+      <span
+        key={`${idPrefix}-${suffix}-${index}`}
+        className="mx-4 shrink-0 whitespace-nowrap text-lg sm:text-xl font-black tracking-widest text-slate-900"
+      >
+        DO NOT CROSS
+      </span>
+    ));
+
+  return (
+    <div
+      role="presentation"
+      aria-hidden
+      className="pointer-events-none absolute left-1/2 max-w-none select-none overflow-hidden"
+      style={{
+        top,
+        width: "min(500vw, 9000px)",
+        transform: `translateX(-50%) rotate(${rotateDeg}deg)`,
+      }}
+    >
+      <div className="flex w-max flex-nowrap gap-0 bg-yellow-400 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.45)] border-y-2 border-yellow-300/80 animate-crime-tape-marquee [will-change:transform]">
+        {labels("a")}
+        {labels("b")}
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -82,27 +122,8 @@ export default function LoginPage() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.14),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.1),transparent_45%)]"></div>
 
-        <div className="absolute left-1/2 top-[30%] flex w-[175%] -translate-x-1/2 -rotate-[13deg] bg-yellow-400 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.45)] border-y-2 border-yellow-300/80">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <span
-              key={`top-tape-${index}`}
-              className="mx-4 whitespace-nowrap text-lg sm:text-xl font-black tracking-widest text-slate-900"
-            >
-              DO NOT CROSS
-            </span>
-          ))}
-        </div>
-
-        <div className="absolute left-1/2 top-[53%] flex w-[175%] -translate-x-1/2 rotate-[12deg] bg-yellow-400 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.45)] border-y-2 border-yellow-300/80">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <span
-              key={`bottom-tape-${index}`}
-              className="mx-4 whitespace-nowrap text-lg sm:text-xl font-black tracking-widest text-slate-900"
-            >
-              DO NOT CROSS
-            </span>
-          ))}
-        </div>
+        <LoopingCrimeTape top="30%" rotateDeg={-13} idPrefix="top-tape" />
+        <LoopingCrimeTape top="53%" rotateDeg={12} idPrefix="bottom-tape" />
       </div>
 
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

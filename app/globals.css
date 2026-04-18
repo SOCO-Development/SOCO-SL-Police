@@ -291,6 +291,28 @@ select:active {
   animation: slideIn 0.3s ease-out;
 }
 
+/* Login crime-scene tape: seamless horizontal loop */
+@keyframes crime-tape-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-crime-tape-marquee {
+  animation: crime-tape-marquee 55s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-crime-tape-marquee {
+    animation: none;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 /* Sidebar icon animations */
 @keyframes iconPulse {
 
