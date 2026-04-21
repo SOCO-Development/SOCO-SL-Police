@@ -38,10 +38,58 @@ export interface CrimeSceneDateTime {
   time: string;
 }
 
+/** Laboratory / annex analysis outcome (update investigation details). */
+export type AnalysisReportResult =
+  | 'Positive'
+  | 'Negative'
+  | 'Insufficient'
+  | 'Destruction of Evidence'
+  | 'Other';
+
+/** Analysis report received for a visit record (editable via Production analysis). */
+export interface AnalysisReportReceived {
+  annexRef: string;
+  /** Date (DD/MM/YY) from date picker. */
+  date: string;
+  resultReceived: AnalysisReportResult | '';
+  /** When result is Other. */
+  resultOtherDetail?: string;
+}
+
+export function emptyAnalysisReportReceived(): AnalysisReportReceived {
+  return { annexRef: '', date: '', resultReceived: '', resultOtherDetail: '' };
+}
+
+/** Court attendance update (officer, visit date, outcome) — from Update court details → Court visit. */
+export interface CourtVisitUpdateDetails {
+  /** Stable key from officer dropdown (JSON string). */
+  officerKey: string;
+  officerName: string;
+  officerRegNo?: string;
+  officerRoleLabel?: string;
+  visitDate: string;
+  resultReceived: AnalysisReportResult | '';
+  resultOtherDetail?: string;
+}
+
+export function emptyCourtVisitUpdate(): CourtVisitUpdateDetails {
+  return {
+    officerKey: '',
+    officerName: '',
+    officerRegNo: '',
+    officerRoleLabel: '',
+    visitDate: '',
+    resultReceived: '',
+    resultOtherDetail: '',
+  };
+}
+
 /** One production item sent to court (repeatable). */
 export interface ProductionSentToCourtRow {
   /** Value from Production (P.R.) selection. */
   productionRef: string;
+  /** Whether this production was sent to court; if Yes, date and court case no. apply. */
+  sentToCourt?: '' | 'Yes' | 'No';
   date?: string;
   courtCaseNo?: string;
 }
@@ -49,6 +97,8 @@ export interface ProductionSentToCourtRow {
 /** One production sent to an analysis institute (repeatable). */
 export interface SentToAnalysisRow {
   productionRef: string;
+  /** Whether this production was sent for analysis; if Yes, institute, date, etc. apply. */
+  sentToAnalysis?: '' | 'Yes' | 'No';
   institution?: string;
   /** When institution is Others — free text. */
   institutionOtherDetail?: string;
@@ -57,11 +107,18 @@ export interface SentToAnalysisRow {
 }
 
 export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
-  return { productionRef: '', date: '', courtCaseNo: '' };
+  return { productionRef: '', sentToCourt: '', date: '', courtCaseNo: '' };
 }
 
 export function emptySentToAnalysisRow(): SentToAnalysisRow {
-  return { productionRef: '', institution: '', institutionOtherDetail: '', date: '', refNo: '' };
+  return {
+    productionRef: '',
+    sentToAnalysis: '',
+    institution: '',
+    institutionOtherDetail: '',
+    date: '',
+    refNo: '',
+  };
 }
 
 /** Court / production tracking for samples from the scene (hair, blood, fingerprints, etc.). */
@@ -130,6 +187,12 @@ export interface CrimeScene {
   photoZipName?: string;
   sketchFileName?: string;
   reportFileName?: string;
+
+  /** Analysis reports received (annex, date, result) — maintained from Production analysis. */
+  analysisReportReceived?: AnalysisReportReceived;
+
+  /** Court visit attendance / outcome — maintained from Update court details → Court visit. */
+  courtVisitUpdate?: CourtVisitUpdateDetails;
 
   courtDetails?: CrimeSceneCourtDetails;
 

@@ -1,4 +1,4 @@
-import type { CrimeScene } from '@/types/crimeScene';
+import type { AnalysisReportReceived, CourtVisitUpdateDetails, CrimeScene } from '@/types/crimeScene';
 import { crimeSceneUsesRevisitFields } from '@/types/crimeScene';
 import { formatIncidentDuration } from '@/lib/dateUtils';
 import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
@@ -18,6 +18,45 @@ function DisplayField({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</div>
       <div className="mt-1 text-sm text-gray-900">{value}</div>
     </div>
+  );
+}
+
+function formatAnalysisReportResultDisplay(r: AnalysisReportReceived): string {
+  const res = r.resultReceived?.trim();
+  if (!res) return '';
+  if (res === 'Other' && r.resultOtherDetail?.trim()) {
+    return `Other — ${r.resultOtherDetail.trim()}`;
+  }
+  return res;
+}
+
+function hasAnalysisReportData(r: AnalysisReportReceived | undefined): boolean {
+  if (!r) return false;
+  return Boolean(
+    r.annexRef?.trim() ||
+      r.date?.trim() ||
+      r.resultReceived ||
+      r.resultOtherDetail?.trim(),
+  );
+}
+
+function formatCourtVisitResultDisplay(r: CourtVisitUpdateDetails): string {
+  const res = r.resultReceived?.trim();
+  if (!res) return '';
+  if (res === 'Other' && r.resultOtherDetail?.trim()) {
+    return `Other — ${r.resultOtherDetail.trim()}`;
+  }
+  return res;
+}
+
+function hasCourtVisitUpdateData(r: CourtVisitUpdateDetails | undefined): boolean {
+  if (!r) return false;
+  return Boolean(
+    r.officerKey?.trim() ||
+      r.officerName?.trim() ||
+      r.visitDate?.trim() ||
+      r.resultReceived ||
+      r.resultOtherDetail?.trim(),
   );
 }
 
@@ -196,6 +235,49 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         </div>
       </div>
 
+      {hasAnalysisReportData(scene.analysisReportReceived) ? (
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+          <SectionTitle stripeClass="bg-cyan-600">Analysis reports received</SectionTitle>
+          <p className="text-xs text-gray-500 mb-3">
+            Updated via <span className="font-medium text-gray-700">Production analysis</span>.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <DisplayField
+              label="Analysis reports received"
+              value={readValue(scene.analysisReportReceived?.annexRef)}
+            />
+            <DisplayField label="Date" value={readValue(scene.analysisReportReceived?.date)} />
+            <div className="md:col-span-2">
+              <DisplayField
+                label="Result received"
+                value={readValue(formatAnalysisReportResultDisplay(scene.analysisReportReceived!))}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {hasCourtVisitUpdateData(scene.courtVisitUpdate) ? (
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+          <SectionTitle stripeClass="bg-violet-600">Court visit</SectionTitle>
+          <p className="text-xs text-gray-500 mb-3">
+            Updated via <span className="font-medium text-gray-700">Update court details</span> → Court visit.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <DisplayField label="Officer" value={readValue(scene.courtVisitUpdate?.officerName)} />
+            <DisplayField label="Reg. number" value={readValue(scene.courtVisitUpdate?.officerRegNo)} />
+            <DisplayField label="Role" value={readValue(scene.courtVisitUpdate?.officerRoleLabel)} />
+            <DisplayField label="Date of visit" value={readValue(scene.courtVisitUpdate?.visitDate)} />
+            <div className="md:col-span-2">
+              <DisplayField
+                label="Results"
+                value={readValue(formatCourtVisitResultDisplay(scene.courtVisitUpdate!))}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
         <SectionTitle stripeClass="bg-amber-500">Court details</SectionTitle>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
@@ -239,19 +321,34 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
               Production sent to court
             </div>
             <div className="divide-y divide-gray-200">
-              {(scene.courtDetails?.productionSentToCourtRows ?? []).map((row, idx) => (
-                <div
-                  key={`psc-${idx}-${row.productionRef}`}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-2 py-4 first:pt-0"
-                >
-                  <DisplayField
-                    label="Production"
-                    value={readValue(getProductionPRDisplayLabel(row.productionRef))}
-                  />
-                  <DisplayField label="Date" value={readValue(row.date)} />
-                  <DisplayField label="Court case no." value={readValue(row.courtCaseNo)} />
-                </div>
-              ))}
+              {(scene.courtDetails?.productionSentToCourtRows ?? []).map((row, idx) => {
+                const sent =
+                  row.sentToCourt === 'Yes' || row.sentToCourt === 'No'
+                    ? row.sentToCourt
+                    : String(row.date ?? '').trim() || String(row.courtCaseNo ?? '').trim()
+                      ? 'Yes'
+                      : '—';
+                return (
+                  <div
+                    key={`psc-${idx}-${row.productionRef}`}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 py-4 first:pt-0"
+                  >
+                    <DisplayField
+                      label="Production"
+                      value={readValue(getProductionPRDisplayLabel(row.productionRef))}
+                    />
+                    <DisplayField label="Sent to court?" value={readValue(sent === '—' ? '' : sent)} />
+                    <DisplayField
+                      label="Date"
+                      value={readValue(sent === 'Yes' ? row.date : '')}
+                    />
+                    <DisplayField
+                      label="Court case no."
+                      value={readValue(sent === 'Yes' ? row.courtCaseNo : '')}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -262,23 +359,34 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
               Sent to analysis institute
             </div>
             <div className="divide-y divide-gray-200">
-              {(scene.courtDetails?.sentToAnalysisRows ?? []).map((row, idx) => (
-                <div
-                  key={`sa-${idx}-${row.productionRef}-${row.institution}`}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 py-4 first:pt-0"
-                >
-                  <DisplayField
-                    label="Production"
-                    value={readValue(getProductionPRDisplayLabel(row.productionRef))}
-                  />
-                  <DisplayField
-                    label="Institution"
-                    value={readValue(formatAnalysisInstitutionDisplay(row))}
-                  />
-                  <DisplayField label="Date" value={readValue(row.date)} />
-                  <DisplayField label="Ref. no." value={readValue(row.refNo)} />
-                </div>
-              ))}
+              {(scene.courtDetails?.sentToAnalysisRows ?? []).map((row, idx) => {
+                const sent =
+                  row.sentToAnalysis === 'Yes' || row.sentToAnalysis === 'No'
+                    ? row.sentToAnalysis
+                    : String(row.date ?? '').trim() ||
+                        String(row.refNo ?? '').trim() ||
+                        String(row.institution ?? '').trim()
+                      ? 'Yes'
+                      : '—';
+                return (
+                  <div
+                    key={`sa-${idx}-${row.productionRef}-${row.institution}`}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 py-4 first:pt-0"
+                  >
+                    <DisplayField
+                      label="Production"
+                      value={readValue(getProductionPRDisplayLabel(row.productionRef))}
+                    />
+                    <DisplayField label="Sent for analysis?" value={readValue(sent === '—' ? '' : sent)} />
+                    <DisplayField
+                      label="Institution"
+                      value={readValue(sent === 'Yes' ? formatAnalysisInstitutionDisplay(row) : '')}
+                    />
+                    <DisplayField label="Date" value={readValue(sent === 'Yes' ? row.date : '')} />
+                    <DisplayField label="Ref. no." value={readValue(sent === 'Yes' ? row.refNo : '')} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : null}
