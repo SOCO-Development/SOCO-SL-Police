@@ -1,6 +1,8 @@
 'use client';
 
 import type {
+  AnalysisReportReceived,
+  CourtVisitUpdateDetails,
   CrimeScene,
   CrimeSceneCourtDetails,
   CrimeSceneFormData,
@@ -34,6 +36,27 @@ type LegacyCourtDetails = CrimeSceneCourtDetails &
     analysisRefNo?: string;
   };
 
+function inferSentToCourtFlag(row: ProductionSentToCourtRow): '' | 'Yes' | 'No' {
+  const s = row.sentToCourt;
+  if (s === 'Yes' || s === 'No') return s;
+  if (String(row.date ?? '').trim() || String(row.courtCaseNo ?? '').trim()) return 'Yes';
+  return '';
+}
+
+function inferSentToAnalysisFlag(row: SentToAnalysisRow): '' | 'Yes' | 'No' {
+  const s = row.sentToAnalysis;
+  if (s === 'Yes' || s === 'No') return s;
+  if (
+    String(row.date ?? '').trim() ||
+    String(row.refNo ?? '').trim() ||
+    String(row.institution ?? '').trim() ||
+    String(row.institutionOtherDetail ?? '').trim()
+  ) {
+    return 'Yes';
+  }
+  return '';
+}
+
 /** Migrate flat “sent to court / analysis” fields into repeatable rows. */
 function normalizeCourtDetails(cd: CrimeSceneCourtDetails | undefined): CrimeSceneCourtDetails | undefined {
   if (!cd) return undefined;
@@ -49,11 +72,20 @@ function normalizeCourtDetails(cd: CrimeSceneCourtDetails | undefined): CrimeSce
     if (hadYes || legacyDate || legacyCase) {
       rows.push({
         productionRef: types[0] ?? '',
+        sentToCourt: hadYes || legacyDate || legacyCase ? 'Yes' : '',
         date: legacyDate,
         courtCaseNo: legacyCase,
       });
     }
     out = { ...out, productionSentToCourtRows: rows };
+  } else {
+    out = {
+      ...out,
+      productionSentToCourtRows: (out.productionSentToCourtRows ?? []).map((row) => ({
+        ...row,
+        sentToCourt: inferSentToCourtFlag(row),
+      })),
+    };
   }
 
   if (!Array.isArray(r.sentToAnalysisRows)) {
@@ -65,6 +97,7 @@ function normalizeCourtDetails(cd: CrimeSceneCourtDetails | undefined): CrimeSce
     if (hadYes || legacyDate || legacyRef) {
       rows.push({
         productionRef: types[0] ?? '',
+        sentToAnalysis: hadYes || legacyDate || legacyRef ? 'Yes' : '',
         institution: '',
         institutionOtherDetail: '',
         date: legacyDate,
@@ -72,6 +105,14 @@ function normalizeCourtDetails(cd: CrimeSceneCourtDetails | undefined): CrimeSce
       });
     }
     out = { ...out, sentToAnalysisRows: rows };
+  } else {
+    out = {
+      ...out,
+      sentToAnalysisRows: (out.sentToAnalysisRows ?? []).map((row) => ({
+        ...row,
+        sentToAnalysis: inferSentToAnalysisFlag(row),
+      })),
+    };
   }
 
   return out;
@@ -129,6 +170,55 @@ export const crimeSceneService = {
 
   getById(id: string): CrimeScene | undefined {
     return loadAll().find((scene) => scene.id === id);
+  },
+
+  /** Update analysis report fields for a submitted crime scene (by visit record id). */
+  updateAnalysisReportReceived(sceneId: string, data: AnalysisReportReceived): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    const next: CrimeScene = {
+      ...scene,
+      analysisReportReceived: { ...data },
+      updatedAt: now(),
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
+
+  /** Replace court / production details (same structure as create crime scene court section). */
+  updateCourtDetailsProduction(sceneId: string, courtDetails: CrimeSceneCourtDetails): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    const normalized = normalizeCourtDetails(courtDetails) ?? courtDetails;
+    const next: CrimeScene = {
+      ...scene,
+      courtDetails: normalized,
+      updatedAt: now(),
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
+
+  /** Court visit: attending officer, date, results. */
+  updateCourtVisitDetails(sceneId: string, data: CourtVisitUpdateDetails): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    const next: CrimeScene = {
+      ...scene,
+      courtVisitUpdate: { ...data },
+      updatedAt: now(),
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
   },
 
   /** Crime scenes with a pending “may I edit?” request. */

@@ -72,6 +72,8 @@ export function crimeSceneToFormData(scene: CrimeScene): CrimeSceneFormData {
     photoZipName: scene.photoZipName ?? '',
     sketchFileName: scene.sketchFileName ?? '',
     reportFileName: scene.reportFileName ?? '',
+    analysisReportReceived: scene.analysisReportReceived,
+    courtVisitUpdate: scene.courtVisitUpdate,
     courtDetails: scene.courtDetails ?? emptyCrimeSceneCourtDetails(),
   };
 }

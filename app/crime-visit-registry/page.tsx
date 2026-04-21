@@ -60,16 +60,18 @@ export default function CrimeVisitRegistryPage() {
             href: '/crime-visit-registry/pending-cvr-approvals',
         },
         {
-            title: 'Update Investigation Details',
-            subtitle: 'පරීක්ෂණ තොරතුරු යාවත්කාලීන කිරීම',
-            description: 'Jump to investigation officers for an approved CVR amendment.',
+            title: 'Production analysis',
+            subtitle: 'නිෂ්පාදන විශ්ලේෂණය',
+            description:
+                'Select a CVR visit and record analysis reports received (annex, date, result). Shown on submitted crime scenes.',
             icon: <UserSearch className="w-12 h-12" style={{ color: '#c2410c' }} />,
-            href: '/crime-visit-registry/update-investigation-details',
+            href: '/crime-visit-registry/production-analysis',
         },
         {
             title: 'Update Court Details',
             subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
-            description: 'Jump to court and production details for an approved CVR amendment.',
+            description:
+                'Select a CVR visit: update production sent to court (registry fields) or record a court visit (officer, date, results).',
             icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
             href: '/crime-visit-registry/update-court-details',
         },
