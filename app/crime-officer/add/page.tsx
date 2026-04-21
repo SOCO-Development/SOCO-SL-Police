@@ -20,14 +20,21 @@ import {
 const SOCO_LABS_OPTIONS = ANNEX_01_SOCO_LABS.map((s) => ({ value: s, label: s }));
 const RANK_OPTIONS = ANNEX_12_RANK.map((s) => ({ value: s, label: s }));
 const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
+const CHILD_STATUS_OPTIONS = [
+    'Toddler',
+    'Student',
+    'Unmarried Employed',
+    'Unmarried Unemployed',
+    'Married',
+].map((s) => ({ value: s, label: s }));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ChildRow {
     id: number;
     name: string;
-    age: string;
-    school: string;
+    birthday: string;
+    status: string;
 }
 
 interface PromotionRow {
@@ -104,7 +111,7 @@ function defaultForm(): FormData {
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
         civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseNameAddress: '',
-        children: [{ id: newId(), name: '', age: '', school: '' }],
+        children: [{ id: newId(), name: '', birthday: '', status: '' }],
         dateJoinedPolice: '', appointedRank: '', presentRank: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
         servedLabs: [{ id: newId(), lab: '', from: '', to: '', oic: '' }],
@@ -269,7 +276,7 @@ export default function AddOfficerPage() {
     // Children rows
     const addChild = () => {
         if (form.children.length >= 4) return;
-        set('children', [...form.children, { id: newId(), name: '', age: '', school: '' }]);
+        set('children', [...form.children, { id: newId(), name: '', birthday: '', status: '' }]);
     };
     const updateChild = (id: number, patch: Partial<ChildRow>) =>
         set('children', form.children.map((c) => c.id === id ? { ...c, ...patch } : c));
@@ -296,15 +303,6 @@ export default function AddOfficerPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const invalidChild = form.children.find((c) => {
-            if (c.age === '') return false;
-            const n = parseInt(c.age, 10);
-            return isNaN(n) || n < 1 || n > 99;
-        });
-        if (invalidChild) {
-            alert('Child age must be between 1 and 99.');
-            return;
-        }
         setSubmitted(true);
         // Future: POST to API
         alert('Officer details saved successfully!');
@@ -517,8 +515,8 @@ export default function AddOfficerPage() {
                                                                         {
                                                                             id: newId(),
                                                                             name: '',
-                                                                            age: '',
-                                                                            school: '',
+                                                                            birthday: '',
+                                                                            status: '',
                                                                         },
                                                                     ],
                                                                 }));
@@ -587,8 +585,8 @@ export default function AddOfficerPage() {
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Name of the Child / දරුවාගේ නම</th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28 font-noto-sinhala">Age / වයස</th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">School / University / පාසල / විශ්ව.</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48 font-noto-sinhala">Birthday / උපන්දිනය</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Status / තත්වය</th>
                                                     <th className="px-2 py-2.5 text-right w-px whitespace-nowrap">
                                                         <span className="sr-only">Actions</span>
                                                     </th>
@@ -601,26 +599,18 @@ export default function AddOfficerPage() {
                                                             <GInput value={child.name} onChange={(v) => updateChild(child.id, { name: v })} placeholder="Child name" />
                                                         </td>
                                                         <td className="px-2 py-1.5">
-                                                            <GInput
-                                                            value={child.age}
-                                                            onChange={(v) => {
-                                                                if (v === '') {
-                                                                    updateChild(child.id, { age: v });
-                                                                } else {
-                                                                    const n = parseInt(v, 10);
-                                                                    if (!isNaN(n) && n >= 1 && n <= 99) {
-                                                                        updateChild(child.id, { age: v });
-                                                                    }
-                                                                }
-                                                            }}
-                                                            placeholder="Age"
-                                                            type="number"
-                                                            min={1}
-                                                            max={99}
-                                                        />
+                                                            <DatePicker
+                                                                value={child.birthday}
+                                                                onChange={(v) => updateChild(child.id, { birthday: v })}
+                                                            />
                                                         </td>
                                                         <td className="px-2 py-1.5">
-                                                            <GInput value={child.school} onChange={(v) => updateChild(child.id, { school: v })} placeholder="School / University" />
+                                                            <CustomSelect
+                                                                value={child.status}
+                                                                onChange={(v) => updateChild(child.id, { status: v })}
+                                                                options={CHILD_STATUS_OPTIONS}
+                                                                placeholder="Select status"
+                                                            />
                                                         </td>
                                                         <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
                                                             {form.children.length > 1 ? (
@@ -866,38 +856,6 @@ export default function AddOfficerPage() {
                         hover:border-gray-400 transition-colors resize-y"
                                         />
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* ─── SECTION 7: Transfer Details ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
-                                <SectionHeader sectionNo={7} title="Transfer Details" titleSi="මාරුවීම් තොරතුරු" />
-
-                                <div className="space-y-4">
-                                    {[
-                                        { label: 'Served in Administrative Unit / පරිපාලන ඒකකයේ සේවය', fieldKey: 'servedAdminUnit', ynKey: 'servedAdminUnitYesNo' },
-                                        { label: 'Attached Unit / අමුණා ගත් ඒකකය', fieldKey: 'attachedUnit', ynKey: 'attachedUnitYesNo' },
-                                        { label: 'Division / කොට්ඨාසය', fieldKey: 'attachedDivision', ynKey: 'attachedDivisionYesNo' },
-                                        { label: 'Branch / ශාඛාව', fieldKey: 'branch', ynKey: 'branchYesNo' },
-                                    ].map(({ label, fieldKey, ynKey }) => (
-                                        <div key={fieldKey} className="flex flex-row gap-4 items-end">
-                                            <div className="flex-shrink-0">
-                                                <FieldLabel label="Yes / No" />
-                                                <YesNo
-                                                    value={form[ynKey as keyof FormData] as string}
-                                                    onChange={(v) => set(ynKey as keyof FormData, v)}
-                                                />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <FieldLabel label={label} />
-                                                <GInput
-                                                    value={form[fieldKey as keyof FormData] as string}
-                                                    onChange={(v) => set(fieldKey as keyof FormData, v)}
-                                                    placeholder="Details..."
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
 
