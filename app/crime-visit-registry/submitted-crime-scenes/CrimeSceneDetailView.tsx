@@ -32,6 +32,7 @@ function formatAnalysisReportResultDisplay(r: AnalysisReportReceived): string {
 
 function hasAnalysisReportData(r: AnalysisReportReceived | undefined): boolean {
   if (!r) return false;
+  if (r.labReportReceived === 'Yes' || r.labReportReceived === 'No') return true;
   return Boolean(
     r.annexRef?.trim() ||
       r.date?.trim() ||
@@ -239,20 +240,46 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
           <SectionTitle stripeClass="bg-cyan-600">Analysis reports received</SectionTitle>
           <p className="text-xs text-gray-500 mb-3">
-            Updated via <span className="font-medium text-gray-700">Production analysis</span>.
+            Updated via <span className="font-medium text-gray-700">Production Analysis</span>.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <DisplayField
-              label="Analysis reports received"
-              value={readValue(scene.analysisReportReceived?.annexRef)}
+              label="Laboratory analysis report received"
+              value={readValue(
+                scene.analysisReportReceived?.labReportReceived === 'Yes'
+                  ? 'Yes'
+                  : scene.analysisReportReceived?.labReportReceived === 'No'
+                    ? 'No'
+                    : scene.analysisReportReceived?.labReportReceived === ''
+                      ? ''
+                      : scene.analysisReportReceived?.annexRef || scene.analysisReportReceived?.date
+                        ? 'Yes (legacy)'
+                        : '',
+              )}
             />
-            <DisplayField label="Date" value={readValue(scene.analysisReportReceived?.date)} />
-            <div className="md:col-span-2">
-              <DisplayField
-                label="Result received"
-                value={readValue(formatAnalysisReportResultDisplay(scene.analysisReportReceived!))}
-              />
-            </div>
+            {scene.analysisReportReceived?.labReportReceived === 'No' ? (
+              <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Details</div>
+                <div className="mt-1 text-sm text-gray-600">
+                  No laboratory report recorded yet. When a report is received, update this visit in Production Analysis
+                  and choose Yes to add annex, date, and result.
+                </div>
+              </div>
+            ) : (
+              <>
+                <DisplayField
+                  label="Analysis reports received (annex)"
+                  value={readValue(scene.analysisReportReceived?.annexRef)}
+                />
+                <DisplayField label="Date" value={readValue(scene.analysisReportReceived?.date)} />
+                <div className="md:col-span-2">
+                  <DisplayField
+                    label="Result received"
+                    value={readValue(formatAnalysisReportResultDisplay(scene.analysisReportReceived!))}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : null}

@@ -60,7 +60,7 @@ export default function CrimeVisitRegistryPage() {
             href: '/crime-visit-registry/pending-cvr-approvals',
         },
         {
-            title: 'Production analysis',
+            title: 'Production Analysis',
             subtitle: 'නිෂ්පාදන විශ්ලේෂණය',
             description:
                 'Select a CVR visit and record analysis reports received (annex, date, result). Shown on submitted crime scenes.',

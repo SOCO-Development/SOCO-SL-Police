@@ -48,6 +48,8 @@ export type AnalysisReportResult =
 
 /** Analysis report received for a visit record (editable via Production analysis). */
 export interface AnalysisReportReceived {
+  /** Whether the laboratory has returned an analysis report for items sent from this visit. */
+  labReportReceived?: '' | 'Yes' | 'No';
   annexRef: string;
   /** Date (DD/MM/YY) from date picker. */
   date: string;
@@ -57,7 +59,7 @@ export interface AnalysisReportReceived {
 }
 
 export function emptyAnalysisReportReceived(): AnalysisReportReceived {
-  return { annexRef: '', date: '', resultReceived: '', resultOtherDetail: '' };
+  return { labReportReceived: '', annexRef: '', date: '', resultReceived: '', resultOtherDetail: '' };
 }
 
 /** Court attendance update (officer, visit date, outcome) — from Update court details → Court visit. */

@@ -1,0 +1,133 @@
+'use client';
+
+import type { CrimeSceneCourtDetails } from '@/types/crimeScene';
+import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
+import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
+
+function hasAnyCourtData(cd: CrimeSceneCourtDetails | undefined): boolean {
+  if (!cd) return false;
+  return Boolean(
+    cd.courtName?.trim() ||
+      cd.courtCaseNo?.trim() ||
+      cd.productionPR === 'Yes' ||
+      cd.productionPR === 'No' ||
+      (cd.productionPRTypes?.length ?? 0) > 0 ||
+      (cd.productionSentToCourtRows?.length ?? 0) > 0 ||
+      (cd.sentToAnalysisRows?.length ?? 0) > 0,
+  );
+}
+
+export default function CourtDetailsReadOnlySummary({
+  courtDetails,
+  title = 'Court & production (from crime scene submission)',
+  className = '',
+}: {
+  courtDetails: CrimeSceneCourtDetails | undefined;
+  title?: string;
+  className?: string;
+}) {
+  if (!hasAnyCourtData(courtDetails)) {
+    return (
+      <div
+        className={`rounded-lg border border-dashed border-gray-300 bg-gray-50/90 px-4 py-3 text-sm text-gray-600 ${className}`}
+      >
+        <p className="font-medium text-gray-800 mb-1">{title}</p>
+        <p>No court or production details were saved when this crime scene was submitted.</p>
+      </div>
+    );
+  }
+
+  const cd = courtDetails!;
+
+  return (
+    <div
+      className={`rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-4 text-sm space-y-3 ${className}`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
+      <p className="text-xs text-slate-500">Read-only reference — same data is loaded into the update form below.</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Court name</span>
+          <p className="text-gray-900 mt-0.5">{cd.courtName?.trim() || '—'}</p>
+        </div>
+        <div>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Court case no.</span>
+          <p className="text-gray-900 mt-0.5">{cd.courtCaseNo?.trim() || '—'}</p>
+        </div>
+      </div>
+
+      <div>
+        <span className="text-[11px] font-semibold uppercase text-gray-500">Production (P.R.)</span>
+        <p className="text-gray-900 mt-0.5">{cd.productionPR === 'Yes' ? 'Yes' : cd.productionPR === 'No' ? 'No' : '—'}</p>
+      </div>
+
+      {cd.productionPR === 'Yes' && (cd.productionPRTypes?.length ?? 0) > 0 ? (
+        <div>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Production types</span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {(cd.productionPRTypes ?? []).map((t) => (
+              <span
+                key={t}
+                className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-900"
+              >
+                {getProductionPRDisplayLabel(t)}
+              </span>
+            ))}
+          </div>
+          {productionPRHasOthersSelected(cd.productionPRTypes) && cd.productionPROtherDetail?.trim() ? (
+            <p className="mt-2 text-xs text-gray-700">
+              <span className="font-semibold">Others: </span>
+              {cd.productionPROtherDetail.trim()}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {(cd.productionSentToCourtRows ?? []).length > 0 ? (
+        <div>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Production sent to court</span>
+          <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
+            {(cd.productionSentToCourtRows ?? []).map((row, idx) => (
+              <li key={`psc-${idx}-${row.productionRef}`} className="border-l-2 border-teal-400 pl-2">
+                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef)}</span>
+                {row.sentToCourt === 'Yes' ? (
+                  <span className="text-gray-600">
+                    {' '}
+                    — sent {row.date ? `(${row.date})` : ''}
+                    {row.courtCaseNo ? ` · Case ${row.courtCaseNo}` : ''}
+                  </span>
+                ) : row.sentToCourt === 'No' ? (
+                  <span className="text-gray-600"> — not sent to court</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {(cd.sentToAnalysisRows ?? []).length > 0 ? (
+        <div>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Sent to analysis institute</span>
+          <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
+            {(cd.sentToAnalysisRows ?? []).map((row, idx) => (
+              <li key={`sa-${idx}-${row.productionRef}`} className="border-l-2 border-sky-400 pl-2">
+                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef)}</span>
+                {row.sentToAnalysis === 'Yes' ? (
+                  <span className="text-gray-600">
+                    {' '}
+                    — {formatAnalysisInstitutionDisplay(row)}
+                    {row.date ? ` · ${row.date}` : ''}
+                    {row.refNo ? ` · Ref ${row.refNo}` : ''}
+                  </span>
+                ) : row.sentToAnalysis === 'No' ? (
+                  <span className="text-gray-600"> — not sent for analysis</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
