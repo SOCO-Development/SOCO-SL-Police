@@ -37,11 +37,16 @@ function FieldGroup({ label, children, className = '' }: FieldGroupProps) {
 }
 
 function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  const { className = '', ...rest } = props;
+  const { className = '', readOnly, ...rest } = props;
   return (
     <input
+      readOnly={readOnly}
       {...rest}
-      className={`w-full min-h-10 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 transition-colors ${className}`}
+      className={`w-full min-h-10 px-3 py-2 text-sm rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+        readOnly
+          ? 'bg-gray-50 border-gray-200 cursor-default hover:border-gray-200'
+          : 'bg-white hover:border-gray-400'
+      } ${className}`}
     />
   );
 }
@@ -53,14 +58,21 @@ export interface CourtProductionDetailsEditorProps {
   onChange: (next: CrimeSceneCourtDetails) => void;
   /** `full` — all court/production blocks. `productionSentToCourt` / `sentToAnalysis` — that section only (Update Court & Production Analysis flows). */
   mode?: CourtProductionDetailsEditorMode;
+  /**
+   * Same form UI with fields non-editable when `true` and `mode` is `sentToAnalysis` (Production Analysis) or
+   * `productionSentToCourt` (Update Court Details — production sent) before the user clicks Edit.
+   */
+  readOnly?: boolean;
 }
 
 export default function CourtProductionDetailsEditor({
   courtDetails,
   onChange,
   mode = 'full',
+  readOnly = false,
 }: CourtProductionDetailsEditorProps) {
   const patch = (partial: Partial<CrimeSceneCourtDetails>) => {
+    if (readOnly) return;
     onChange({
       ...emptyCrimeSceneCourtDetails(),
       ...courtDetails,
@@ -165,7 +177,9 @@ export default function CourtProductionDetailsEditor({
       ) : null}
 
       {showSentToAnalysis ? (
-      <div className={`mt-2 pt-4 border-t border-gray-200${mode === 'sentToAnalysis' ? ' border-0 pt-0 mt-0' : ''}`}>
+      <div
+        className={`mt-2 pt-4 border-t border-gray-200${mode === 'sentToAnalysis' ? ' border-0 pt-0 mt-0' : ''}`}
+      >
         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
           <span className="w-1.5 h-4 rounded-full bg-sky-500 inline-block flex-shrink-0" />
           Productions sent to analysis institutes
@@ -175,14 +189,40 @@ export default function CourtProductionDetailsEditor({
             Select production types under Production Availability first, then add analysis rows as needed.
           </p>
         ) : null}
-        <div className="divide-y divide-gray-200">
+        <div className="space-y-4">
           {(courtDetails.sentToAnalysisRows ?? []).map((row, index) => (
             <div
               key={`analysis-${index}`}
-              className="space-y-3 py-4 first:pt-0 border-b border-gray-100 last:border-b-0"
+              className="rounded-lg border border-sky-200 bg-white p-4 shadow-sm space-y-3"
             >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto_auto] md:items-end">
-                <FieldGroup label="Production" className="min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sky-100 pb-3 min-h-10">
+                <p className="text-sm font-semibold text-sky-900">
+                  Production {String(index + 1).padStart(2, '0')}
+                </p>
+                {readOnly ? (
+                  <span
+                    className="h-9 w-[4.5rem] shrink-0 inline-block"
+                    aria-hidden
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      patch({
+                        sentToAnalysisRows: (courtDetails.sentToAnalysisRows ?? []).filter(
+                          (_, i) => i !== index,
+                        ),
+                      })
+                    }
+                    className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                    aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
+                <FieldGroup label="Production type" className="min-w-0">
                   <CustomSelect
                     value={row.productionRef}
                     onChange={(value) => {
@@ -206,16 +246,27 @@ export default function CourtProductionDetailsEditor({
                     }
                     searchable
                     searchPlaceholder="Search…"
+                    disabled={readOnly}
                   />
                 </FieldGroup>
                 <FieldGroup label="Sent for analysis?">
-                  <div className="flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
+                  <div
+                    className={`flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2 ${
+                      readOnly ? 'bg-gray-50/90' : ''
+                    }`}
+                  >
                     {(['Yes', 'No'] as const).map((opt) => (
-                      <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <label
+                        key={opt}
+                        className={`inline-flex items-center gap-2 text-sm text-gray-700 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        }`}
+                      >
                         <input
                           type="radio"
                           name={`update-court-analysis-${index}`}
                           checked={(row.sentToAnalysis ?? '') === opt}
+                          disabled={readOnly}
                           onChange={() => {
                             const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
                             rows[index] =
@@ -231,29 +282,13 @@ export default function CourtProductionDetailsEditor({
                                   };
                             patch({ sentToAnalysisRows: rows });
                           }}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                         {opt}
                       </label>
                     ))}
                   </div>
                 </FieldGroup>
-                <div className="shrink-0 flex md:pb-0.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      patch({
-                        sentToAnalysisRows: (courtDetails.sentToAnalysisRows ?? []).filter(
-                          (_, i) => i !== index,
-                        ),
-                      })
-                    }
-                    className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
-                    aria-label="Remove row"
-                  >
-                    Remove
-                  </button>
-                </div>
               </div>
               {row.sentToAnalysis === 'Yes' ? (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
@@ -277,12 +312,14 @@ export default function CourtProductionDetailsEditor({
                           placeholder="Select institute"
                           searchable
                           searchPlaceholder="Search…"
+                          disabled={readOnly}
                         />
                       </div>
                       {analysisInstitutionIsOthers(row.institution) ? (
                         <TextInput
                           className="flex-1 min-w-0"
                           value={row.institutionOtherDetail ?? ''}
+                          readOnly={readOnly}
                           onChange={(e) => {
                             const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
                             rows[index] = { ...rows[index], institutionOtherDetail: e.target.value };
@@ -302,11 +339,13 @@ export default function CourtProductionDetailsEditor({
                         rows[index] = { ...rows[index], date: value };
                         patch({ sentToAnalysisRows: rows });
                       }}
+                      disabled={readOnly}
                     />
                   </FieldGroup>
                   <FieldGroup label="Ref. no.">
                     <TextInput
                       value={row.refNo ?? ''}
+                      readOnly={readOnly}
                       onChange={(e) => {
                         const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
                         rows[index] = { ...rows[index], refNo: e.target.value };
@@ -320,18 +359,20 @@ export default function CourtProductionDetailsEditor({
             </div>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            patch({
-              sentToAnalysisRows: [...(courtDetails.sentToAnalysisRows ?? []), emptySentToAnalysisRow()],
-            })
-          }
-          disabled={!(courtDetails.productionPRTypes ?? []).length}
-          className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-        >
-          <span className="text-base leading-none">+</span> Add analysis institute row
-        </button>
+        {readOnly ? null : (
+          <button
+            type="button"
+            onClick={() =>
+              patch({
+                sentToAnalysisRows: [...(courtDetails.sentToAnalysisRows ?? []), emptySentToAnalysisRow()],
+              })
+            }
+            disabled={!(courtDetails.productionPRTypes ?? []).length}
+            className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <span className="text-base leading-none">+</span> Add analysis institute row
+          </button>
+        )}
       </div>
       ) : null}
 
@@ -346,14 +387,37 @@ export default function CourtProductionDetailsEditor({
             Select production types under Production Availability first, then add a row for each item sent to court.
           </p>
         ) : null}
-        <div className="divide-y divide-gray-200">
+        <div className="space-y-4">
           {(courtDetails.productionSentToCourtRows ?? []).map((row, index) => (
             <div
               key={`court-sent-${index}`}
-              className="space-y-3 py-4 first:pt-0 border-b border-gray-100 last:border-b-0"
+              className="rounded-lg border border-teal-200 bg-white p-4 shadow-sm space-y-3"
             >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.3fr)_auto_auto] md:items-end">
-                <FieldGroup label="Production" className="min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-teal-100 pb-3 min-h-10">
+                <p className="text-sm font-semibold text-teal-900">
+                  Production {String(index + 1).padStart(2, '0')}
+                </p>
+                {readOnly ? (
+                  <span className="h-9 w-[4.5rem] shrink-0 inline-block" aria-hidden />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      patch({
+                        productionSentToCourtRows: (courtDetails.productionSentToCourtRows ?? []).filter(
+                          (_, i) => i !== index,
+                        ),
+                      })
+                    }
+                    className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                    aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
+                <FieldGroup label="Production type" className="min-w-0">
                   <CustomSelect
                     value={row.productionRef}
                     onChange={(value) => {
@@ -376,16 +440,27 @@ export default function CourtProductionDetailsEditor({
                     }
                     searchable
                     searchPlaceholder="Search…"
+                    disabled={readOnly}
                   />
                 </FieldGroup>
                 <FieldGroup label="Sent to court?">
-                  <div className="flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
+                  <div
+                    className={`flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2 ${
+                      readOnly ? 'bg-gray-50/90' : ''
+                    }`}
+                  >
                     {(['Yes', 'No'] as const).map((opt) => (
-                      <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <label
+                        key={opt}
+                        className={`inline-flex items-center gap-2 text-sm text-gray-700 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        }`}
+                      >
                         <input
                           type="radio"
                           name={`update-court-sent-${index}`}
                           checked={(row.sentToCourt ?? '') === opt}
+                          disabled={readOnly}
                           onChange={() => {
                             const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
                             rows[index] =
@@ -400,29 +475,13 @@ export default function CourtProductionDetailsEditor({
                                   };
                             patch({ productionSentToCourtRows: rows });
                           }}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                         {opt}
                       </label>
                     ))}
                   </div>
                 </FieldGroup>
-                <div className="shrink-0 flex md:pb-0.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      patch({
-                        productionSentToCourtRows: (courtDetails.productionSentToCourtRows ?? []).filter(
-                          (_, i) => i !== index,
-                        ),
-                      })
-                    }
-                    className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
-                    aria-label="Remove row"
-                  >
-                    Remove
-                  </button>
-                </div>
               </div>
               {row.sentToCourt === 'Yes' ? (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
@@ -434,6 +493,7 @@ export default function CourtProductionDetailsEditor({
                         rows[index] = { ...rows[index], date: value };
                         patch({ productionSentToCourtRows: rows });
                       }}
+                      disabled={readOnly}
                     />
                   </FieldGroup>
                   <FieldGroup label="Court name (optional)" className="min-w-0">
@@ -448,11 +508,13 @@ export default function CourtProductionDetailsEditor({
                       placeholder="Select court (optional)"
                       searchable
                       searchPlaceholder="Search…"
+                      disabled={readOnly}
                     />
                   </FieldGroup>
                   <FieldGroup label="Case no. (optional)">
                     <TextInput
                       value={row.courtCaseNo ?? ''}
+                      readOnly={readOnly}
                       onChange={(e) => {
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
                         rows[index] = { ...rows[index], courtCaseNo: e.target.value };
@@ -466,21 +528,23 @@ export default function CourtProductionDetailsEditor({
             </div>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            patch({
-              productionSentToCourtRows: [
-                ...(courtDetails.productionSentToCourtRows ?? []),
-                emptyProductionSentToCourtRow(),
-              ],
-            })
-          }
-          disabled={!(courtDetails.productionPRTypes ?? []).length}
-          className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-        >
-          <span className="text-base leading-none">+</span> Add production sent to court
-        </button>
+        {readOnly ? null : (
+          <button
+            type="button"
+            onClick={() =>
+              patch({
+                productionSentToCourtRows: [
+                  ...(courtDetails.productionSentToCourtRows ?? []),
+                  emptyProductionSentToCourtRow(),
+                ],
+              })
+            }
+            disabled={!(courtDetails.productionPRTypes ?? []).length}
+            className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <span className="text-base leading-none">+</span> Add production sent to court
+          </button>
+        )}
       </div>
       ) : null}
     </div>

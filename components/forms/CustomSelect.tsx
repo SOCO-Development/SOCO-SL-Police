@@ -16,6 +16,8 @@ interface CustomSelectProps {
   /** Show a search box at the top of the dropdown to filter options (long lists). */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /** When set, the control is not interactive and is styled as read-only. */
+  disabled?: boolean;
 }
 
 export default function CustomSelect({
@@ -28,6 +30,7 @@ export default function CustomSelect({
   placeholder = 'Select an option',
   searchable = false,
   searchPlaceholder = 'Search…',
+  disabled = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState<string>(value || '');
@@ -136,6 +139,10 @@ export default function CustomSelect({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (disabled) setIsOpen(false);
+  }, [disabled]);
+
   const handleSelect = (optionValue: string) => {
     setSelectedValue(optionValue);
     onChange?.(optionValue);
@@ -145,6 +152,7 @@ export default function CustomSelect({
   const listForKeys = searchable ? filteredOptions : options;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
     if (!isOpen) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault();
@@ -231,7 +239,9 @@ export default function CustomSelect({
         <button
           id={buttonId}
           type="button"
+          disabled={disabled}
           onClick={() => {
+            if (disabled) return;
             if (!isOpen && selectRef.current) {
               const btn = selectRef.current.querySelector('button');
               if (btn) {
@@ -252,9 +262,13 @@ export default function CustomSelect({
           aria-controls={listboxId}
           aria-labelledby={label ? `${buttonId}-label` : undefined}
           aria-activedescendant={isOpen && highlightedIndex >= 0 ? `${listboxId}-option-${highlightedIndex}` : undefined}
-          className={`group w-full min-h-10 px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between
-            border-gray-300 hover:border-gray-400 hover:bg-gray-50/50 active:bg-gray-50
-            ${isOpen ? 'border-blue-400 ring-1 ring-blue-500/20' : ''}
+          className={`group w-full min-h-10 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between
+            ${
+              disabled
+                ? 'border-gray-200 bg-gray-50 text-gray-800 cursor-not-allowed shadow-none'
+                : 'bg-white border-gray-300 hover:border-gray-400 hover:bg-gray-50/50 active:bg-gray-50'
+            }
+            ${isOpen && !disabled ? 'border-blue-400 ring-1 ring-blue-500/20' : ''}
             ${error ? 'border-red-300 focus:ring-red-500/30' : ''}`}
         >
           <span className={selectedValue ? 'text-gray-900' : 'text-gray-400'}>

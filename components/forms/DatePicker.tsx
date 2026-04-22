@@ -12,6 +12,7 @@ interface DatePickerProps {
   defaultValue?: string;
   className?: string;
   error?: string;
+  disabled?: boolean;
 }
 
 export default function DatePicker({
@@ -21,6 +22,7 @@ export default function DatePicker({
   defaultValue,
   className = '',
   error,
+  disabled = false,
 }: DatePickerProps) {
   const parseDate = (dateString: string): Date => {
     if (!dateString) return new Date();
@@ -78,6 +80,10 @@ export default function DatePicker({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, portalId]);
+
+  useEffect(() => {
+    if (disabled) setIsOpen(false);
+  }, [disabled]);
 
   const MIN_SPACE_BELOW = 320;
   const updatePopupPosition = () => {
@@ -295,7 +301,9 @@ export default function DatePicker({
       <div className="relative">
         <button
           type="button"
+          disabled={disabled}
           onClick={() => {
+            if (disabled) return;
             if (!isOpen) {
               if (selectedDate) setCurrentMonth(parseDate(selectedDate));
               setView('calendar');
@@ -312,9 +320,11 @@ export default function DatePicker({
             }
             setIsOpen(!isOpen);
           }}
-          className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between ${
-            error ? 'border-red-300' : ''
-          }`}
+          className={`w-full min-h-10 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between ${
+            disabled
+              ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+              : 'border-gray-300 bg-white'
+          } ${error ? 'border-red-300' : ''}`}
         >
           <span className={selectedDate ? 'text-gray-900' : 'text-gray-400'}>
             {selectedDate ? displayDate : 'DD-MM-YYYY'}

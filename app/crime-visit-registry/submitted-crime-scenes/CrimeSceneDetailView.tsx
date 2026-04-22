@@ -1,5 +1,5 @@
-import type { AnalysisReportReceived, CourtVisitUpdateDetails, CrimeScene } from '@/types/crimeScene';
-import { crimeSceneUsesRevisitFields } from '@/types/crimeScene';
+import type { AnalysisReportReceived, CrimeScene } from '@/types/crimeScene';
+import { crimeSceneUsesRevisitFields, courtVisitUpdateHasDisplayableData, normalizeCourtVisitUpdate } from '@/types/crimeScene';
 import { formatIncidentDuration } from '@/lib/dateUtils';
 import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
 import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
@@ -36,26 +36,6 @@ function hasAnalysisReportData(r: AnalysisReportReceived | undefined): boolean {
   return Boolean(
     r.annexRef?.trim() ||
       r.date?.trim() ||
-      r.resultReceived ||
-      r.resultOtherDetail?.trim(),
-  );
-}
-
-function formatCourtVisitResultDisplay(r: CourtVisitUpdateDetails): string {
-  const res = r.resultReceived?.trim();
-  if (!res) return '';
-  if (res === 'Other' && r.resultOtherDetail?.trim()) {
-    return `Other — ${r.resultOtherDetail.trim()}`;
-  }
-  return res;
-}
-
-function hasCourtVisitUpdateData(r: CourtVisitUpdateDetails | undefined): boolean {
-  if (!r) return false;
-  return Boolean(
-    r.officerKey?.trim() ||
-      r.officerName?.trim() ||
-      r.visitDate?.trim() ||
       r.resultReceived ||
       r.resultOtherDetail?.trim(),
   );
@@ -326,23 +306,64 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         </div>
       ) : null}
 
-      {hasCourtVisitUpdateData(scene.courtVisitUpdate) ? (
-        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-          <SectionTitle stripeClass="bg-violet-600">Court visit</SectionTitle>
-          <p className="text-xs text-gray-500 mb-3">
+      {courtVisitUpdateHasDisplayableData(scene.courtVisitUpdate) ? (
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-4">
+          <SectionTitle stripeClass="bg-violet-600">Court visit (SOC officers)</SectionTitle>
+          <p className="text-xs text-gray-500">
             Updated via <span className="font-medium text-gray-700">Update court details</span> → Court visit.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <DisplayField label="Officer" value={readValue(scene.courtVisitUpdate?.officerName)} />
-            <DisplayField label="Reg. number" value={readValue(scene.courtVisitUpdate?.officerRegNo)} />
-            <DisplayField label="Role" value={readValue(scene.courtVisitUpdate?.officerRoleLabel)} />
-            <DisplayField label="Date of visit" value={readValue(scene.courtVisitUpdate?.visitDate)} />
-            <div className="md:col-span-2">
-              <DisplayField
-                label="Results"
-                value={readValue(formatCourtVisitResultDisplay(scene.courtVisitUpdate!))}
-              />
-            </div>
+          <div className="space-y-4">
+            {normalizeCourtVisitUpdate(scene.courtVisitUpdate).rows.map((row, idx) => (
+              <div
+                key={`cv-${idx}-${row.officerKey}-${row.visitDate}`}
+                className="rounded-lg border border-violet-200 bg-white p-4 shadow-sm space-y-3"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-900">
+                  Court visit {String(idx + 1).padStart(2, '0')}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <DisplayField label="Testified officer" value={readValue(row.testifiedOfficer)} />
+                  <DisplayField label="Date" value={readValue(row.visitDate)} />
+                  <DisplayField
+                    label="Officer (visit record)"
+                    value={readValue(
+                      row.officerName?.trim()
+                        ? `${row.officerName}${row.officerRegNo?.trim() ? ` (${row.officerRegNo.trim()})` : ''}${
+                            row.officerRoleLabel?.trim() ? ` — ${row.officerRoleLabel.trim()}` : ''
+                          }`
+                        : undefined,
+                    )}
+                  />
+                  <DisplayField label="Next court date" value={readValue(row.nextCourtDate)} />
+                </div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Description of the visit
+                  </div>
+                  <div className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
+                    {row.visitDescription?.trim() ? row.visitDescription : '—'}
+                  </div>
+                </div>
+                {row.attachmentFileName?.trim() || row.attachmentDataUrl ? (
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="text-gray-600">Attachment:</span>
+                    {row.attachmentDataUrl ? (
+                      <a
+                        href={row.attachmentDataUrl}
+                        download={row.attachmentFileName || 'attachment'}
+                        className="font-medium text-violet-700 hover:underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {row.attachmentFileName?.trim() || 'View file'}
+                      </a>
+                    ) : (
+                      <span className="text-gray-900">{readValue(row.attachmentFileName)}</span>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}

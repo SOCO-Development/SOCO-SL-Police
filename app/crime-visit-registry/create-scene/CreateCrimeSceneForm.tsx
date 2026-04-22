@@ -1373,11 +1373,38 @@ export default function CreateCrimeSceneForm({
                     Select production types under Production Availability first, then add analysis rows as needed.
                   </p>
                 ) : null}
-                <div className="divide-y divide-gray-200">
+                <div className="space-y-4">
                   {(form.courtDetails?.sentToAnalysisRows ?? []).map((row, index) => (
-                    <div key={`analysis-${index}`} className="space-y-3 py-4 first:pt-0 border-b border-gray-100 last:border-b-0">
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto_auto] md:items-end">
-                        <FieldGroup label="Production" className="min-w-0">
+                    <div
+                      key={`analysis-${index}`}
+                      className="rounded-lg border border-sky-200 bg-white p-4 shadow-sm space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sky-100 pb-3 min-h-10">
+                        <p className="text-sm font-semibold text-sky-900">
+                          Production {String(index + 1).padStart(2, '0')}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              courtDetails: {
+                                ...emptyCrimeSceneCourtDetails(),
+                                ...prev.courtDetails,
+                                sentToAnalysisRows: (prev.courtDetails?.sentToAnalysisRows ?? []).filter(
+                                  (_, i) => i !== index,
+                                ),
+                              },
+                            }))
+                          }
+                          className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                          aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
+                        <FieldGroup label="Production type" className="min-w-0">
                           <CustomSelect
                             value={row.productionRef}
                             onChange={(value) =>
@@ -1451,27 +1478,6 @@ export default function CreateCrimeSceneForm({
                             ))}
                           </div>
                         </FieldGroup>
-                        <div className="shrink-0 flex md:pb-0.5">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                courtDetails: {
-                                  ...emptyCrimeSceneCourtDetails(),
-                                  ...prev.courtDetails,
-                                  sentToAnalysisRows: (prev.courtDetails?.sentToAnalysisRows ?? []).filter(
-                                    (_, i) => i !== index,
-                                  ),
-                                },
-                              }))
-                            }
-                            className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
-                            aria-label="Remove row"
-                          >
-                            Remove
-                          </button>
-                        </div>
                       </div>
                       {row.sentToAnalysis === 'Yes' ? (
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
@@ -1608,11 +1614,38 @@ export default function CreateCrimeSceneForm({
                     court.
                   </p>
                 ) : null}
-                <div className="divide-y divide-gray-200">
+                <div className="space-y-4">
                   {(form.courtDetails?.productionSentToCourtRows ?? []).map((row, index) => (
-                    <div key={`court-sent-${index}`} className="space-y-3 py-4 first:pt-0 border-b border-gray-100 last:border-b-0">
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.3fr)_auto_auto] md:items-end">
-                        <FieldGroup label="Production" className="min-w-0">
+                    <div
+                      key={`court-sent-${index}`}
+                      className="rounded-lg border border-teal-200 bg-white p-4 shadow-sm space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-teal-100 pb-3 min-h-10">
+                        <p className="text-sm font-semibold text-teal-900">
+                          Production {String(index + 1).padStart(2, '0')}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              courtDetails: {
+                                ...emptyCrimeSceneCourtDetails(),
+                                ...prev.courtDetails,
+                                productionSentToCourtRows: (prev.courtDetails?.productionSentToCourtRows ?? []).filter(
+                                  (_, i) => i !== index,
+                                ),
+                              },
+                            }))
+                          }
+                          className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                          aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
+                        <FieldGroup label="Production type" className="min-w-0">
                           <CustomSelect
                             value={row.productionRef}
                             onChange={(value) =>
@@ -1684,27 +1717,6 @@ export default function CreateCrimeSceneForm({
                             ))}
                           </div>
                         </FieldGroup>
-                        <div className="shrink-0 flex md:pb-0.5">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                courtDetails: {
-                                  ...emptyCrimeSceneCourtDetails(),
-                                  ...prev.courtDetails,
-                                  productionSentToCourtRows: (prev.courtDetails?.productionSentToCourtRows ?? []).filter(
-                                    (_, i) => i !== index,
-                                  ),
-                                },
-                              }))
-                            }
-                            className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
-                            aria-label="Remove row"
-                          >
-                            Remove
-                          </button>
-                        </div>
                       </div>
                       {row.sentToCourt === 'Yes' ? (
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">

@@ -4,23 +4,19 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import Button from '@/components/buttons/Button';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
-import CourtDetailsReadOnlySummary from '@/app/crime-visit-registry/components/CourtDetailsReadOnlySummary';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
+import type { CrimeScene, CrimeSceneCourtDetails, CourtVisitOfficerDetailRow, CourtVisitUpdateDetails } from '@/types/crimeScene';
 import {
-  ANALYSIS_REPORT_RESULT_OPTIONS,
-  analysisResultIsOther,
-} from '@/lib/analysisReportReceivedOptions';
-import type { CrimeScene, CrimeSceneCourtDetails, CourtVisitUpdateDetails } from '@/types/crimeScene';
-import {
+  emptyCourtVisitOfficerDetailRow,
   emptyCourtVisitUpdate,
   emptyCrimeSceneCourtDetails,
+  normalizeCourtVisitUpdate,
 } from '@/types/crimeScene';
 import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import { ArrowLeft } from 'lucide-react';
@@ -35,43 +31,12 @@ function visitTypeLabel(scene: CrimeScene) {
       : 'New visit';
 }
 
-function courtTableHaystack(s: CrimeScene): string {
-  const cd = s.courtDetails;
-  const cv = s.courtVisitUpdate;
-  return [
-    s.cvrNo,
-    visitTypeLabel(s),
-    formatDateTimeDDMMYYYY(s.updatedAt),
-    s.placeOfCrimeScene,
-    cd?.courtName,
-    cd?.productionPR,
-    cd?.productionPRTypes?.join(' '),
-    cv?.officerName,
-    cv?.visitDate,
-    cv?.resultReceived,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-}
-
-function courtStatusHint(s: CrimeScene): string {
-  const parts: string[] = [];
-  const pr = s.courtDetails?.productionPR;
-  if (pr === 'Yes') parts.push('P.R. Yes');
-  else if (pr === 'No') parts.push('P.R. No');
-  const rows = s.courtDetails?.productionSentToCourtRows?.length ?? 0;
-  if (rows > 0) parts.push(`${rows} sent row${rows === 1 ? '' : 's'}`);
-  if (s.courtVisitUpdate?.officerName?.trim()) parts.push('Visit saved');
-  return parts.length ? parts.join(' · ') : '—';
-}
-
 function mergeCourtDetails(base: CrimeSceneCourtDetails | undefined): CrimeSceneCourtDetails {
   return { ...emptyCrimeSceneCourtDetails(), ...base };
 }
 
 function mergeCourtVisit(base: CourtVisitUpdateDetails | undefined): CourtVisitUpdateDetails {
-  return { ...emptyCourtVisitUpdate(), ...base };
+  return normalizeCourtVisitUpdate(base);
 }
 
 function buildOfficerOptions(scene: CrimeScene): { value: string; label: string }[] {
@@ -92,7 +57,7 @@ function buildOfficerOptions(scene: CrimeScene): { value: string; label: string 
   return opts;
 }
 
-function parseOfficerKey(key: string): Pick<CourtVisitUpdateDetails, 'officerName' | 'officerRegNo' | 'officerRoleLabel'> {
+function parseOfficerKey(key: string): Pick<CourtVisitOfficerDetailRow, 'officerName' | 'officerRegNo' | 'officerRoleLabel'> {
   try {
     const o = JSON.parse(key) as { role?: string; name?: string; regNo?: string };
     return {
@@ -103,6 +68,44 @@ function parseOfficerKey(key: string): Pick<CourtVisitUpdateDetails, 'officerNam
   } catch {
     return { officerRoleLabel: '', officerName: '', officerRegNo: '' };
   }
+}
+
+const MAX_COURT_VISIT_ATTACHMENT_BYTES = Math.floor(1.5 * 1024 * 1024);
+
+function isCourtVisitRowNonEmpty(r: CourtVisitOfficerDetailRow): boolean {
+  return Boolean(
+    r.testifiedOfficer?.trim() ||
+      r.visitDate?.trim() ||
+      r.officerKey?.trim() ||
+      r.visitDescription?.trim() ||
+      r.nextCourtDate?.trim() ||
+      r.attachmentFileName?.trim() ||
+      r.attachmentDataUrl?.trim(),
+  );
+}
+
+function validateCourtVisitRows(rows: CourtVisitOfficerDetailRow[]): string {
+  if (rows.length === 0) {
+    return 'Add at least one court visit detail (use “Add court visit detail”) and complete the required fields.';
+  }
+  for (let i = 0; i < rows.length; i += 1) {
+    const r = rows[i];
+    const n = `Court visit ${String(i + 1).padStart(2, '0')}`;
+    if (!r.testifiedOfficer?.trim()) return `${n}: enter testified officer.`;
+    if (!r.visitDate?.trim()) return `${n}: enter date.`;
+    if (!r.officerKey?.trim()) return `${n}: select an officer from this visit.`;
+    if (!r.visitDescription?.trim()) return `${n}: enter a description of the visit.`;
+  }
+  return '';
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(new Error('Failed to read file'));
+    fr.readAsDataURL(file);
+  });
 }
 
 function FieldGroup({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) {
@@ -117,59 +120,84 @@ function FieldGroup({ label, children, className = '' }: { label: string; childr
 export default function UpdateCourtDetailsPage() {
   const [scenes, setScenes] = useState<CrimeScene[]>([]);
   const [selectedSceneId, setSelectedSceneId] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortKey, setSortKey] = useState<keyof CrimeScene | string | null>('updatedAt');
-  const [sortAsc, setSortAsc] = useState(false);
   const [flowMode, setFlowMode] = useState<FlowMode>('production_sent');
   const [courtDraft, setCourtDraft] = useState<CrimeSceneCourtDetails>(() => emptyCrimeSceneCourtDetails());
   const [courtVisitDraft, setCourtVisitDraft] = useState<CourtVisitUpdateDetails>(() => emptyCourtVisitUpdate());
   const [error, setError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
+  const [isEditingProductionSentToCourt, setIsEditingProductionSentToCourt] = useState(false);
 
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
   }, []);
 
-  const filteredScenes = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    return scenes.filter((s) => (q ? courtTableHaystack(s).includes(q) : true));
-  }, [scenes, searchTerm]);
-
   const sortedScenes = useMemo(() => {
-    const data = [...filteredScenes];
-    if (!sortKey) return data;
-    data.sort((a, b) => {
-      const av =
-        sortKey === 'updatedAt'
-          ? new Date(a.updatedAt).getTime()
-          : String((a as unknown as Record<string, unknown>)[sortKey] ?? '')
-              .toLowerCase();
-      const bv =
-        sortKey === 'updatedAt'
-          ? new Date(b.updatedAt).getTime()
-          : String((b as unknown as Record<string, unknown>)[sortKey] ?? '')
-              .toLowerCase();
-      if (av < bv) return sortAsc ? -1 : 1;
-      if (av > bv) return sortAsc ? 1 : -1;
-      return 0;
-    });
+    const data = [...scenes];
+    data.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return data;
-  }, [filteredScenes, sortKey, sortAsc]);
+  }, [scenes]);
+
+  const sceneSelectOptions = useMemo(
+    () =>
+      sortedScenes.map((s) => {
+        const place = (s.placeOfCrimeScene ?? '').trim();
+        const placeShort = place.length > 48 ? `${place.slice(0, 48)}…` : place;
+        return {
+          value: s.id,
+          label: `${(s.cvrNo ?? '').trim() || s.id} · ${visitTypeLabel(s)}${placeShort ? ` · ${placeShort}` : ''} · ${formatDateTimeDDMMYYYY(s.updatedAt)}`,
+        };
+      }),
+    [sortedScenes],
+  );
 
   const selectedScene = useMemo(
     () => (selectedSceneId ? scenes.find((s) => s.id === selectedSceneId) : undefined),
     [scenes, selectedSceneId],
   );
 
+  useEffect(() => {
+    if (!selectedSceneId) return;
+    if (!sortedScenes.some((s) => s.id === selectedSceneId)) {
+      setSelectedSceneId('');
+    }
+  }, [sortedScenes, selectedSceneId]);
+
   const officerOptions = useMemo(
     () => (selectedScene ? buildOfficerOptions(selectedScene) : []),
     [selectedScene],
   );
 
+  function patchCourtVisitRow(index: number, partial: Partial<CourtVisitOfficerDetailRow>) {
+    setCourtVisitDraft((d) => ({
+      rows: d.rows.map((r, i) => (i === index ? { ...r, ...partial } : r)),
+    }));
+  }
+
+  async function handleCourtVisitAttachment(index: number, file: File | null) {
+    if (!file) {
+      patchCourtVisitRow(index, { attachmentFileName: '', attachmentDataUrl: '' });
+      return;
+    }
+    if (file.size > MAX_COURT_VISIT_ATTACHMENT_BYTES) {
+      setError(
+        `Attachment is too large (max ${Math.round(MAX_COURT_VISIT_ATTACHMENT_BYTES / 1024 / 1024)} MB).`,
+      );
+      return;
+    }
+    setError('');
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      patchCourtVisitRow(index, { attachmentFileName: file.name, attachmentDataUrl: dataUrl });
+    } catch {
+      setError('Could not read the attachment.');
+    }
+  }
+
   useEffect(() => {
     if (!selectedSceneId) {
       setCourtDraft(emptyCrimeSceneCourtDetails());
       setCourtVisitDraft(emptyCourtVisitUpdate());
+      setIsEditingProductionSentToCourt(false);
       return;
     }
     const scene = scenes.find((s) => s.id === selectedSceneId);
@@ -178,37 +206,33 @@ export default function UpdateCourtDetailsPage() {
     setCourtVisitDraft(mergeCourtVisit(scene.courtVisitUpdate));
     setError('');
     setSavedOk(false);
+    setIsEditingProductionSentToCourt(false);
   }, [selectedSceneId, scenes]);
 
-  function handleSort(key: keyof CrimeScene | string) {
-    if (sortKey === key) setSortAsc((prev) => !prev);
-    else {
-      setSortKey(key);
-      setSortAsc(true);
-    }
-  }
+  useEffect(() => {
+    setIsEditingProductionSentToCourt(false);
+    setError('');
+    setSavedOk(false);
+  }, [flowMode]);
 
   function selectScene(id: string) {
     setSelectedSceneId(id);
-    setTimeout(() => {
-      document.getElementById('court-update-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    if (id) {
+      setTimeout(() => {
+        document.getElementById('court-update-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
   }
 
   function validateCourtVisit(): string {
-    if (!selectedSceneId) return 'Select a row in the table, then complete the form below.';
-    if (!courtVisitDraft.officerKey?.trim()) return 'Select the officer.';
-    if (!courtVisitDraft.visitDate?.trim()) return 'Enter the date of visit.';
-    if (!courtVisitDraft.resultReceived) return 'Select results.';
-    if (analysisResultIsOther(courtVisitDraft.resultReceived) && !courtVisitDraft.resultOtherDetail?.trim()) {
-      return 'Describe the result when “Other” is selected.';
-    }
-    return '';
+    if (!selectedSceneId) return 'Select a crime scene above, then complete the form below.';
+    const filled = courtVisitDraft.rows.filter(isCourtVisitRowNonEmpty);
+    return validateCourtVisitRows(filled);
   }
 
   function handleSaveProduction() {
     if (!selectedSceneId) {
-      setError('Select a row in the table first.');
+      setError('Select a crime scene first.');
       setSavedOk(false);
       return;
     }
@@ -228,27 +252,43 @@ export default function UpdateCourtDetailsPage() {
     setCourtDraft(mergeCourtDetails(updated.courtDetails));
     setError('');
     setSavedOk(true);
+    setIsEditingProductionSentToCourt(false);
+  }
+
+  function handleCancelEditProductionSentToCourt() {
+    if (!selectedSceneId) return;
+    const scene = scenes.find((s) => s.id === selectedSceneId);
+    if (!scene) return;
+    setCourtDraft(mergeCourtDetails(scene.courtDetails));
+    setError('');
+    setSavedOk(false);
+    setIsEditingProductionSentToCourt(false);
   }
 
   function handleSaveCourtVisit() {
+    if (!selectedSceneId) {
+      setError('Select a crime scene first.');
+      setSavedOk(false);
+      return;
+    }
     const v = validateCourtVisit();
     if (v) {
       setError(v);
       setSavedOk(false);
       return;
     }
-    const parsed = parseOfficerKey(courtVisitDraft.officerKey);
-    const payload: CourtVisitUpdateDetails = {
-      officerKey: courtVisitDraft.officerKey,
-      officerName: parsed.officerName || courtVisitDraft.officerName,
-      officerRegNo: parsed.officerRegNo || courtVisitDraft.officerRegNo,
-      officerRoleLabel: parsed.officerRoleLabel || courtVisitDraft.officerRoleLabel,
-      visitDate: courtVisitDraft.visitDate.trim(),
-      resultReceived: courtVisitDraft.resultReceived as CourtVisitUpdateDetails['resultReceived'],
-      resultOtherDetail: analysisResultIsOther(courtVisitDraft.resultReceived)
-        ? courtVisitDraft.resultOtherDetail?.trim()
-        : '',
-    };
+    const filled = courtVisitDraft.rows
+      .filter(isCourtVisitRowNonEmpty)
+      .map((row) => {
+        const p = parseOfficerKey(row.officerKey);
+        return {
+          ...row,
+          officerName: p.officerName || row.officerName,
+          officerRegNo: p.officerRegNo || row.officerRegNo,
+          officerRoleLabel: p.officerRoleLabel || row.officerRoleLabel,
+        };
+      });
+    const payload: CourtVisitUpdateDetails = { rows: filled };
     const updated = crimeSceneService.updateCourtVisitDetails(selectedSceneId, payload);
     if (!updated) {
       setError('Could not save. The visit record may have been removed.');
@@ -260,73 +300,6 @@ export default function UpdateCourtDetailsPage() {
     setError('');
     setSavedOk(true);
   }
-
-  const columns: AppTableColumn<CrimeScene>[] = useMemo(
-    () => [
-      {
-        key: 'cvrNo',
-        label: 'CVR No.',
-        sortable: true,
-        render: (_, row) => (
-          <span className="font-mono text-xs text-blue-700 font-semibold">{row.cvrNo ?? row.id}</span>
-        ),
-      },
-      {
-        key: 'visitType',
-        label: 'Visit type',
-        sortable: true,
-        render: (_, row) => <span className="text-gray-700">{visitTypeLabel(row)}</span>,
-      },
-      {
-        key: 'placeOfCrimeScene',
-        label: 'Place',
-        sortable: true,
-        render: (_, row) => (
-          <span className="text-gray-700 line-clamp-2 max-w-[12rem]" title={row.placeOfCrimeScene}>
-            {row.placeOfCrimeScene?.trim() ? row.placeOfCrimeScene : '—'}
-          </span>
-        ),
-      },
-      {
-        key: 'courtHint',
-        label: 'Court / production (saved)',
-        sortable: false,
-        render: (_, row) => (
-          <span className="text-gray-700 text-xs">{courtStatusHint(row)}</span>
-        ),
-      },
-      {
-        key: 'updatedAt',
-        label: 'Updated',
-        sortable: true,
-        render: (_, row) => (
-          <span className="text-gray-700 text-xs tabular-nums">{formatDateTimeDDMMYYYY(row.updatedAt)}</span>
-        ),
-      },
-      {
-        key: 'actions',
-        label: 'Actions',
-        align: 'right',
-        render: (_, row) => {
-          const isSel = row.id === selectedSceneId;
-          return (
-            <button
-              type="button"
-              onClick={() => selectScene(row.id)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
-                isSel
-                  ? 'text-green-800 bg-green-50 border-green-200 cursor-default'
-                  : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200'
-              }`}
-            >
-              {isSel ? 'Selected' : 'Select'}
-            </button>
-          );
-        },
-      },
-    ],
-    [selectedSceneId],
-  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -342,8 +315,8 @@ export default function UpdateCourtDetailsPage() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Update Court Details</h2>
                 <p className="text-sm text-gray-600 mt-0.5">
-                  Choose a visit in the table, then pick <strong>Production sent to court</strong> or{' '}
-                  <strong>Court visit</strong> and save. Updates appear under{' '}
+                  Choose a crime scene below, then pick <strong>Production sent to court</strong> (use <strong>Edit</strong>{' '}
+                  to change rows) or <strong>Court visit</strong> and save. Updates appear under{' '}
                   <Link
                     href="/crime-visit-registry/submitted-crime-scenes"
                     className="text-blue-600 font-medium hover:underline"
@@ -365,32 +338,27 @@ export default function UpdateCourtDetailsPage() {
               </div>
             ) : (
               <>
-                <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
-                  <div className="px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 border-blue-600 text-blue-700 bg-blue-50/50">
+                <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50/90 p-4 sm:p-5 space-y-4">
+                  <p className="text-sm font-medium text-gray-800">
                     Crime scenes
-                    <span className="ml-2 px-1.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                       {sortedScenes.length}
                     </span>
-                  </div>
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by CVR, visit type, place, court data, or updated date…"
-                    className="w-full md:w-96 min-h-10 mb-2 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
-                  />
+                  </p>
+                  <FieldGroup label="Select crime scene">
+                    <CustomSelect
+                      value={selectedSceneId}
+                      onChange={(id) => selectScene(id)}
+                      options={[
+                        { value: '', label: '— Select a crime scene —' },
+                        ...sceneSelectOptions,
+                      ]}
+                      placeholder="Choose a visit to load the form below"
+                      searchable
+                      searchPlaceholder="Search CVR, place, type, date…"
+                    />
+                  </FieldGroup>
                 </div>
-
-                <AppTable<CrimeScene>
-                  columns={columns}
-                  data={sortedScenes}
-                  keyField="id"
-                  sortKey={sortKey}
-                  sortAsc={sortAsc}
-                  onSort={handleSort}
-                  emptyMessage="No crime scenes match this search."
-                  variant="card"
-                />
 
                 <div
                   id="court-update-form"
@@ -404,20 +372,11 @@ export default function UpdateCourtDetailsPage() {
 
                       {!selectedScene ? (
                         <p className="text-sm text-gray-500 py-4">
-                          Select a visit using <strong>Select</strong> in the table above, then choose what to update.
+                          Choose a crime scene in the <strong>Select crime scene</strong> dropdown above, then choose
+                          what to update.
                         </p>
                       ) : (
                         <>
-                          <CourtDetailsReadOnlySummary
-                            courtDetails={selectedScene.courtDetails}
-                            title="Production details saved with this visit (reference)"
-                            scope="productionSentToCourt"
-                          />
-                          <p className="text-xs text-gray-600 -mt-2">
-                            The editable section below starts from this data — change only what you need; you are not
-                            re-entering the whole crime scene.
-                          </p>
-
                           <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
                             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
                               <span className="w-1.5 h-4 rounded-full bg-gray-500 inline-block flex-shrink-0" />
@@ -466,125 +425,243 @@ export default function UpdateCourtDetailsPage() {
                           {flowMode === 'production_sent' ? (
                             <div
                               id="court-update-production"
-                              className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70 scroll-mt-24"
+                              className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70 scroll-mt-24 space-y-4"
                             >
-                              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-                                <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
-                                Production details
-                              </h4>
-                              <p className="text-xs text-gray-600 mb-4">
-                                Edit <strong>Production sent to court</strong> only. Use Create crime scene or a full
-                                update elsewhere for other production fields.
+                              <div className="flex flex-wrap items-start justify-between gap-3 pb-2 border-b border-amber-200/80">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2 min-w-0 flex-1">
+                                  <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
+                                  <span className="min-w-0">Production details — Production sent to court</span>
+                                </h4>
+                                <div className="flex flex-wrap items-center gap-2 shrink-0 ml-auto">
+                                  {isEditingProductionSentToCourt ? (
+                                    <Button
+                                      variant="secondary"
+                                      type="button"
+                                      onClick={handleCancelEditProductionSentToCourt}
+                                      className="!min-h-[40px] !px-3 !py-2 !text-sm"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="primary"
+                                      type="button"
+                                      onClick={() => {
+                                        setIsEditingProductionSentToCourt(true);
+                                        setError('');
+                                        setSavedOk(false);
+                                      }}
+                                      className="!min-h-[40px] !px-3 !py-2 !text-sm"
+                                    >
+                                      Edit
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-600">
+                                {isEditingProductionSentToCourt ? (
+                                  <>
+                                    Edit <strong>Production sent to court</strong> only. Use{' '}
+                                    <strong>Create crime scene</strong> or a full update elsewhere for other production
+                                    fields. If rows are disabled, set Production Availability and types there first.
+                                  </>
+                                ) : (
+                                  <>
+                                    Other production fields are set in <strong>Create crime scene</strong> or other
+                                    updates.
+                                  </>
+                                )}
                               </p>
                               <CourtProductionDetailsEditor
                                 mode="productionSentToCourt"
                                 courtDetails={courtDraft}
                                 onChange={setCourtDraft}
+                                readOnly={!isEditingProductionSentToCourt}
                               />
-                              <div className="mt-6 pt-4 border-t border-amber-200/80 space-y-3">
-                                {error ? <p className="text-sm text-red-600">{error}</p> : null}
-                                {savedOk ? (
-                                  <p className="text-sm text-green-700 font-medium">
-                                    Production details saved. View them under Production details on the submitted scene.
-                                  </p>
-                                ) : null}
-                                <Button variant="success" type="button" onClick={handleSaveProduction}>
-                                  Save production details
-                                </Button>
-                              </div>
+                              {isEditingProductionSentToCourt ? (
+                                <>
+                                  {error ? <p className="text-sm text-red-600">{error}</p> : null}
+                                  {savedOk ? (
+                                    <p className="text-sm text-green-700 font-medium">
+                                      Production details saved. View them under Production details on the submitted
+                                      scene.
+                                    </p>
+                                  ) : null}
+                                  <div className="flex justify-center">
+                                    <Button variant="success" type="button" onClick={handleSaveProduction}>
+                                      Save production details
+                                    </Button>
+                                  </div>
+                                </>
+                              ) : null}
+                              {!isEditingProductionSentToCourt && error ? (
+                                <p className="text-sm text-red-600">{error}</p>
+                              ) : null}
+                              {!isEditingProductionSentToCourt && savedOk ? (
+                                <p className="text-sm text-green-700 font-medium">
+                                  Production details saved. View them under Production details on the submitted scene.
+                                </p>
+                              ) : null}
                             </div>
                           ) : (
                             <div
                               id="court-update-visit"
-                              className="p-4 sm:p-5 rounded-xl border border-fuchsia-200 bg-fuchsia-50/65 scroll-mt-24"
+                              className="p-4 sm:p-5 rounded-xl border border-fuchsia-200 bg-fuchsia-50/65 scroll-mt-24 space-y-4"
                             >
-                              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-fuchsia-200/80 flex items-center gap-2">
                                 <span className="w-1.5 h-4 rounded-full bg-fuchsia-500 inline-block flex-shrink-0" />
-                                Court visit
+                                Court visit — SOCO officer details
                               </h4>
+                              <p className="text-xs text-gray-600">
+                                Add one or more rows for officers on this visit. The officer list comes from the crime
+                                scene (team leader, SOCO, investigation) with their roles.
+                              </p>
 
-                              <div className="space-y-4">
-                                <FieldGroup label="Officer">
-                                  {officerOptions.length === 0 ? (
-                                    <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                      No officers on this visit record. Add officers on the crime scene first.
-                                    </p>
-                                  ) : (
-                                    <CustomSelect
-                                      value={courtVisitDraft.officerKey}
-                                      onChange={(key) => {
-                                        const p = parseOfficerKey(key);
-                                        setCourtVisitDraft((d) => ({
-                                          ...d,
-                                          officerKey: key,
-                                          officerName: p.officerName,
-                                          officerRegNo: p.officerRegNo,
-                                          officerRoleLabel: p.officerRoleLabel,
-                                        }));
-                                      }}
-                                      options={officerOptions}
-                                      placeholder="Select officer…"
-                                      searchable
-                                      searchPlaceholder="Search…"
-                                    />
-                                  )}
-                                </FieldGroup>
-
-                                <FieldGroup label="Date of visit (DD/MM/YY)">
-                                  <DatePicker
-                                    value={courtVisitDraft.visitDate}
-                                    onChange={(v) => setCourtVisitDraft((d) => ({ ...d, visitDate: v }))}
-                                  />
-                                </FieldGroup>
-
-                                <FieldGroup label="Results">
-                                  <div className="flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
-                                    {ANALYSIS_REPORT_RESULT_OPTIONS.map((opt) => (
-                                      <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                                        <input
-                                          type="radio"
-                                          name="court-visit-results"
-                                          checked={courtVisitDraft.resultReceived === opt}
-                                          onChange={() =>
-                                            setCourtVisitDraft((d) => ({
-                                              ...d,
-                                              resultReceived: opt,
-                                              ...(!analysisResultIsOther(opt) ? { resultOtherDetail: '' } : {}),
-                                            }))
-                                          }
-                                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                        />
-                                        {opt}
-                                      </label>
+                              {officerOptions.length === 0 ? (
+                                <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                  No officers on this visit record. Add officers on the crime scene first.
+                                </p>
+                              ) : (
+                                <>
+                                  <div className="space-y-4">
+                                    {courtVisitDraft.rows.map((row, index) => (
+                                      <div
+                                        key={index}
+                                        className="rounded-lg border border-fuchsia-200/90 bg-white p-4 shadow-sm space-y-3"
+                                      >
+                                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-fuchsia-100 pb-2">
+                                          <p className="text-sm font-semibold text-fuchsia-950">
+                                            Court visit {String(index + 1).padStart(2, '0')}
+                                          </p>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setCourtVisitDraft((d) => ({
+                                                rows: d.rows.filter((_, i) => i !== index),
+                                              }))
+                                            }
+                                            className="h-9 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 text-xs font-semibold hover:bg-red-100"
+                                            aria-label={`Remove court visit row ${String(index + 1).padStart(2, '0')}`}
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                        <FieldGroup label="Testified officer">
+                                          <input
+                                            type="text"
+                                            value={row.testifiedOfficer}
+                                            onChange={(e) => patchCourtVisitRow(index, { testifiedOfficer: e.target.value })}
+                                            placeholder="Name of the officer who testified"
+                                            className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/40 focus:border-fuchsia-500"
+                                          />
+                                        </FieldGroup>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                          <FieldGroup label="Date (DD/MM/YY)">
+                                            <DatePicker
+                                              value={row.visitDate}
+                                              onChange={(v) => patchCourtVisitRow(index, { visitDate: v })}
+                                            />
+                                          </FieldGroup>
+                                          <FieldGroup label="Officer (on this visit)">
+                                            <CustomSelect
+                                              value={row.officerKey}
+                                              onChange={(key) => {
+                                                const p = parseOfficerKey(key);
+                                                patchCourtVisitRow(index, {
+                                                  officerKey: key,
+                                                  officerName: p.officerName,
+                                                  officerRegNo: p.officerRegNo,
+                                                  officerRoleLabel: p.officerRoleLabel,
+                                                });
+                                              }}
+                                              options={officerOptions}
+                                              placeholder="Select officer & role"
+                                              searchable
+                                              searchPlaceholder="Search name, role…"
+                                            />
+                                          </FieldGroup>
+                                        </div>
+                                        <FieldGroup label="Description of the visit">
+                                          <textarea
+                                            value={row.visitDescription}
+                                            onChange={(e) => patchCourtVisitRow(index, { visitDescription: e.target.value })}
+                                            rows={4}
+                                            placeholder="What happened at court for this visit…"
+                                            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/40 focus:border-fuchsia-500 placeholder:text-gray-400"
+                                          />
+                                        </FieldGroup>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                          <FieldGroup label="Next court date (optional)">
+                                            <DatePicker
+                                              value={row.nextCourtDate ?? ''}
+                                              onChange={(v) => patchCourtVisitRow(index, { nextCourtDate: v })}
+                                            />
+                                          </FieldGroup>
+                                          <FieldGroup label="Attachment (optional)">
+                                            <div className="space-y-2">
+                                              <input
+                                                type="file"
+                                                className="block w-full min-h-10 text-sm text-gray-600 file:mr-3 file:h-10 file:min-h-10 file:rounded-lg file:border file:border-fuchsia-200 file:bg-fuchsia-50 file:px-3 file:py-0 file:text-sm file:font-medium file:leading-none file:text-fuchsia-900 file:inline-flex file:items-center"
+                                                onChange={(e) => {
+                                                  const f = e.target.files?.[0] ?? null;
+                                                  void handleCourtVisitAttachment(index, f);
+                                                  e.currentTarget.value = '';
+                                                }}
+                                              />
+                                              {row.attachmentFileName ? (
+                                                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
+                                                  <span className="font-medium">{row.attachmentFileName}</span>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      patchCourtVisitRow(index, {
+                                                        attachmentFileName: '',
+                                                        attachmentDataUrl: '',
+                                                      })
+                                                    }
+                                                    className="text-red-600 font-semibold hover:underline"
+                                                  >
+                                                    Remove file
+                                                  </button>
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          </FieldGroup>
+                                        </div>
+                                      </div>
                                     ))}
                                   </div>
-                                </FieldGroup>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setCourtVisitDraft((d) => ({
+                                        rows: [...d.rows, emptyCourtVisitOfficerDetailRow()],
+                                      }))
+                                    }
+                                    className="text-sm text-fuchsia-800 hover:text-fuchsia-950 font-medium flex items-center gap-1"
+                                  >
+                                    <span className="text-base leading-none">+</span> Add court visit detail
+                                  </button>
+                                </>
+                              )}
 
-                                {analysisResultIsOther(courtVisitDraft.resultReceived) ? (
-                                  <FieldGroup label="Other — specify">
-                                    <textarea
-                                      value={courtVisitDraft.resultOtherDetail ?? ''}
-                                      onChange={(e) =>
-                                        setCourtVisitDraft((d) => ({ ...d, resultOtherDetail: e.target.value }))
-                                      }
-                                      rows={3}
-                                      placeholder="යතුරු ලියනය කළ හැකි පරිදි සකස් කරන්න"
-                                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-noto-sinhala placeholder:text-gray-400"
-                                    />
-                                  </FieldGroup>
-                                ) : null}
-                              </div>
-
-                              <div className="mt-6 pt-4 border-t border-fuchsia-200/80 space-y-3">
+                              <div className="mt-2 pt-4 border-t border-fuchsia-200/80 space-y-3">
                                 {error ? <p className="text-sm text-red-600">{error}</p> : null}
                                 {savedOk ? (
                                   <p className="text-sm text-green-700 font-medium">
-                                    Court visit saved. View it in the Court visit section on the submitted scene.
+                                    Court visit details saved. View them on the submitted crime scene.
                                   </p>
                                 ) : null}
-                                <Button variant="success" type="button" onClick={handleSaveCourtVisit}>
-                                  Save court visit
-                                </Button>
+                                <div className="flex justify-center">
+                                  <Button
+                                    variant="success"
+                                    type="button"
+                                    onClick={handleSaveCourtVisit}
+                                    disabled={officerOptions.length === 0}
+                                  >
+                                    Save court visit
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           )}

@@ -44,12 +44,15 @@ export default function CourtDetailsReadOnlySummary({
   title = 'Production (from crime scene submission)',
   className = '',
   scope = 'all',
+  /** If set, replaces the default read-only line under the title (e.g. point users to an Edit action). */
+  readOnlySubtext,
 }: {
   courtDetails: CrimeSceneCourtDetails | undefined;
   title?: string;
   className?: string;
   /** Limit which court details blocks are shown. */
   scope?: CourtDetailsReadOnlyScope;
+  readOnlySubtext?: string;
 }) {
   if (!courtDetails || !hasDataForScope(courtDetails, scope)) {
     return (
@@ -71,13 +74,14 @@ export default function CourtDetailsReadOnlySummary({
       : scope === 'productionSentToCourt'
         ? 'Read-only — production sent to court. Edit the form below; sent-to-analysis is updated from Production Analysis.'
         : 'Read-only reference — same data is loaded into the update form below.';
+  const subtext = readOnlySubtext ?? readOnlyHint;
 
   return (
     <div
       className={`rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-4 text-sm space-y-3 ${className}`}
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
-      <p className="text-xs text-slate-500">{readOnlyHint}</p>
+      <p className="text-xs text-slate-500">{subtext}</p>
 
       <div>
         <span className="text-[11px] font-semibold uppercase text-gray-500">Production Availability</span>

@@ -62,28 +62,125 @@ export function emptyAnalysisReportReceived(): AnalysisReportReceived {
   return { labReportReceived: '', annexRef: '', date: '', resultReceived: '', resultOtherDetail: '' };
 }
 
-/** Court attendance update (officer, visit date, outcome) — from Update court details → Court visit. */
-export interface CourtVisitUpdateDetails {
-  /** Stable key from officer dropdown (JSON string). */
+/**
+ * One court attendance row — SOC officer court visit (repeatable) from Update court details → Court visit.
+ */
+export interface CourtVisitOfficerDetailRow {
+  /** Officer who testified (free text). */
+  testifiedOfficer: string;
+  /** Date of this court visit (DD/MM/YY from date picker). */
+  visitDate: string;
+  /** Stable key from officer dropdown (JSON with role, name, reg). */
   officerKey: string;
-  officerName: string;
+  officerName?: string;
   officerRegNo?: string;
   officerRoleLabel?: string;
-  visitDate: string;
-  resultReceived: AnalysisReportResult | '';
-  resultOtherDetail?: string;
+  /** Narrative for this visit. */
+  visitDescription: string;
+  nextCourtDate?: string;
+  attachmentFileName?: string;
+  /** Data URL for client-side persistence (optional; may be large). */
+  attachmentDataUrl?: string;
 }
 
-export function emptyCourtVisitUpdate(): CourtVisitUpdateDetails {
+export function emptyCourtVisitOfficerDetailRow(): CourtVisitOfficerDetailRow {
   return {
+    testifiedOfficer: '',
+    visitDate: '',
     officerKey: '',
     officerName: '',
     officerRegNo: '',
     officerRoleLabel: '',
-    visitDate: '',
-    resultReceived: '',
-    resultOtherDetail: '',
+    visitDescription: '',
+    nextCourtDate: '',
+    attachmentFileName: '',
+    attachmentDataUrl: '',
   };
+}
+
+/** Court visit book — multiple officer visit rows. */
+export interface CourtVisitUpdateDetails {
+  rows: CourtVisitOfficerDetailRow[];
+}
+
+/** @internal Legacy single-record shape before rows[] (kept for migration from stored JSON). */
+export type LegacyCourtVisitUpdateDetails = {
+  officerKey?: string;
+  officerName?: string;
+  officerRegNo?: string;
+  officerRoleLabel?: string;
+  visitDate?: string;
+  resultReceived?: AnalysisReportResult | '';
+  resultOtherDetail?: string;
+};
+
+function formatLegacyResultLine(r: LegacyCourtVisitUpdateDetails): string {
+  const res = r.resultReceived?.trim();
+  if (!res) return '';
+  if (res === 'Other' && r.resultOtherDetail?.trim()) {
+    return `Result: Other — ${r.resultOtherDetail.trim()}`;
+  }
+  return `Result: ${res}`;
+}
+
+/** Map stored data (new `rows` or legacy single form) to `{ rows }`. */
+export function normalizeCourtVisitUpdate(
+  raw: CourtVisitUpdateDetails | LegacyCourtVisitUpdateDetails | undefined | null,
+): CourtVisitUpdateDetails {
+  if (!raw) return { rows: [] };
+  if ('rows' in raw && Array.isArray((raw as CourtVisitUpdateDetails).rows)) {
+    const list = (raw as CourtVisitUpdateDetails).rows;
+    return {
+      rows: (list ?? []).map((r) => ({
+        ...emptyCourtVisitOfficerDetailRow(),
+        ...r,
+      })),
+    };
+  }
+  const legacy = raw as LegacyCourtVisitUpdateDetails;
+  const hasLegacy = Boolean(
+    legacy.officerKey?.trim() ||
+      legacy.visitDate?.trim() ||
+      legacy.resultReceived ||
+      legacy.officerName?.trim() ||
+      legacy.resultOtherDetail?.trim(),
+  );
+  if (!hasLegacy) return { rows: [] };
+  const desc = formatLegacyResultLine(legacy);
+  return {
+    rows: [
+      {
+        ...emptyCourtVisitOfficerDetailRow(),
+        visitDate: legacy.visitDate ?? '',
+        officerKey: legacy.officerKey ?? '',
+        officerName: legacy.officerName,
+        officerRegNo: legacy.officerRegNo,
+        officerRoleLabel: legacy.officerRoleLabel,
+        visitDescription: desc || '— Migrated from previous court visit record —',
+      },
+    ],
+  };
+}
+
+export function emptyCourtVisitUpdate(): CourtVisitUpdateDetails {
+  return { rows: [] };
+}
+
+/** True if any row has data worth showing (after normalization / migration). */
+export function courtVisitUpdateHasDisplayableData(
+  raw: CourtVisitUpdateDetails | LegacyCourtVisitUpdateDetails | undefined | null,
+): boolean {
+  const { rows } = normalizeCourtVisitUpdate(raw);
+  return rows.some(
+    (r) =>
+      r.testifiedOfficer?.trim() ||
+      r.visitDate?.trim() ||
+      r.officerKey?.trim() ||
+      r.visitDescription?.trim() ||
+      r.nextCourtDate?.trim() ||
+      r.attachmentFileName?.trim() ||
+      r.officerName?.trim(),
+  );
 }
 
 /** One production item sent to court (repeatable). */
