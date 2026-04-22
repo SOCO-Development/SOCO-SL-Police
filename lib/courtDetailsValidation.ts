@@ -1,10 +1,8 @@
 import type { CrimeSceneCourtDetails } from '@/types/crimeScene';
 import { analysisInstitutionIsOthers } from '@/lib/analysisInstitutions';
 
-/** Validation for production / court rows when saving court details (matches create crime scene rules). */
-export function validateCourtProductionDetails(cd: CrimeSceneCourtDetails | undefined): string {
+export function validateProductionSentToCourtSection(cd: CrimeSceneCourtDetails | undefined): string {
   if (!cd) return '';
-
   const courtRows = cd.productionSentToCourtRows ?? [];
   for (let i = 0; i < courtRows.length; i++) {
     const row = courtRows[i];
@@ -21,7 +19,11 @@ export function validateCourtProductionDetails(cd: CrimeSceneCourtDetails | unde
       }
     }
   }
+  return '';
+}
 
+export function validateSentToAnalysisSection(cd: CrimeSceneCourtDetails | undefined): string {
+  if (!cd) return '';
   const analysisRows = cd.sentToAnalysisRows ?? [];
   for (let i = 0; i < analysisRows.length; i++) {
     const row = analysisRows[i];
@@ -45,6 +47,12 @@ export function validateCourtProductionDetails(cd: CrimeSceneCourtDetails | unde
       }
     }
   }
-
   return '';
+}
+
+/** Validation for production / court rows when saving court details (matches create crime scene rules). */
+export function validateCourtProductionDetails(cd: CrimeSceneCourtDetails | undefined): string {
+  const a = validateProductionSentToCourtSection(cd);
+  if (a) return a;
+  return validateSentToAnalysisSection(cd);
 }

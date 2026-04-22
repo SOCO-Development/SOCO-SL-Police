@@ -19,7 +19,10 @@ import {
   analysisResultIsOther,
 } from '@/lib/analysisReportReceivedOptions';
 import { ArrowLeft } from 'lucide-react';
+import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import CourtDetailsReadOnlySummary from '@/app/crime-visit-registry/components/CourtDetailsReadOnlySummary';
+import { validateSentToAnalysisSection } from '@/lib/courtDetailsValidation';
+import { emptyCrimeSceneCourtDetails, type CrimeSceneCourtDetails } from '@/types/crimeScene';
 
 function visitTypeLabel(scene: CrimeScene) {
   return scene.visitType === 'REVISIT'
@@ -44,6 +47,10 @@ function sceneTableHaystack(s: CrimeScene): string {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
+}
+
+function mergeCourtDetails(base: CrimeSceneCourtDetails | undefined): CrimeSceneCourtDetails {
+  return { ...emptyCrimeSceneCourtDetails(), ...base };
 }
 
 function mergeReport(base: AnalysisReportReceived | undefined): AnalysisReportReceived {
@@ -76,6 +83,11 @@ export default function ProductionAnalysisPage() {
   const [sortAsc, setSortAsc] = useState(false);
   const [error, setError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
+  const [courtDetailsDraft, setCourtDetailsDraft] = useState<CrimeSceneCourtDetails>(() =>
+    emptyCrimeSceneCourtDetails(),
+  );
+  const [courtDetailsError, setCourtDetailsError] = useState('');
+  const [courtDetailsSavedOk, setCourtDetailsSavedOk] = useState(false);
 
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
@@ -115,12 +127,17 @@ export default function ProductionAnalysisPage() {
   useEffect(() => {
     if (!selectedSceneId) {
       setForm(emptyAnalysisReportReceived());
+      setCourtDetailsDraft(emptyCrimeSceneCourtDetails());
       return;
     }
     const scene = scenes.find((s) => s.id === selectedSceneId);
-    setForm(mergeReport(scene?.analysisReportReceived));
+    if (!scene) return;
+    setForm(mergeReport(scene.analysisReportReceived));
+    setCourtDetailsDraft(mergeCourtDetails(scene.courtDetails));
     setError('');
     setSavedOk(false);
+    setCourtDetailsError('');
+    setCourtDetailsSavedOk(false);
   }, [selectedSceneId, scenes]);
 
   function handleSort(key: keyof CrimeScene | string) {
@@ -188,6 +205,30 @@ export default function ProductionAnalysisPage() {
     setScenes(crimeSceneService.getAll());
     setError('');
     setSavedOk(true);
+  }
+
+  function handleSaveCourtDetails() {
+    if (!selectedSceneId) {
+      setCourtDetailsError('Select a visit in the table first.');
+      setCourtDetailsSavedOk(false);
+      return;
+    }
+    const v = validateSentToAnalysisSection(courtDetailsDraft);
+    if (v) {
+      setCourtDetailsError(v);
+      setCourtDetailsSavedOk(false);
+      return;
+    }
+    const updated = crimeSceneService.updateCourtDetailsProduction(selectedSceneId, courtDetailsDraft);
+    if (!updated) {
+      setCourtDetailsError('Could not save. The visit record may have been removed.');
+      setCourtDetailsSavedOk(false);
+      return;
+    }
+    setScenes(crimeSceneService.getAll());
+    setCourtDetailsDraft(mergeCourtDetails(updated.courtDetails));
+    setCourtDetailsError('');
+    setCourtDetailsSavedOk(true);
   }
 
   const columns: AppTableColumn<CrimeScene>[] = useMemo(
@@ -360,7 +401,37 @@ export default function ProductionAnalysisPage() {
                             <span className="text-gray-700">{visitTypeLabel(selectedScene)}</span>
                           </p>
 
-                          <CourtDetailsReadOnlySummary courtDetails={selectedScene.courtDetails} />
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-4 py-3 space-y-3">
+                            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
+                              Court details — Sent to analysis institute
+                            </h4>
+                            <p className="text-xs text-gray-600">
+                              Only <strong>Sent to analysis institute</strong> is editable here. Other court and
+                              production fields are set in <strong>Update Court Details</strong> or{' '}
+                              <strong>Create crime scene</strong>. If rows are disabled, set Production (P.R.) and types
+                              there first.
+                            </p>
+                            <CourtDetailsReadOnlySummary
+                              courtDetails={selectedScene.courtDetails}
+                              title="Court details (reference)"
+                              scope="sentToAnalysis"
+                              className="!bg-white/90"
+                            />
+                            <CourtProductionDetailsEditor
+                              mode="sentToAnalysis"
+                              courtDetails={courtDetailsDraft}
+                              onChange={setCourtDetailsDraft}
+                            />
+                            {courtDetailsError ? <p className="text-sm text-red-600">{courtDetailsError}</p> : null}
+                            {courtDetailsSavedOk ? (
+                              <p className="text-sm text-green-700 font-medium">
+                                Court details (sent to analysis) saved.
+                              </p>
+                            ) : null}
+                            <Button variant="success" type="button" onClick={handleSaveCourtDetails}>
+                              Save sent to analysis (court details)
+                            </Button>
+                          </div>
 
                           <div className="rounded-lg border border-cyan-300/80 bg-white/90 px-4 py-3">
                             <h4 className="text-xs font-semibold uppercase tracking-wide text-cyan-900 mb-3">

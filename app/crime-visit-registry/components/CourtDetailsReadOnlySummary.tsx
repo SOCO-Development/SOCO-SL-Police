@@ -17,16 +17,47 @@ function hasAnyCourtData(cd: CrimeSceneCourtDetails | undefined): boolean {
   );
 }
 
+/** `all` — full snapshot. `productionSentToCourt` / `sentToAnalysis` — only that block (e.g. Update Court vs Production Analysis). */
+export type CourtDetailsReadOnlyScope = 'all' | 'productionSentToCourt' | 'sentToAnalysis';
+
+function hasDataForScope(cd: CrimeSceneCourtDetails, scope: CourtDetailsReadOnlyScope): boolean {
+  if (scope === 'all') {
+    return hasAnyCourtData(cd);
+  }
+  if (scope === 'productionSentToCourt') {
+    return Boolean(
+      cd.courtName?.trim() ||
+        cd.courtCaseNo?.trim() ||
+        cd.productionPR === 'Yes' ||
+        cd.productionPR === 'No' ||
+        (cd.productionPRTypes?.length ?? 0) > 0 ||
+        (cd.productionSentToCourtRows?.length ?? 0) > 0,
+    );
+  }
+  // sentToAnalysis
+  return Boolean(
+    cd.courtName?.trim() ||
+      cd.courtCaseNo?.trim() ||
+      cd.productionPR === 'Yes' ||
+      cd.productionPR === 'No' ||
+      (cd.productionPRTypes?.length ?? 0) > 0 ||
+      (cd.sentToAnalysisRows?.length ?? 0) > 0,
+  );
+}
+
 export default function CourtDetailsReadOnlySummary({
   courtDetails,
   title = 'Court & production (from crime scene submission)',
   className = '',
+  scope = 'all',
 }: {
   courtDetails: CrimeSceneCourtDetails | undefined;
   title?: string;
   className?: string;
+  /** Limit which court details blocks are shown. */
+  scope?: CourtDetailsReadOnlyScope;
 }) {
-  if (!hasAnyCourtData(courtDetails)) {
+  if (!courtDetails || !hasDataForScope(courtDetails, scope)) {
     return (
       <div
         className={`rounded-lg border border-dashed border-gray-300 bg-gray-50/90 px-4 py-3 text-sm text-gray-600 ${className}`}
@@ -38,13 +69,21 @@ export default function CourtDetailsReadOnlySummary({
   }
 
   const cd = courtDetails!;
+  const showProductionToCourt = scope === 'all' || scope === 'productionSentToCourt';
+  const showSentToAnalysis = scope === 'all' || scope === 'sentToAnalysis';
+  const readOnlyHint =
+    scope === 'sentToAnalysis'
+      ? 'Read-only — saved P.R. and sent-to-analysis rows. Edit this visit’s sent-to-analysis block below.'
+      : scope === 'productionSentToCourt'
+        ? 'Read-only — court and production sent to court. Edit the form below; sent-to-analysis is updated from Production Analysis.'
+        : 'Read-only reference — same data is loaded into the update form below.';
 
   return (
     <div
       className={`rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-4 text-sm space-y-3 ${className}`}
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
-      <p className="text-xs text-slate-500">Read-only reference — same data is loaded into the update form below.</p>
+      <p className="text-xs text-slate-500">{readOnlyHint}</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
@@ -84,7 +123,7 @@ export default function CourtDetailsReadOnlySummary({
         </div>
       ) : null}
 
-      {(cd.productionSentToCourtRows ?? []).length > 0 ? (
+      {showProductionToCourt && (cd.productionSentToCourtRows ?? []).length > 0 ? (
         <div>
           <span className="text-[11px] font-semibold uppercase text-gray-500">Production sent to court</span>
           <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
@@ -106,7 +145,7 @@ export default function CourtDetailsReadOnlySummary({
         </div>
       ) : null}
 
-      {(cd.sentToAnalysisRows ?? []).length > 0 ? (
+      {showSentToAnalysis && (cd.sentToAnalysisRows ?? []).length > 0 ? (
         <div>
           <span className="text-[11px] font-semibold uppercase text-gray-500">Sent to analysis institute</span>
           <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">

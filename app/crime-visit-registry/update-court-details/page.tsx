@@ -12,7 +12,7 @@ import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/
 import CourtDetailsReadOnlySummary from '@/app/crime-visit-registry/components/CourtDetailsReadOnlySummary';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
-import { validateCourtProductionDetails } from '@/lib/courtDetailsValidation';
+import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
 import {
   ANALYSIS_REPORT_RESULT_OPTIONS,
   analysisResultIsOther,
@@ -212,7 +212,7 @@ export default function UpdateCourtDetailsPage() {
       setSavedOk(false);
       return;
     }
-    const v = validateCourtProductionDetails(courtDraft);
+    const v = validateProductionSentToCourtSection(courtDraft);
     if (v) {
       setError(v);
       setSavedOk(false);
@@ -411,6 +411,7 @@ export default function UpdateCourtDetailsPage() {
                           <CourtDetailsReadOnlySummary
                             courtDetails={selectedScene.courtDetails}
                             title="Court & production saved with this visit (reference)"
+                            scope="productionSentToCourt"
                           />
                           <p className="text-xs text-gray-600 -mt-2">
                             The editable section below starts from this data — change only what you need; you are not
@@ -472,10 +473,14 @@ export default function UpdateCourtDetailsPage() {
                                 Court details
                               </h4>
                               <p className="text-xs text-gray-600 mb-4">
-                                Same court and production fields as in Create crime scene. Data is pre-filled from this
-                                visit.
+                                Edit <strong>Production sent to court</strong> only. Use Create crime scene or a full
+                                update elsewhere for other court and production fields.
                               </p>
-                              <CourtProductionDetailsEditor courtDetails={courtDraft} onChange={setCourtDraft} />
+                              <CourtProductionDetailsEditor
+                                mode="productionSentToCourt"
+                                courtDetails={courtDraft}
+                                onChange={setCourtDraft}
+                              />
                               <div className="mt-6 pt-4 border-t border-amber-200/80 space-y-3">
                                 {error ? <p className="text-sm text-red-600">{error}</p> : null}
                                 {savedOk ? (

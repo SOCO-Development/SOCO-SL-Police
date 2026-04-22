@@ -45,14 +45,19 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
+export type CourtProductionDetailsEditorMode = 'full' | 'productionSentToCourt' | 'sentToAnalysis';
+
 export interface CourtProductionDetailsEditorProps {
   courtDetails: CrimeSceneCourtDetails;
   onChange: (next: CrimeSceneCourtDetails) => void;
+  /** `full` — all court/production blocks. `productionSentToCourt` / `sentToAnalysis` — that section only (Update Court & Production Analysis flows). */
+  mode?: CourtProductionDetailsEditorMode;
 }
 
 export default function CourtProductionDetailsEditor({
   courtDetails,
   onChange,
+  mode = 'full',
 }: CourtProductionDetailsEditorProps) {
   const patch = (partial: Partial<CrimeSceneCourtDetails>) => {
     onChange({
@@ -62,8 +67,14 @@ export default function CourtProductionDetailsEditor({
     });
   };
 
+  const showTopBlock = mode === 'full';
+  const showSentToCourt = mode === 'full' || mode === 'productionSentToCourt';
+  const showSentToAnalysis = mode === 'full' || mode === 'sentToAnalysis';
+
   return (
     <div className="space-y-4">
+      {showTopBlock ? (
+        <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FieldGroup label="Court name (optional)">
           <CustomSelect
@@ -154,8 +165,11 @@ export default function CourtProductionDetailsEditor({
           </>
         ) : null}
       </div>
+        </>
+      ) : null}
 
-      <div className="mt-2 pt-4 border-t border-gray-200">
+      {showSentToCourt ? (
+      <div className={`mt-2 pt-4 border-t border-gray-200${!showTopBlock ? ' border-0 pt-0 mt-0' : ''}`}>
         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
           <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
           Production sent to court
@@ -285,8 +299,10 @@ export default function CourtProductionDetailsEditor({
           <span className="text-base leading-none">+</span> Add production sent to court
         </button>
       </div>
+      ) : null}
 
-      <div className="mt-2 pt-4 border-t border-gray-200">
+      {showSentToAnalysis ? (
+      <div className={`mt-2 pt-4 border-t border-gray-200${mode === 'sentToAnalysis' ? ' border-0 pt-0 mt-0' : ''}`}>
         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
           <span className="w-1.5 h-4 rounded-full bg-sky-500 inline-block flex-shrink-0" />
           Sent to analysis institute
@@ -454,6 +470,7 @@ export default function CourtProductionDetailsEditor({
           <span className="text-base leading-none">+</span> Add analysis institute row
         </button>
       </div>
+      ) : null}
     </div>
   );
 }
