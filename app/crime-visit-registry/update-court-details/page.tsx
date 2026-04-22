@@ -410,7 +410,7 @@ export default function UpdateCourtDetailsPage() {
                         <>
                           <CourtDetailsReadOnlySummary
                             courtDetails={selectedScene.courtDetails}
-                            title="Court & production saved with this visit (reference)"
+                            title="Production details saved with this visit (reference)"
                             scope="productionSentToCourt"
                           />
                           <p className="text-xs text-gray-600 -mt-2">
@@ -470,11 +470,11 @@ export default function UpdateCourtDetailsPage() {
                             >
                               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
                                 <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
-                                Court details
+                                Production details
                               </h4>
                               <p className="text-xs text-gray-600 mb-4">
                                 Edit <strong>Production sent to court</strong> only. Use Create crime scene or a full
-                                update elsewhere for other court and production fields.
+                                update elsewhere for other production fields.
                               </p>
                               <CourtProductionDetailsEditor
                                 mode="productionSentToCourt"
@@ -485,12 +485,11 @@ export default function UpdateCourtDetailsPage() {
                                 {error ? <p className="text-sm text-red-600">{error}</p> : null}
                                 {savedOk ? (
                                   <p className="text-sm text-green-700 font-medium">
-                                    Production / court details saved. View them under Court details on the submitted
-                                    scene.
+                                    Production details saved. View them under Production details on the submitted scene.
                                   </p>
                                 ) : null}
                                 <Button variant="success" type="button" onClick={handleSaveProduction}>
-                                  Save production / court details
+                                  Save production details
                                 </Button>
                               </div>
                             </div>

@@ -1,4 +1,4 @@
-/** Analysis / forensic institutions for “Sent to analysis institute”. */
+/** Analysis / forensic institutions for “Productions sent to analysis institutes”. */
 export const ANALYSIS_INSTITUTION_OTHERS_VALUE = 'Others';
 
 export function analysisInstitutionIsOthers(institution: string | undefined): boolean {

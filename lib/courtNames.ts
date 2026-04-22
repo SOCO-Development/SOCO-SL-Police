@@ -193,3 +193,9 @@ export const COURT_NAME_OPTIONS: { value: string; label: string }[] = NAMES.map(
   value: name,
   label: name,
 }));
+
+/** For optional per-row “Court name” in Production sent to court (empty = none). */
+export const COURT_NAME_OPTIONAL_SELECT_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Select court (optional)' },
+  ...COURT_NAME_OPTIONS,
+];
