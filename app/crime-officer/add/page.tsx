@@ -113,8 +113,8 @@ interface FormData {
     foreignAfterCourses: CourseAfterRow[];
     // Section 6
     drivingLicenseNo: string;
-    vehicleCategoryPrimary: string;
-    vehicleCategorySecondary: string;
+    /** Vehicle categories (Annex 13) — multi-select. */
+    vehicleCategories: string[];
     heavyVehicleQualified: string;
     lightVehicleQualified: string;
     motorcycleQualified: string;
@@ -145,23 +145,18 @@ function defaultForm(): FormData {
         promotions: [{ id: newId(), rank: '', date: '' }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
-            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
         foreignBeforeCourses: [
-            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
         localAfterCourses: [
             { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
-            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
         ],
         foreignAfterCourses: [
             { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
-            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
         ],
         drivingLicenseNo: '',
-        vehicleCategoryPrimary: '',
-        vehicleCategorySecondary: '',
+        vehicleCategories: [],
         heavyVehicleQualified: '',
         lightVehicleQualified: '',
         motorcycleQualified: '',
@@ -286,6 +281,17 @@ export default function AddOfficerPage() {
         setForm((f) => ({ ...f, [key]: val }));
     }, []);
 
+    const toggleVehicleCategory = useCallback((value: string) => {
+        setForm((f) => {
+            const cur = f.vehicleCategories;
+            const has = cur.includes(value);
+            return {
+                ...f,
+                vehicleCategories: has ? cur.filter((v) => v !== value) : [...cur, value],
+            };
+        });
+    }, []);
+
     // Photo upload
     const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -323,12 +329,52 @@ export default function AddOfficerPage() {
         set(section, form[section].map((row) => (row.id === id ? { ...row, ...patch } : row)));
     };
 
+    const addBeforeCourse = (section: 'localBeforeCourses' | 'foreignBeforeCourses') => {
+        if (form[section].length >= 4) return;
+        setForm((f) =>
+            f[section].length >= 4
+                ? f
+                : {
+                      ...f,
+                      [section]: [
+                          ...f[section],
+                          { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+                      ],
+                  },
+        );
+    };
+
+    const removeBeforeCourse = (section: 'localBeforeCourses' | 'foreignBeforeCourses', id: number) => {
+        if (form[section].length <= 1) return;
+        set(section, form[section].filter((r) => r.id !== id));
+    };
+
     const updateAfterCourse = (
         section: 'localAfterCourses' | 'foreignAfterCourses',
         id: number,
         patch: Partial<CourseAfterRow>
     ) => {
         set(section, form[section].map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    };
+
+    const addAfterCourse = (section: 'localAfterCourses' | 'foreignAfterCourses') => {
+        if (form[section].length >= 4) return;
+        setForm((f) =>
+            f[section].length >= 4
+                ? f
+                : {
+                      ...f,
+                      [section]: [
+                          ...f[section],
+                          { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+                      ],
+                  },
+        );
+    };
+
+    const removeAfterCourse = (section: 'localAfterCourses' | 'foreignAfterCourses', id: number) => {
+        if (form[section].length <= 1) return;
+        set(section, form[section].filter((r) => r.id !== id));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -768,6 +814,9 @@ export default function AddOfficerPage() {
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -779,16 +828,36 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { from: v })} /></td>
                                                             <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { to: v })} /></td>
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.localBeforeCourses.length > 1 ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeBeforeCourse('localBeforeCourses', row.id)}
+                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                                                                        aria-label="Remove local course row (before SOCO)"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                ) : null}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                                         </div>
+                                        {form.localBeforeCourses.length < 4 && (
+                                            <div className="px-4 pb-3">
+                                                <AddRowBtn onClick={() => addBeforeCourse('localBeforeCourses')} label="Add row" />
+                                            </div>
+                                        )}
+                                        {form.localBeforeCourses.length >= 4 && (
+                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
+                                        )}
                                     </div>
 
                                     <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
                                         <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
-                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Foring</h4>
+                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Foreign</h4>
                                             <p className="text-xs text-amber-700">Department & Others</p>
                                         </div>
                                         <div className="overflow-x-auto">
@@ -801,6 +870,9 @@ export default function AddOfficerPage() {
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -812,11 +884,31 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { from: v })} /></td>
                                                             <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { to: v })} /></td>
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.foreignBeforeCourses.length > 1 ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeBeforeCourse('foreignBeforeCourses', row.id)}
+                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                                                                        aria-label="Remove foreign course row (before SOCO)"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                ) : null}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                                         </div>
+                                        {form.foreignBeforeCourses.length < 4 && (
+                                            <div className="px-4 pb-3">
+                                                <AddRowBtn onClick={() => addBeforeCourse('foreignBeforeCourses')} label="Add row" />
+                                            </div>
+                                        )}
+                                        {form.foreignBeforeCourses.length >= 4 && (
+                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -846,6 +938,9 @@ export default function AddOfficerPage() {
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department or Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -856,16 +951,36 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { to: v })} /></td>
                                                             <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.localAfterCourses.length > 1 ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeAfterCourse('localAfterCourses', row.id)}
+                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                                                                        aria-label="Remove local course row (after SOCO)"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                ) : null}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                                         </div>
+                                        {form.localAfterCourses.length < 4 && (
+                                            <div className="px-4 pb-3">
+                                                <AddRowBtn onClick={() => addAfterCourse('localAfterCourses')} label="Add row" />
+                                            </div>
+                                        )}
+                                        {form.localAfterCourses.length >= 4 && (
+                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
+                                        )}
                                     </div>
 
                                     <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
                                         <div className="px-4 py-3 border-b border-cyan-100 bg-cyan-50/60">
-                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Foring</h4>
+                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Foreign</h4>
                                             <p className="text-xs text-cyan-700">Department & Others</p>
                                         </div>
                                         <div className="overflow-x-auto">
@@ -877,6 +992,9 @@ export default function AddOfficerPage() {
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -887,11 +1005,31 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { to: v })} /></td>
                                                             <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.foreignAfterCourses.length > 1 ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeAfterCourse('foreignAfterCourses', row.id)}
+                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                                                                        aria-label="Remove foreign course row (after SOCO)"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                ) : null}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                                         </div>
+                                        {form.foreignAfterCourses.length < 4 && (
+                                            <div className="px-4 pb-3">
+                                                <AddRowBtn onClick={() => addAfterCourse('foreignAfterCourses')} label="Add row" />
+                                            </div>
+                                        )}
+                                        {form.foreignAfterCourses.length >= 4 && (
+                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -900,8 +1038,8 @@ export default function AddOfficerPage() {
                             <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 via-white to-pink-50/70">
                                 <SectionHeader sectionNo={6} title="Driving License Details" />
 
-                                <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_1fr] gap-5">
-                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4">
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4 xl:col-span-2">
                                         <h4 className="text-sm font-bold text-rose-900 uppercase tracking-wide mb-3">License Information</h4>
                                         <div className="space-y-4">
                                             <div>
@@ -914,36 +1052,43 @@ export default function AddOfficerPage() {
                                             </div>
                                             <div>
                                                 <FieldLabel label="Categories of Vehicles" />
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                    <CustomSelect
-                                                        value={form.vehicleCategoryPrimary}
-                                                        onChange={(v) => set('vehicleCategoryPrimary', v)}
-                                                        options={ANNEX_13_CATEGORY_OPTIONS}
-                                                        placeholder="Primary category"
-                                                    />
-                                                    <CustomSelect
-                                                        value={form.vehicleCategorySecondary}
-                                                        onChange={(v) => set('vehicleCategorySecondary', v)}
-                                                        options={ANNEX_13_CATEGORY_OPTIONS}
-                                                        placeholder="Secondary category"
-                                                    />
-                                                </div>
-                                                <p className="mt-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Annex 13</p>
-                                                <div className="mt-2 flex flex-wrap gap-2">
-                                                    {ANNEX_13_CATEGORY_OPTIONS.map((option) => (
-                                                        <span
-                                                            key={option.value}
-                                                            className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-800"
-                                                        >
-                                                            {option.label}
-                                                        </span>
-                                                    ))}
+                                                <p className="text-sm text-gray-500 mb-2">Select all categories that apply.</p>
+                                                <div
+                                                    className="grid grid-cols-3 sm:grid-cols-5 gap-2"
+                                                    role="group"
+                                                    aria-label="Vehicle categories (multi-select)"
+                                                >
+                                                    {ANNEX_13_CATEGORY_OPTIONS.map((opt) => {
+                                                        const selected = form.vehicleCategories.includes(opt.value);
+                                                        return (
+                                                            <label
+                                                                key={opt.value}
+                                                                className={`flex flex-row items-center justify-between gap-2 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors min-h-11 ${
+                                                                    selected
+                                                                        ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200/80'
+                                                                        : 'border-gray-200 bg-white hover:border-rose-200'
+                                                                }`}
+                                                            >
+                                                                <span className="text-sm font-semibold text-gray-800 leading-snug text-left min-w-0 pr-1">
+                                                                    {opt.label}
+                                                                </span>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    name="officer-vehicle-categories"
+                                                                    value={opt.value}
+                                                                    checked={selected}
+                                                                    onChange={() => toggleVehicleCategory(opt.value)}
+                                                                    className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
+                                                                />
+                                                            </label>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4">
+                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4 xl:col-span-1">
                                         <h4 className="text-sm font-bold text-rose-900 uppercase tracking-wide">Police Driving / Riding Qualified</h4>
                                         <p className="text-xs text-rose-700 mt-1 mb-4">Select only Yes or No for each vehicle type.</p>
 
