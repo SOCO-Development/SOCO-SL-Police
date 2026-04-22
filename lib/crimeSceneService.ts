@@ -39,7 +39,13 @@ type LegacyCourtDetails = CrimeSceneCourtDetails &
 function inferSentToCourtFlag(row: ProductionSentToCourtRow): '' | 'Yes' | 'No' {
   const s = row.sentToCourt;
   if (s === 'Yes' || s === 'No') return s;
-  if (String(row.date ?? '').trim() || String(row.courtCaseNo ?? '').trim()) return 'Yes';
+  if (
+    String(row.date ?? '').trim() ||
+    String(row.courtCaseNo ?? '').trim() ||
+    String(row.courtName ?? '').trim()
+  ) {
+    return 'Yes';
+  }
   return '';
 }
 
@@ -74,6 +80,7 @@ function normalizeCourtDetails(cd: CrimeSceneCourtDetails | undefined): CrimeSce
         productionRef: types[0] ?? '',
         sentToCourt: hadYes || legacyDate || legacyCase ? 'Yes' : '',
         date: legacyDate,
+        courtName: '',
         courtCaseNo: legacyCase,
       });
     }

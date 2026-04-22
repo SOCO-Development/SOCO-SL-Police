@@ -88,11 +88,14 @@ export function emptyCourtVisitUpdate(): CourtVisitUpdateDetails {
 
 /** One production item sent to court (repeatable). */
 export interface ProductionSentToCourtRow {
-  /** Value from Production (P.R.) selection. */
+  /** Value from Production Availability selection. */
   productionRef: string;
-  /** Whether this production was sent to court; if Yes, date and court case no. apply. */
+  /** Whether this production was sent to court; if Yes, date is required; court name and case no. are optional. */
   sentToCourt?: '' | 'Yes' | 'No';
   date?: string;
+  /** Optional — from court list when sent to court is Yes. */
+  courtName?: string;
+  /** Optional case reference when sent to court is Yes. */
   courtCaseNo?: string;
 }
 
@@ -109,7 +112,7 @@ export interface SentToAnalysisRow {
 }
 
 export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
-  return { productionRef: '', sentToCourt: '', date: '', courtCaseNo: '' };
+  return { productionRef: '', sentToCourt: '', date: '', courtName: '', courtCaseNo: '' };
 }
 
 export function emptySentToAnalysisRow(): SentToAnalysisRow {
@@ -130,7 +133,7 @@ export interface CrimeSceneCourtDetails {
   /** Optional at initial submission — typed case reference. */
   courtCaseNo?: string;
   productionPR?: '' | 'Yes' | 'No';
-  /** When Production (P.R.) is Yes — multi-select item values. */
+  /** When Production Availability is Yes — multi-select item values. */
   productionPRTypes?: string[];
   /** Free text when “Others” is included in productionPRTypes. */
   productionPROtherDetail?: string;

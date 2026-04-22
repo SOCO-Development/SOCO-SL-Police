@@ -7,9 +7,7 @@ import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
 function hasAnyCourtData(cd: CrimeSceneCourtDetails | undefined): boolean {
   if (!cd) return false;
   return Boolean(
-    cd.courtName?.trim() ||
-      cd.courtCaseNo?.trim() ||
-      cd.productionPR === 'Yes' ||
+    cd.productionPR === 'Yes' ||
       cd.productionPR === 'No' ||
       (cd.productionPRTypes?.length ?? 0) > 0 ||
       (cd.productionSentToCourtRows?.length ?? 0) > 0 ||
@@ -26,9 +24,7 @@ function hasDataForScope(cd: CrimeSceneCourtDetails, scope: CourtDetailsReadOnly
   }
   if (scope === 'productionSentToCourt') {
     return Boolean(
-      cd.courtName?.trim() ||
-        cd.courtCaseNo?.trim() ||
-        cd.productionPR === 'Yes' ||
+      cd.productionPR === 'Yes' ||
         cd.productionPR === 'No' ||
         (cd.productionPRTypes?.length ?? 0) > 0 ||
         (cd.productionSentToCourtRows?.length ?? 0) > 0,
@@ -36,9 +32,7 @@ function hasDataForScope(cd: CrimeSceneCourtDetails, scope: CourtDetailsReadOnly
   }
   // sentToAnalysis
   return Boolean(
-    cd.courtName?.trim() ||
-      cd.courtCaseNo?.trim() ||
-      cd.productionPR === 'Yes' ||
+    cd.productionPR === 'Yes' ||
       cd.productionPR === 'No' ||
       (cd.productionPRTypes?.length ?? 0) > 0 ||
       (cd.sentToAnalysisRows?.length ?? 0) > 0,
@@ -47,7 +41,7 @@ function hasDataForScope(cd: CrimeSceneCourtDetails, scope: CourtDetailsReadOnly
 
 export default function CourtDetailsReadOnlySummary({
   courtDetails,
-  title = 'Court & production (from crime scene submission)',
+  title = 'Production (from crime scene submission)',
   className = '',
   scope = 'all',
 }: {
@@ -63,7 +57,7 @@ export default function CourtDetailsReadOnlySummary({
         className={`rounded-lg border border-dashed border-gray-300 bg-gray-50/90 px-4 py-3 text-sm text-gray-600 ${className}`}
       >
         <p className="font-medium text-gray-800 mb-1">{title}</p>
-        <p>No court or production details were saved when this crime scene was submitted.</p>
+        <p>No production details were saved when this crime scene was submitted.</p>
       </div>
     );
   }
@@ -73,9 +67,9 @@ export default function CourtDetailsReadOnlySummary({
   const showSentToAnalysis = scope === 'all' || scope === 'sentToAnalysis';
   const readOnlyHint =
     scope === 'sentToAnalysis'
-      ? 'Read-only — saved P.R. and sent-to-analysis rows. Edit this visit’s sent-to-analysis block below.'
+      ? 'Read-only — saved production and sent-to-analysis rows. Edit this visit’s sent-to-analysis block below.'
       : scope === 'productionSentToCourt'
-        ? 'Read-only — court and production sent to court. Edit the form below; sent-to-analysis is updated from Production Analysis.'
+        ? 'Read-only — production sent to court. Edit the form below; sent-to-analysis is updated from Production Analysis.'
         : 'Read-only reference — same data is loaded into the update form below.';
 
   return (
@@ -85,25 +79,14 @@ export default function CourtDetailsReadOnlySummary({
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
       <p className="text-xs text-slate-500">{readOnlyHint}</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div>
-          <span className="text-[11px] font-semibold uppercase text-gray-500">Court name</span>
-          <p className="text-gray-900 mt-0.5">{cd.courtName?.trim() || '—'}</p>
-        </div>
-        <div>
-          <span className="text-[11px] font-semibold uppercase text-gray-500">Court case no.</span>
-          <p className="text-gray-900 mt-0.5">{cd.courtCaseNo?.trim() || '—'}</p>
-        </div>
-      </div>
-
       <div>
-        <span className="text-[11px] font-semibold uppercase text-gray-500">Production (P.R.)</span>
+        <span className="text-[11px] font-semibold uppercase text-gray-500">Production Availability</span>
         <p className="text-gray-900 mt-0.5">{cd.productionPR === 'Yes' ? 'Yes' : cd.productionPR === 'No' ? 'No' : '—'}</p>
       </div>
 
       {cd.productionPR === 'Yes' && (cd.productionPRTypes?.length ?? 0) > 0 ? (
         <div>
-          <span className="text-[11px] font-semibold uppercase text-gray-500">Production types</span>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Selected production types</span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {(cd.productionPRTypes ?? []).map((t) => (
               <span
@@ -123,31 +106,9 @@ export default function CourtDetailsReadOnlySummary({
         </div>
       ) : null}
 
-      {showProductionToCourt && (cd.productionSentToCourtRows ?? []).length > 0 ? (
-        <div>
-          <span className="text-[11px] font-semibold uppercase text-gray-500">Production sent to court</span>
-          <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
-            {(cd.productionSentToCourtRows ?? []).map((row, idx) => (
-              <li key={`psc-${idx}-${row.productionRef}`} className="border-l-2 border-teal-400 pl-2">
-                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef)}</span>
-                {row.sentToCourt === 'Yes' ? (
-                  <span className="text-gray-600">
-                    {' '}
-                    — sent {row.date ? `(${row.date})` : ''}
-                    {row.courtCaseNo ? ` · Case ${row.courtCaseNo}` : ''}
-                  </span>
-                ) : row.sentToCourt === 'No' ? (
-                  <span className="text-gray-600"> — not sent to court</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
       {showSentToAnalysis && (cd.sentToAnalysisRows ?? []).length > 0 ? (
         <div>
-          <span className="text-[11px] font-semibold uppercase text-gray-500">Sent to analysis institute</span>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Productions sent to analysis institutes</span>
           <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
             {(cd.sentToAnalysisRows ?? []).map((row, idx) => (
               <li key={`sa-${idx}-${row.productionRef}`} className="border-l-2 border-sky-400 pl-2">
@@ -161,6 +122,29 @@ export default function CourtDetailsReadOnlySummary({
                   </span>
                 ) : row.sentToAnalysis === 'No' ? (
                   <span className="text-gray-600"> — not sent for analysis</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {showProductionToCourt && (cd.productionSentToCourtRows ?? []).length > 0 ? (
+        <div>
+          <span className="text-[11px] font-semibold uppercase text-gray-500">Production sent to court</span>
+          <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
+            {(cd.productionSentToCourtRows ?? []).map((row, idx) => (
+              <li key={`psc-${idx}-${row.productionRef}`} className="border-l-2 border-teal-400 pl-2">
+                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef)}</span>
+                {row.sentToCourt === 'Yes' ? (
+                  <span className="text-gray-600">
+                    {' '}
+                    — sent {row.date ? `(${row.date})` : ''}
+                    {row.courtName?.trim() ? ` · ${row.courtName.trim()}` : ''}
+                    {row.courtCaseNo?.trim() ? ` · Case ${row.courtCaseNo.trim()}` : ''}
+                  </span>
+                ) : row.sentToCourt === 'No' ? (
+                  <span className="text-gray-600"> — not sent to court</span>
                 ) : null}
               </li>
             ))}

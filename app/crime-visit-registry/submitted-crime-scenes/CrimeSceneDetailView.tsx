@@ -348,16 +348,15 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       ) : null}
 
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <SectionTitle stripeClass="bg-amber-500">Court details</SectionTitle>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          <DisplayField label="Court name" value={readValue(scene.courtDetails?.courtName)} />
-          <DisplayField label="Court case no." value={readValue(scene.courtDetails?.courtCaseNo)} />
+        <SectionTitle stripeClass="bg-amber-500">Production details</SectionTitle>
+        <div className="mb-3">
+          <DisplayField label="Production Availability" value={readValue(scene.courtDetails?.productionPR)} />
         </div>
         {scene.courtDetails?.productionPR === 'Yes' &&
         (scene.courtDetails?.productionPRTypes?.length ?? 0) > 0 ? (
           <div className="mb-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-              Production types (P.R.)
+              Selected production types
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {(scene.courtDetails.productionPRTypes ?? []).map((t) => (
@@ -382,50 +381,11 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             ) : null}
           </div>
         ) : null}
-        <DisplayField label="Production (P.R.)" value={readValue(scene.courtDetails?.productionPR)} />
-
-        {(scene.courtDetails?.productionSentToCourtRows ?? []).length > 0 ? (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">
-              Production sent to court
-            </div>
-            <div className="divide-y divide-gray-200">
-              {(scene.courtDetails?.productionSentToCourtRows ?? []).map((row, idx) => {
-                const sent =
-                  row.sentToCourt === 'Yes' || row.sentToCourt === 'No'
-                    ? row.sentToCourt
-                    : String(row.date ?? '').trim() || String(row.courtCaseNo ?? '').trim()
-                      ? 'Yes'
-                      : '—';
-                return (
-                  <div
-                    key={`psc-${idx}-${row.productionRef}`}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 py-4 first:pt-0"
-                  >
-                    <DisplayField
-                      label="Production"
-                      value={readValue(getProductionPRDisplayLabel(row.productionRef))}
-                    />
-                    <DisplayField label="Sent to court?" value={readValue(sent === '—' ? '' : sent)} />
-                    <DisplayField
-                      label="Date"
-                      value={readValue(sent === 'Yes' ? row.date : '')}
-                    />
-                    <DisplayField
-                      label="Court case no."
-                      value={readValue(sent === 'Yes' ? row.courtCaseNo : '')}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
 
         {(scene.courtDetails?.sentToAnalysisRows ?? []).length > 0 ? (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">
-              Sent to analysis institute
+              Productions sent to analysis institutes
             </div>
             <div className="divide-y divide-gray-200">
               {(scene.courtDetails?.sentToAnalysisRows ?? []).map((row, idx) => {
@@ -453,6 +413,50 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                     />
                     <DisplayField label="Date" value={readValue(sent === 'Yes' ? row.date : '')} />
                     <DisplayField label="Ref. no." value={readValue(sent === 'Yes' ? row.refNo : '')} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {(scene.courtDetails?.productionSentToCourtRows ?? []).length > 0 ? (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">
+              Production sent to court
+            </div>
+            <div className="divide-y divide-gray-200">
+              {(scene.courtDetails?.productionSentToCourtRows ?? []).map((row, idx) => {
+                const sent =
+                  row.sentToCourt === 'Yes' || row.sentToCourt === 'No'
+                    ? row.sentToCourt
+                    : String(row.date ?? '').trim() ||
+                        String(row.courtCaseNo ?? '').trim() ||
+                        String(row.courtName ?? '').trim()
+                      ? 'Yes'
+                      : '—';
+                return (
+                  <div
+                    key={`psc-${idx}-${row.productionRef}`}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 py-4 first:pt-0"
+                  >
+                    <DisplayField
+                      label="Production"
+                      value={readValue(getProductionPRDisplayLabel(row.productionRef))}
+                    />
+                    <DisplayField label="Sent to court?" value={readValue(sent === '—' ? '' : sent)} />
+                    <DisplayField
+                      label="Date"
+                      value={readValue(sent === 'Yes' ? row.date : '')}
+                    />
+                    <DisplayField
+                      label="Court name"
+                      value={readValue(sent === 'Yes' ? row.courtName : '')}
+                    />
+                    <DisplayField
+                      label="Case no."
+                      value={readValue(sent === 'Yes' ? row.courtCaseNo : '')}
+                    />
                   </div>
                 );
               })}

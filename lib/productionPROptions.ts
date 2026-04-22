@@ -102,7 +102,7 @@ export function getProductionPRDisplayLabel(storedValue: string): string {
   return opt?.label ?? storedValue;
 }
 
-/** Dropdown options limited to items selected under Production (P.R.). */
+/** Dropdown options limited to items selected under Production Availability. */
 export function productionOptionsForSelection(
   selected: string[] | undefined,
 ): { value: string; label: string }[] {

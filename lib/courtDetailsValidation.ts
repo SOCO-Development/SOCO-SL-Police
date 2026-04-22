@@ -14,9 +14,6 @@ export function validateProductionSentToCourtSection(cd: CrimeSceneCourtDetails 
       if (!String(row.date ?? '').trim()) {
         return `Production sent to court (row ${i + 1}): enter the date sent to court.`;
       }
-      if (!String(row.courtCaseNo ?? '').trim()) {
-        return `Production sent to court (row ${i + 1}): enter the court case number.`;
-      }
     }
   }
   return '';
@@ -29,21 +26,21 @@ export function validateSentToAnalysisSection(cd: CrimeSceneCourtDetails | undef
     const row = analysisRows[i];
     if (!row.productionRef?.trim()) continue;
     if (row.sentToAnalysis !== 'Yes' && row.sentToAnalysis !== 'No') {
-      return `Sent to analysis institute (row ${i + 1}): choose Yes or No.`;
+      return `Productions sent to analysis institutes (row ${i + 1}): choose Yes or No.`;
     }
     if (row.sentToAnalysis === 'Yes') {
       if (!String(row.date ?? '').trim()) {
-        return `Sent to analysis institute (row ${i + 1}): enter the date.`;
+        return `Productions sent to analysis institutes (row ${i + 1}): enter the date.`;
       }
       const inst = String(row.institution ?? '').trim();
       if (!inst) {
-        return `Sent to analysis institute (row ${i + 1}): select an institution.`;
+        return `Productions sent to analysis institutes (row ${i + 1}): select an institution.`;
       }
       if (analysisInstitutionIsOthers(inst) && !String(row.institutionOtherDetail ?? '').trim()) {
-        return `Sent to analysis institute (row ${i + 1}): specify the institution.`;
+        return `Productions sent to analysis institutes (row ${i + 1}): specify the institution.`;
       }
       if (!String(row.refNo ?? '').trim()) {
-        return `Sent to analysis institute (row ${i + 1}): enter the reference number.`;
+        return `Productions sent to analysis institutes (row ${i + 1}): enter the reference number.`;
       }
     }
   }
@@ -52,7 +49,7 @@ export function validateSentToAnalysisSection(cd: CrimeSceneCourtDetails | undef
 
 /** Validation for production / court rows when saving court details (matches create crime scene rules). */
 export function validateCourtProductionDetails(cd: CrimeSceneCourtDetails | undefined): string {
-  const a = validateProductionSentToCourtSection(cd);
+  const a = validateSentToAnalysisSection(cd);
   if (a) return a;
-  return validateSentToAnalysisSection(cd);
+  return validateProductionSentToCourtSection(cd);
 }

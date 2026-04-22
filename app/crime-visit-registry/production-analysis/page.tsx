@@ -403,17 +403,16 @@ export default function ProductionAnalysisPage() {
 
                           <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-4 py-3 space-y-3">
                             <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
-                              Court details — Sent to analysis institute
+                              Production details — Productions sent to analysis institutes
                             </h4>
                             <p className="text-xs text-gray-600">
-                              Only <strong>Sent to analysis institute</strong> is editable here. Other court and
-                              production fields are set in <strong>Update Court Details</strong> or{' '}
-                              <strong>Create crime scene</strong>. If rows are disabled, set Production (P.R.) and types
-                              there first.
+                              Only <strong>Productions sent to analysis institutes</strong> is editable here. Other production fields
+                              are set in <strong>Update Court Details</strong> or <strong>Create crime scene</strong>. If
+                              rows are disabled, set Production Availability and types there first.
                             </p>
                             <CourtDetailsReadOnlySummary
                               courtDetails={selectedScene.courtDetails}
-                              title="Court details (reference)"
+                              title="Production details (reference)"
                               scope="sentToAnalysis"
                               className="!bg-white/90"
                             />
@@ -425,11 +424,11 @@ export default function ProductionAnalysisPage() {
                             {courtDetailsError ? <p className="text-sm text-red-600">{courtDetailsError}</p> : null}
                             {courtDetailsSavedOk ? (
                               <p className="text-sm text-green-700 font-medium">
-                                Court details (sent to analysis) saved.
+                                Production details (sent to analysis) saved.
                               </p>
                             ) : null}
                             <Button variant="success" type="button" onClick={handleSaveCourtDetails}>
-                              Save sent to analysis (court details)
+                              Save sent to analysis (production details)
                             </Button>
                           </div>
 
