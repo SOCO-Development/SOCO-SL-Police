@@ -60,7 +60,7 @@ export default function CrimeVisitRegistryPage() {
             href: '/crime-visit-registry/pending-cvr-approvals',
         },
         {
-            title: 'Production Analysis',
+            title: 'Production sent to analysis institutes',
             subtitle: 'නිෂ්පාදන විශ්ලේෂණය',
             description:
                 'Select a CVR visit and record analysis reports received (annex, date, result). Shown on submitted crime scenes.',
@@ -68,7 +68,7 @@ export default function CrimeVisitRegistryPage() {
             href: '/crime-visit-registry/production-analysis',
         },
         {
-            title: 'Update Court Details',
+            title: 'Court Details',
             subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
             description:
                 'Select a CVR visit: update production sent to court (registry fields) or record a court visit (officer, date, results).',
