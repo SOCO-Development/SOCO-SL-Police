@@ -27,6 +27,23 @@ const CHILD_STATUS_OPTIONS = [
     'Unmarried Unemployed',
     'Married',
 ].map((s) => ({ value: s, label: s }));
+const ANNEX_13_CATEGORY_OPTIONS = [
+    'A1',
+    'A',
+    'B1',
+    'B2',
+    'B',
+    'C1',
+    'C',
+    'CE',
+    'D1',
+    'D',
+    'DE',
+    'G1',
+    'G',
+    'J',
+    'H',
+].map((s) => ({ value: s, label: s }));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,12 +60,23 @@ interface PromotionRow {
     date: string;
 }
 
-interface ServedLabRow {
+interface CourseBeforeRow {
     id: number;
-    lab: string;
+    conNo: string;
+    policeStation: string;
+    branch: string;
     from: string;
     to: string;
-    oic: string;
+    institute: string;
+}
+
+interface CourseAfterRow {
+    id: number;
+    courseName: string;
+    from: string;
+    to: string;
+    time: string;
+    institute: string;
 }
 
 interface FormData {
@@ -78,17 +106,18 @@ interface FormData {
     presentRank: string;
     promotions: PromotionRow[];
     // Section 4
-    servedLabs: ServedLabRow[];
+    localBeforeCourses: CourseBeforeRow[];
+    foreignBeforeCourses: CourseBeforeRow[];
     // Section 5
-    preferredLab1: string;
-    preferredLab2: string;
-    preferredLab3: string;
+    localAfterCourses: CourseAfterRow[];
+    foreignAfterCourses: CourseAfterRow[];
     // Section 6
-    disciplinaryNature: string;
-    disciplinaryStation: string;
-    disciplinaryDivision: string;
-    disciplinaryYesNo: string;
-    disciplinaryResult: string;
+    drivingLicenseNo: string;
+    vehicleCategoryPrimary: string;
+    vehicleCategorySecondary: string;
+    heavyVehicleQualified: string;
+    lightVehicleQualified: string;
+    motorcycleQualified: string;
     // Section 7
     servedAdminUnit: string;
     servedAdminUnitYesNo: string;
@@ -114,40 +143,33 @@ function defaultForm(): FormData {
         children: [{ id: newId(), name: '', birthday: '', status: '' }],
         dateJoinedPolice: '', appointedRank: '', presentRank: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
-        servedLabs: [{ id: newId(), lab: '', from: '', to: '', oic: '' }],
-        preferredLab1: '', preferredLab2: '', preferredLab3: '',
-        disciplinaryNature: '', disciplinaryStation: '', disciplinaryDivision: '',
-        disciplinaryYesNo: 'No', disciplinaryResult: '',
+        localBeforeCourses: [
+            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+        ],
+        foreignBeforeCourses: [
+            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+        ],
+        localAfterCourses: [
+            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+        ],
+        foreignAfterCourses: [
+            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+        ],
+        drivingLicenseNo: '',
+        vehicleCategoryPrimary: '',
+        vehicleCategorySecondary: '',
+        heavyVehicleQualified: '',
+        lightVehicleQualified: '',
+        motorcycleQualified: '',
         servedAdminUnit: '', servedAdminUnitYesNo: 'No',
         attachedUnit: '', attachedUnitYesNo: 'No',
         attachedDivision: '', attachedDivisionYesNo: 'No',
         branch: '', branchYesNo: 'No',
     };
-}
-
-// ─── Duration calculator ──────────────────────────────────────────────────────
-
-function calcDuration(from: string, to: string): string {
-    if (!from || !to) return '';
-    const parseDate = (s: string) => {
-        const sep = s.includes('-') ? '-' : '/';
-        const parts = s.split(sep);
-        if (!parts[0] || !parts[1] || !parts[2]) return null;
-        const [a, b, c] = parts.map((p) => parseInt(p, 10));
-        if (isNaN(a) || isNaN(b) || isNaN(c)) return null;
-        if (parts[0].length === 4) {
-            return new Date(a, b - 1, c);
-        }
-        const year = c <= 99 ? 2000 + c : c;
-        return new Date(year, b - 1, a);
-    };
-    const f = parseDate(from);
-    const t = parseDate(to);
-    if (!f || !t || isNaN(f.getTime()) || isNaN(t.getTime())) return '';
-    const diffMs = t.getTime() - f.getTime();
-    if (diffMs < 0) return '';
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    return diffDays === 1 ? '1 day' : `${diffDays} days`;
 }
 
 // ─── Shared UI Components ─────────────────────────────────────────────────────
@@ -293,13 +315,21 @@ export default function AddOfficerPage() {
     const removePromotion = (id: number) =>
         set('promotions', form.promotions.filter((p) => p.id !== id));
 
-    // Served labs
-    const addServedLab = () =>
-        set('servedLabs', [...form.servedLabs, { id: newId(), lab: '', from: '', to: '', oic: '' }]);
-    const updateServedLab = (id: number, patch: Partial<ServedLabRow>) =>
-        set('servedLabs', form.servedLabs.map((r) => r.id === id ? { ...r, ...patch } : r));
-    const removeServedLab = (id: number) =>
-        set('servedLabs', form.servedLabs.filter((r) => r.id !== id));
+    const updateBeforeCourse = (
+        section: 'localBeforeCourses' | 'foreignBeforeCourses',
+        id: number,
+        patch: Partial<CourseBeforeRow>
+    ) => {
+        set(section, form[section].map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    };
+
+    const updateAfterCourse = (
+        section: 'localAfterCourses' | 'foreignAfterCourses',
+        id: number,
+        patch: Partial<CourseAfterRow>
+    ) => {
+        set(section, form[section].map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -712,149 +742,225 @@ export default function AddOfficerPage() {
                                 </div>
                             </div>
 
-                            {/* ─── SECTION 4: Served SOCO Labs ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70">
+                            {/* ─── SECTION 4: Courses Before SOCO ──────────────────────────── */}
+                            <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/85 via-white to-orange-50/70">
                                 <SectionHeader
                                     sectionNo={4}
-                                    title="SERVED SOCO LABS AFTER FOLLOWED THE SOCO COURSE"
-                                    titleSi="SOCO පාඨමාලාවෙන් පසු සේවය කළ SOCO රසායනාගාර"
+                                    title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
                                 />
+                                <p className="text-sm text-amber-900/80 mb-4">
+                                    Capture departmental and external training completed before joining the SOCO project.
+                                </p>
 
-                                <div className="overflow-x-auto rounded-xl border border-gray-200">
-                                    <table className="w-full text-sm table-fixed">
-                                        <colgroup>
-                                            <col style={{ width: '18%' }} />
-                                            <col style={{ width: '14rem' }} />
-                                            <col style={{ width: '14rem' }} />
-                                            <col style={{ width: '7.5rem' }} />
-                                            <col />
-                                        </colgroup>
-                                        <thead>
-                                            <tr className="bg-gray-50 border-b border-gray-200">
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                                    SOCO Lab
-                                                </th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                                    From (DD-MM-YYYY)
-                                                </th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                                    To (DD-MM-YYYY)
-                                                </th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                                    Duration
-                                                </th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-0">
-                                                    OIC / A-OIC
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {form.servedLabs.map((row) => {
-                                                const dur = calcDuration(row.from, row.to);
-                                                const showRemoveLab = form.servedLabs.length > 1;
-                                                return (
-                                                    <tr key={row.id} className="border-b border-gray-100 last:border-0">
-                                                        <td className="px-2 py-1.5 align-top min-w-0">
-                                                            <CustomSelect value={row.lab} onChange={(v) => updateServedLab(row.id, { lab: v })}
-                                                                options={SOCO_LABS_OPTIONS} placeholder="Select Lab" />
-                                                        </td>
-                                                        <td className="px-2 py-1.5 align-top">
-                                                            <DatePicker
-                                                                value={row.from}
-                                                                onChange={(v) => updateServedLab(row.id, { from: v })}
-                                                                className="min-w-0 w-full"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-1.5 align-top">
-                                                            <DatePicker
-                                                                value={row.to}
-                                                                onChange={(v) => updateServedLab(row.id, { to: v })}
-                                                                className="min-w-0 w-full"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-1.5 align-top">
-                                                            <GInput value={dur} onChange={() => { }} readOnly placeholder="Auto" />
-                                                        </td>
-                                                        <td className="px-2 py-1.5 align-top min-w-0">
-                                                            <div className="flex items-center gap-4 min-w-0">
-                                                                <div className="min-w-0 flex-1">
-                                                                    <GInput value={row.oic} onChange={(v) => updateServedLab(row.id, { oic: v })} placeholder="OIC / A-OIC" />
-                                                                </div>
-                                                                {showRemoveLab ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeServedLab(row.id)}
-                                                                        className="h-10 shrink-0 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                        aria-label="Remove lab row"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
-                                                                ) : null}
-                                                            </div>
-                                                        </td>
+                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
+                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Local</h4>
+                                            <p className="text-xs text-amber-700">Department & Others</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-[760px] w-full text-sm">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Institute</th>
                                                     </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                </thead>
+                                                <tbody>
+                                                    {form.localBeforeCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-amber-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { conNo: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { policeStation: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { branch: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { institute: v })} /></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
+                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Foring</h4>
+                                            <p className="text-xs text-amber-700">Department & Others</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-[760px] w-full text-sm">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.foreignBeforeCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-amber-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { conNo: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { policeStation: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { branch: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { institute: v })} /></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                                <AddRowBtn onClick={addServedLab} label="Add Lab" />
                             </div>
 
-                            {/* ─── SECTION 5: Willing to Serve ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-cyan-200 bg-cyan-50/70">
-                                <SectionHeader sectionNo={5} title="Willing to Serve SOCO Labs" titleSi="සේවය කිරීමට කැමති SOCO රසායනාගාර" />
+                            {/* ─── SECTION 5: Courses After SOCO ───────────────────────────── */}
+                            <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50/85 via-white to-sky-50/70">
+                                <SectionHeader
+                                    sectionNo={5}
+                                    title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
+                                />
+                                <p className="text-sm text-cyan-900/80 mb-4">
+                                    Record advanced courses and certifications completed after joining the SOCO project.
+                                </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {([1, 2, 3] as const).map((n) => {
-                                        const key = `preferredLab${n}` as keyof FormData;
-                                        return (
-                                            <div key={n}>
-                                                <FieldLabel label={`${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'} Preference / ${n} වන කැමැත්ත`} />
-                                                <CustomSelect
-                                                    value={form[key] as string}
-                                                    onChange={(v) => set(key, v)}
-                                                    options={SOCO_LABS_OPTIONS}
-                                                    placeholder="Select Lab"
+                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-cyan-100 bg-cyan-50/60">
+                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Local</h4>
+                                            <p className="text-xs text-cyan-700">Department & Others</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-[760px] w-full text-sm">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department or Institute</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.localAfterCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-cyan-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { courseName: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { institute: v })} /></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-cyan-100 bg-cyan-50/60">
+                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Foring</h4>
+                                            <p className="text-xs text-cyan-700">Department & Others</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-[760px] w-full text-sm">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.foreignAfterCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-cyan-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { courseName: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { institute: v })} /></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ─── SECTION 6: Driving License ──────────────────────────────── */}
+                            <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 via-white to-pink-50/70">
+                                <SectionHeader sectionNo={6} title="Driving License Details" />
+
+                                <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_1fr] gap-5">
+                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4">
+                                        <h4 className="text-sm font-bold text-rose-900 uppercase tracking-wide mb-3">License Information</h4>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <FieldLabel label="Driving License No" />
+                                                <GInput
+                                                    value={form.drivingLicenseNo}
+                                                    onChange={(v) => set('drivingLicenseNo', v)}
+                                                    placeholder="Enter driving license number"
                                                 />
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                                            <div>
+                                                <FieldLabel label="Categories of Vehicles" />
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <CustomSelect
+                                                        value={form.vehicleCategoryPrimary}
+                                                        onChange={(v) => set('vehicleCategoryPrimary', v)}
+                                                        options={ANNEX_13_CATEGORY_OPTIONS}
+                                                        placeholder="Primary category"
+                                                    />
+                                                    <CustomSelect
+                                                        value={form.vehicleCategorySecondary}
+                                                        onChange={(v) => set('vehicleCategorySecondary', v)}
+                                                        options={ANNEX_13_CATEGORY_OPTIONS}
+                                                        placeholder="Secondary category"
+                                                    />
+                                                </div>
+                                                <p className="mt-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Annex 13</p>
+                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                    {ANNEX_13_CATEGORY_OPTIONS.map((option) => (
+                                                        <span
+                                                            key={option.value}
+                                                            className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-800"
+                                                        >
+                                                            {option.label}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            {/* ─── SECTION 6: Disciplinary Inquiries ───────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/65">
-                                <SectionHeader sectionNo={6} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4">
+                                        <h4 className="text-sm font-bold text-rose-900 uppercase tracking-wide">Police Driving / Riding Qualified</h4>
+                                        <p className="text-xs text-rose-700 mt-1 mb-4">Select only Yes or No for each vehicle type.</p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <FieldLabel label="Nature / ස්වභාවය" />
-                                        <GInput value={form.disciplinaryNature} onChange={(v) => set('disciplinaryNature', v)} placeholder="Nature of inquiry" />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Police Station / පොලිස් ස්ථානය" />
-                                        <GInput value={form.disciplinaryStation} onChange={(v) => set('disciplinaryStation', v)} placeholder="Police Station" />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Division / කොට්ඨාසය" />
-                                        <GInput value={form.disciplinaryDivision} onChange={(v) => set('disciplinaryDivision', v)} placeholder="Division" />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Yes / No" />
-                                        <YesNo value={form.disciplinaryYesNo} onChange={(v) => set('disciplinaryYesNo', v)} />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <FieldLabel label="Result / ප්‍රතිඵලය" />
-                                        <textarea
-                                            value={form.disciplinaryResult}
-                                            onChange={(e) => set('disciplinaryResult', e.target.value)}
-                                            rows={4}
-                                            placeholder="Describe the result of the disciplinary inquiry..."
-                                            className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 
-                        focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500
-                        hover:border-gray-400 transition-colors resize-y"
-                                        />
+                                        <div className="space-y-3">
+                                            <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <span className="text-sm font-semibold text-gray-800">Heavy Vehicle</span>
+                                                <YesNo value={form.heavyVehicleQualified} onChange={(v) => set('heavyVehicleQualified', v)} />
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <span className="text-sm font-semibold text-gray-800">Light Vehicle</span>
+                                                <YesNo value={form.lightVehicleQualified} onChange={(v) => set('lightVehicleQualified', v)} />
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <span className="text-sm font-semibold text-gray-800">Motor Cycle</span>
+                                                <YesNo value={form.motorcycleQualified} onChange={(v) => set('motorcycleQualified', v)} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
