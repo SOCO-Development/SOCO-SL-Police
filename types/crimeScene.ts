@@ -172,6 +172,8 @@ export interface CrimeScene {
   /** House, Institutions, Buildings, Shop, Highway, Others — use crimeSceneTypeOther when Others. */
   crimeSceneType?: string;
   crimeSceneTypeOther?: string;
+  /** If true, only incidentKnown is used; if false, only From/To range; omit for legacy records (both used). */
+  incidentDateExactlyKnown?: boolean;
   /** Exactly known date & time when the incident occurred (single moment). */
   incidentKnown?: CrimeSceneDateTime;
   /** Duration / period — start (date & time). */
@@ -215,6 +217,11 @@ export interface CvrAmendmentState {
   baselineJson?: string;
 }
 
-export interface CrimeSceneFormData extends Omit<CrimeScene, 'id' | 'createdAt' | 'updatedAt' | 'cvrNo' | 'cvrAmendment'> {
+export interface CrimeSceneFormData extends Omit<
+  CrimeScene,
+  'id' | 'createdAt' | 'updatedAt' | 'cvrNo' | 'cvrAmendment' | 'incidentDateExactlyKnown'
+> {
   cvrNo?: string;
+  /** true = exact moment only; false = duration range only; null = legacy (show & validate both). */
+  incidentDateExactlyKnown?: boolean | null;
 }

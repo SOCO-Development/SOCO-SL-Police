@@ -21,7 +21,8 @@ import {
   productionOptionsForSelection,
   productionPRHasOthersSelected,
 } from '@/lib/productionPROptions';
-import { formatDateTimeDDMMYYYY, formatIncidentDuration, parseDateTimeParts } from '@/lib/dateUtils';
+import { formatDateTimeDDMMYYYY, formatIncidentDuration } from '@/lib/dateUtils';
+import { validateIncidentTimingSection } from '@/lib/crimeSceneFormMapping';
 import type { CrimeVisit } from '@/types/crimeVisit';
 import {
   crimeSceneUsesNewVisitFields,
@@ -160,6 +161,7 @@ function defaultForm(): CrimeSceneFormData {
     placeOfCrimeScene: '',
     crimeSceneType: '',
     crimeSceneTypeOther: '',
+    incidentDateExactlyKnown: true,
     incidentKnown: { date: '', time: '' },
     incidentFrom: { date: '', time: '' },
     incidentTo: { date: '', time: '' },
@@ -241,6 +243,9 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
       ),
     [form.incidentFrom, form.incidentTo],
   );
+  const incidentMode = form.incidentDateExactlyKnown;
+  const showIncidentExact = incidentMode === true || incidentMode === null;
+  const showIncidentDuration = incidentMode === false || incidentMode === null;
 
   if (!isOpen) return null;
 
@@ -327,25 +332,8 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
     if (form.crimeSceneType === 'Others' && !form.crimeSceneTypeOther?.trim()) {
       return 'Please specify type of crime scene when “Others” is selected.';
     }
-    const known = form.incidentKnown ?? { date: '', time: '' };
-    if (!known.date?.trim() || !known.time?.trim()) {
-      return 'Please enter the exactly known date and time of the incident.';
-    }
-    if (!parseDateTimeParts(known)) return 'Invalid date or time for the incident.';
-    const incFrom = form.incidentFrom ?? { date: '', time: '' };
-    const incTo = form.incidentTo ?? { date: '', time: '' };
-    if (!incFrom.date?.trim() || !incFrom.time?.trim()) {
-      return 'Please enter duration start: date and time (from).';
-    }
-    if (!incTo.date?.trim() || !incTo.time?.trim()) {
-      return 'Please enter duration end: date and time (to).';
-    }
-    const fromD = parseDateTimeParts(incFrom);
-    const toD = parseDateTimeParts(incTo);
-    if (!fromD || !toD) return 'Invalid incidence date or time.';
-    if (toD.getTime() < fromD.getTime()) {
-      return 'Incidence end date and time must be the same as or after the start.';
-    }
+    const incidentErr = validateIncidentTimingSection(form);
+    if (incidentErr) return incidentErr;
 
     const courtRows = form.courtDetails?.productionSentToCourtRows ?? [];
     for (let i = 0; i < courtRows.length; i++) {
@@ -586,73 +574,129 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
               </div>
 
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <DatePicker
-                    label="Incident date (known)"
-                    value={form.incidentKnown?.date ?? ''}
-                    onChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), date: value },
-                      }))
-                    }
-                  />
-                  <TimePicker
-                    label="Incident time (known)"
-                    value={form.incidentKnown?.time ?? ''}
-                    onChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), time: value },
-                      }))
-                    }
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                      Incident date (exactly known)?
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                      {(['Yes', 'No'] as const).map((opt) => (
+                        <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name="modalIncidentDateExactlyKnown"
+                            checked={
+                              opt === 'Yes'
+                                ? form.incidentDateExactlyKnown === true
+                                : form.incidentDateExactlyKnown === false
+                            }
+                            onChange={() =>
+                              setForm((prev) =>
+                                opt === 'Yes'
+                                  ? {
+                                      ...prev,
+                                      incidentDateExactlyKnown: true,
+                                      incidentFrom: { date: '', time: '' },
+                                      incidentTo: { date: '', time: '' },
+                                    }
+                                  : {
+                                      ...prev,
+                                      incidentDateExactlyKnown: false,
+                                      incidentKnown: { date: '', time: '' },
+                                    },
+                              )
+                            }
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                    {form.incidentDateExactlyKnown === null && (
+                      <p className="text-xs text-gray-500 mt-1.5">
+                        This record uses both exact and duration fields. Choose Yes or No to use one set only.
+                      </p>
+                    )}
+                  </div>
+
+                  {showIncidentExact && (
+                    <>
+                      <DatePicker
+                        label="Incident date (exactly known)"
+                        value={form.incidentKnown?.date ?? ''}
+                        onChange={(value) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), date: value },
+                          }))
+                        }
+                      />
+                      <TimePicker
+                        label="Incident time (exactly known)"
+                        value={form.incidentKnown?.time ?? ''}
+                        onChange={(value) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            incidentKnown: { ...(prev.incidentKnown ?? { date: '', time: '' }), time: value },
+                          }))
+                        }
+                      />
+                    </>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <DatePicker
-                    label="Duration from — date"
-                    value={form.incidentFrom?.date ?? ''}
-                    onChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), date: value },
-                      }))
-                    }
-                  />
-                  <TimePicker
-                    label="Duration from — time"
-                    value={form.incidentFrom?.time ?? ''}
-                    onChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), time: value },
-                      }))
-                    }
-                  />
-                  <DatePicker
-                    label="Duration to — date"
-                    value={form.incidentTo?.date ?? ''}
-                    onChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), date: value },
-                      }))
-                    }
-                  />
-                  <TimePicker
-                    label="Duration to — time"
-                    value={form.incidentTo?.time ?? ''}
-                    onChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), time: value },
-                      }))
-                    }
-                  />
-                </div>
-                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                  Duration (from → to): <span className="font-semibold font-mono tabular-nums">{incidentDuration}</span>
-                </div>
+
+                {showIncidentDuration && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <DatePicker
+                      label="Duration from — date"
+                      value={form.incidentFrom?.date ?? ''}
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), date: value },
+                        }))
+                      }
+                    />
+                    <TimePicker
+                      label="Duration from — time"
+                      value={form.incidentFrom?.time ?? ''}
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          incidentFrom: { ...(prev.incidentFrom ?? { date: '', time: '' }), time: value },
+                        }))
+                      }
+                    />
+                    <DatePicker
+                      label="Duration to — date"
+                      value={form.incidentTo?.date ?? ''}
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), date: value },
+                        }))
+                      }
+                    />
+                    <TimePicker
+                      label="Duration to — time"
+                      value={form.incidentTo?.time ?? ''}
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          incidentTo: { ...(prev.incidentTo ?? { date: '', time: '' }), time: value },
+                        }))
+                      }
+                    />
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Duration (from → to)
+                      </span>
+                      <div className="min-h-10 flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                        <span className="font-semibold font-mono tabular-nums">{incidentDuration}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

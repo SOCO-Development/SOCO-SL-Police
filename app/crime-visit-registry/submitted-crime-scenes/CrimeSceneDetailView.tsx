@@ -146,38 +146,80 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                 : readValue(scene.crimeSceneType)
             }
           />
-          <DisplayField
-            label="Date & time of incident (exactly known)"
-            value={
-              scene.incidentKnown?.date?.trim() && scene.incidentKnown?.time?.trim()
-                ? `${readValue(scene.incidentKnown.date)} ${readValue(scene.incidentKnown.time)}`
-                : '—'
-            }
-          />
-          <DisplayField
-            label="Duration — from (date & time)"
-            value={
-              scene.incidentFrom?.date?.trim() && scene.incidentFrom?.time?.trim()
-                ? `${readValue(scene.incidentFrom.date)} ${readValue(scene.incidentFrom.time)}`
-                : '—'
-            }
-          />
-          <DisplayField
-            label="Duration — to (date & time)"
-            value={
-              scene.incidentTo?.date?.trim() && scene.incidentTo?.time?.trim()
-                ? `${readValue(scene.incidentTo.date)} ${readValue(scene.incidentTo.time)}`
-                : '—'
-            }
-          />
-          <DisplayField
-            label="Duration (from → to)"
-            value={
-              scene.incidentFrom && scene.incidentTo
-                ? formatIncidentDuration(scene.incidentFrom, scene.incidentTo)
-                : '—'
-            }
-          />
+          {scene.incidentDateExactlyKnown === false ? (
+            <>
+              <DisplayField
+                label="Duration — from (date & time)"
+                value={
+                  scene.incidentFrom?.date?.trim() && scene.incidentFrom?.time?.trim()
+                    ? `${readValue(scene.incidentFrom.date)} ${readValue(scene.incidentFrom.time)}`
+                    : '—'
+                }
+              />
+              <DisplayField
+                label="Duration — to (date & time)"
+                value={
+                  scene.incidentTo?.date?.trim() && scene.incidentTo?.time?.trim()
+                    ? `${readValue(scene.incidentTo.date)} ${readValue(scene.incidentTo.time)}`
+                    : '—'
+                }
+              />
+              <DisplayField
+                label="Duration (from → to)"
+                value={
+                  scene.incidentFrom && scene.incidentTo
+                    ? formatIncidentDuration(scene.incidentFrom, scene.incidentTo)
+                    : '—'
+                }
+              />
+            </>
+          ) : scene.incidentDateExactlyKnown === true ? (
+            <>
+              <DisplayField
+                label="Incident date (exactly known)"
+                value={readValue(scene.incidentKnown?.date)}
+              />
+              <DisplayField
+                label="Incident time (exactly known)"
+                value={readValue(scene.incidentKnown?.time)}
+              />
+            </>
+          ) : (
+            <>
+              <DisplayField
+                label="Date & time of incident (exactly known)"
+                value={
+                  scene.incidentKnown?.date?.trim() && scene.incidentKnown?.time?.trim()
+                    ? `${readValue(scene.incidentKnown.date)} ${readValue(scene.incidentKnown.time)}`
+                    : '—'
+                }
+              />
+              <DisplayField
+                label="Duration — from (date & time)"
+                value={
+                  scene.incidentFrom?.date?.trim() && scene.incidentFrom?.time?.trim()
+                    ? `${readValue(scene.incidentFrom.date)} ${readValue(scene.incidentFrom.time)}`
+                    : '—'
+                }
+              />
+              <DisplayField
+                label="Duration — to (date & time)"
+                value={
+                  scene.incidentTo?.date?.trim() && scene.incidentTo?.time?.trim()
+                    ? `${readValue(scene.incidentTo.date)} ${readValue(scene.incidentTo.time)}`
+                    : '—'
+                }
+              />
+              <DisplayField
+                label="Duration (from → to)"
+                value={
+                  scene.incidentFrom && scene.incidentTo
+                    ? formatIncidentDuration(scene.incidentFrom, scene.incidentTo)
+                    : '—'
+                }
+              />
+            </>
+          )}
           <DisplayField
             label="Offence Type"
             value={scene.offenceType === 'Other' ? readValue(scene.offenceTypeOther) : readValue(scene.offenceType)}

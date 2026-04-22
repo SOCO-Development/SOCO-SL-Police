@@ -386,6 +386,8 @@ export const crimeSceneService = {
       cvrNo,
       createdAt: now(),
       updatedAt: now(),
+      incidentDateExactlyKnown:
+        data.incidentDateExactlyKnown === null ? undefined : data.incidentDateExactlyKnown,
     };
 
     all.push(created);
