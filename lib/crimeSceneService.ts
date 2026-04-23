@@ -15,6 +15,7 @@ import {
   applyPayloadToScene,
   buildCrimeScenePayloadFromForm,
 } from '@/lib/crimeSceneFormMapping';
+import { normalizeCvrKey } from '@/lib/crimeSceneGrouping';
 
 const STORAGE_KEY = 'crime_scenes';
 
@@ -185,14 +186,23 @@ export const crimeSceneService = {
     const idx = all.findIndex((s) => s.id === sceneId);
     if (idx === -1) return null;
     const scene = all[idx];
-    const next: CrimeScene = {
-      ...scene,
-      analysisReportReceived: { ...data },
-      updatedAt: now(),
-    };
-    all[idx] = next;
+    const groupKey = normalizeCvrKey(scene);
+    const ts = now();
+    const payload = { ...data };
+    let updated: CrimeScene | null = null;
+    for (let i = 0; i < all.length; i += 1) {
+      if (normalizeCvrKey(all[i]) !== groupKey) continue;
+      const s = all[i];
+      const next: CrimeScene = {
+        ...s,
+        analysisReportReceived: payload,
+        updatedAt: ts,
+      };
+      all[i] = next;
+      if (s.id === sceneId) updated = next;
+    }
     saveAll(all);
-    return next;
+    return updated;
   },
 
   /** Replace court / production details (same structure as create crime scene court section). */
@@ -202,14 +212,22 @@ export const crimeSceneService = {
     if (idx === -1) return null;
     const scene = all[idx];
     const normalized = normalizeCourtDetails(courtDetails) ?? courtDetails;
-    const next: CrimeScene = {
-      ...scene,
-      courtDetails: normalized,
-      updatedAt: now(),
-    };
-    all[idx] = next;
+    const groupKey = normalizeCvrKey(scene);
+    const ts = now();
+    let updated: CrimeScene | null = null;
+    for (let i = 0; i < all.length; i += 1) {
+      if (normalizeCvrKey(all[i]) !== groupKey) continue;
+      const s = all[i];
+      const next: CrimeScene = {
+        ...s,
+        courtDetails: normalized,
+        updatedAt: ts,
+      };
+      all[i] = next;
+      if (s.id === sceneId) updated = next;
+    }
     saveAll(all);
-    return next;
+    return updated;
   },
 
   /** Court visit: attending officer, date, results. */
@@ -218,14 +236,23 @@ export const crimeSceneService = {
     const idx = all.findIndex((s) => s.id === sceneId);
     if (idx === -1) return null;
     const scene = all[idx];
-    const next: CrimeScene = {
-      ...scene,
-      courtVisitUpdate: { ...data },
-      updatedAt: now(),
-    };
-    all[idx] = next;
+    const groupKey = normalizeCvrKey(scene);
+    const ts = now();
+    const payload = { ...data };
+    let updated: CrimeScene | null = null;
+    for (let i = 0; i < all.length; i += 1) {
+      if (normalizeCvrKey(all[i]) !== groupKey) continue;
+      const s = all[i];
+      const next: CrimeScene = {
+        ...s,
+        courtVisitUpdate: payload,
+        updatedAt: ts,
+      };
+      all[i] = next;
+      if (s.id === sceneId) updated = next;
+    }
     saveAll(all);
-    return next;
+    return updated;
   },
 
   /** Crime scenes with a pending “may I edit?” request. */

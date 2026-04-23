@@ -154,7 +154,8 @@ export default function ProductionAnalysisPage() {
                 <h2 className="text-2xl font-bold text-gray-900">Update Production Analysis</h2>
                 <p className="text-sm text-gray-600 mt-0.5">
                   Choose a crime scene below, then click <strong>Edit</strong> to change{' '}
-                  <strong>Productions sent to analysis institutes</strong> and save. Saved data appears under{' '}
+                  <strong>Productions sent to analysis institutes</strong> and save. Saving applies to{' '}
+                  <strong>every visit record for the same CVR</strong>. Saved data appears under{' '}
                   <Link
                     href="/crime-visit-registry/submitted-crime-scenes"
                     className="text-blue-600 font-medium hover:underline"

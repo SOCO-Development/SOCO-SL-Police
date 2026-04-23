@@ -316,7 +316,9 @@ export default function UpdateCourtDetailsPage() {
                 <h2 className="text-2xl font-bold text-gray-900">Update Court Details</h2>
                 <p className="text-sm text-gray-600 mt-0.5">
                   Choose a crime scene below, then pick <strong>Production sent to court</strong> (use <strong>Edit</strong>{' '}
-                  to change rows) or <strong>Court visit</strong> and save. Updates appear under{' '}
+                  to change rows) or <strong>Court visit</strong> and save. Saving applies to{' '}
+                  <strong>every visit record for the same CVR</strong> (new visit, revisit, court visit), like a shared
+                  case file. Updates appear under{' '}
                   <Link
                     href="/crime-visit-registry/submitted-crime-scenes"
                     className="text-blue-600 font-medium hover:underline"
