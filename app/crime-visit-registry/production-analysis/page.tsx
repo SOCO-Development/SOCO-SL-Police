@@ -116,7 +116,11 @@ export default function ProductionAnalysisPage() {
       setCourtDetailsSavedOk(false);
       return;
     }
-    const updated = crimeSceneService.updateCourtDetailsProduction(selectedSceneId, courtDetailsDraft);
+    const updated = crimeSceneService.updateCourtDetailsProduction(
+      selectedSceneId,
+      courtDetailsDraft,
+      'production_analysis',
+    );
     if (!updated) {
       setCourtDetailsError('Could not save. The visit record may have been removed.');
       setCourtDetailsSavedOk(false);

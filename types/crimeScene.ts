@@ -1,5 +1,14 @@
 export type CrimeSceneVisitType = 'NEW_VISIT' | 'REVISIT' | 'COURT_VISIT';
 
+/** Saved from Update Court Details or Production Analysis (shared CVR data), for Submitted list highlighting. */
+export type RegistryWorkflowUpdateKind = 'court_production' | 'court_visit' | 'production_analysis';
+
+export interface RegistryWorkflowUpdate {
+  kind: RegistryWorkflowUpdateKind;
+  /** ISO timestamp when the workflow save occurred. */
+  at: string;
+}
+
 /** New crime scene only: initiated visit + new CVR text (not selecting an existing CVR). */
 export function crimeSceneUsesNewVisitFields(visitType: CrimeSceneVisitType): boolean {
   return visitType === 'NEW_VISIT';
@@ -306,6 +315,9 @@ export interface CrimeScene {
    * - revisionPending: edited CVR submitted and awaits approval; baselineJson holds prior approved copy.
    */
   cvrAmendment?: CvrAmendmentState;
+
+  /** Last registry workflow save touching this visit row (same CVR rows are updated together). */
+  registryWorkflowUpdate?: RegistryWorkflowUpdate;
 
   createdAt: string;
   updatedAt: string;

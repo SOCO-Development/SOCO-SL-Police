@@ -9,6 +9,7 @@ import type {
   CrimeSceneOfficer,
   CvrAmendmentState,
   ProductionSentToCourtRow,
+  RegistryWorkflowUpdateKind,
   SentToAnalysisRow,
 } from '@/types/crimeScene';
 import {
@@ -158,6 +159,21 @@ function saveAll(scenes: CrimeScene[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes));
 }
 
+function applyRegistryWorkflowUpdateToCvrGroup(
+  all: CrimeScene[],
+  sceneId: string,
+  kind: RegistryWorkflowUpdateKind,
+  at: string,
+): void {
+  const idx = all.findIndex((s) => s.id === sceneId);
+  if (idx === -1) return;
+  const groupKey = normalizeCvrKey(all[idx]);
+  for (let i = 0; i < all.length; i += 1) {
+    if (normalizeCvrKey(all[i]) !== groupKey) continue;
+    all[i] = { ...all[i], registryWorkflowUpdate: { kind, at } };
+  }
+}
+
 /** Snapshot for diff / reject-restore — strip nested baseline to avoid bloat. */
 function cloneBaselineSnapshot(scene: CrimeScene): CrimeScene {
   const a = scene.cvrAmendment;
@@ -197,6 +213,7 @@ export const crimeSceneService = {
         ...s,
         analysisReportReceived: payload,
         updatedAt: ts,
+        registryWorkflowUpdate: { kind: 'production_analysis', at: ts },
       };
       all[i] = next;
       if (s.id === sceneId) updated = next;
@@ -205,8 +222,15 @@ export const crimeSceneService = {
     return updated;
   },
 
-  /** Replace court / production details (same structure as create crime scene court section). */
-  updateCourtDetailsProduction(sceneId: string, courtDetails: CrimeSceneCourtDetails): CrimeScene | null {
+  /**
+   * Replace court / production details (same structure as create crime scene court section).
+   * @param workflowKind — drives Submitted Crime Scenes “follow-up” pill (court vs analysis editor).
+   */
+  updateCourtDetailsProduction(
+    sceneId: string,
+    courtDetails: CrimeSceneCourtDetails,
+    workflowKind: 'court_production' | 'production_analysis' = 'court_production',
+  ): CrimeScene | null {
     const all = loadAll();
     const idx = all.findIndex((s) => s.id === sceneId);
     if (idx === -1) return null;
@@ -215,6 +239,7 @@ export const crimeSceneService = {
     const groupKey = normalizeCvrKey(scene);
     const ts = now();
     let updated: CrimeScene | null = null;
+    applyRegistryWorkflowUpdateToCvrGroup(all, sceneId, workflowKind, ts);
     for (let i = 0; i < all.length; i += 1) {
       if (normalizeCvrKey(all[i]) !== groupKey) continue;
       const s = all[i];
@@ -240,6 +265,7 @@ export const crimeSceneService = {
     const ts = now();
     const payload = { ...data };
     let updated: CrimeScene | null = null;
+    applyRegistryWorkflowUpdateToCvrGroup(all, sceneId, 'court_visit', ts);
     for (let i = 0; i < all.length; i += 1) {
       if (normalizeCvrKey(all[i]) !== groupKey) continue;
       const s = all[i];

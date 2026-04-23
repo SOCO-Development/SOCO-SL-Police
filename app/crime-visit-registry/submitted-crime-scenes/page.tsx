@@ -15,6 +15,7 @@ import {
   normalizeCvrKey,
   type CrimeSceneCvrGroup,
 } from '@/lib/crimeSceneGrouping';
+import { registryWorkflowFollowUpDisplay } from '@/lib/registryWorkflowDisplay';
 import { ArrowLeft, CheckCircle, ExternalLink, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 
 type FilterTab = 'ALL' | 'TODAY';
@@ -91,6 +92,9 @@ function sceneSearchHaystack(scene: CrimeScene): string {
     scene.incidentTo?.time,
     scene.offenceType === 'Other' ? scene.offenceTypeOther : scene.offenceType,
     offenceText,
+    scene.registryWorkflowUpdate
+      ? 'revisit registry update court production analysis'
+      : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -113,6 +117,19 @@ function visitTypePill(scene: CrimeScene) {
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${pill}`}>
       {label}
+    </span>
+  );
+}
+
+function registryWorkflowPill(scene: CrimeScene) {
+  const d = registryWorkflowFollowUpDisplay(scene);
+  if (!d) return null;
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${d.pillClass}`}
+      title={d.title}
+    >
+      {d.label}
     </span>
   );
 }
@@ -514,6 +531,7 @@ export default function SubmittedCrimeScenesPage() {
                                   </span>
                                 ) : null}
                                 {visitTypePill(primary)}
+                                {registryWorkflowPill(primary)}
                                 {hasChildren ? (
                                   <span className="text-[10px] font-medium text-gray-500">
                                     +{children.length} more
@@ -568,6 +586,7 @@ export default function SubmittedCrimeScenesPage() {
                                               {visitNo}
                                             </span>
                                             {visitTypePill(child)}
+                                            {registryWorkflowPill(child)}
                                             <span className="text-xs text-gray-700 font-medium">
                                               Submitted {formatDateTimeDDMMYYYY(child.updatedAt)}
                                             </span>
