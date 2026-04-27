@@ -238,6 +238,8 @@ export interface CrimeSceneCourtDetails {
   courtName?: string;
   /** Optional at initial submission — typed case reference. */
   courtCaseNo?: string;
+  /** Optional at initial submission — typed B number. */
+  bNumber?: string;
   productionPR?: '' | 'Yes' | 'No';
   /** When Production Availability is Yes — multi-select item values. */
   productionPRTypes?: string[];
@@ -253,6 +255,7 @@ export function emptyCrimeSceneCourtDetails(): CrimeSceneCourtDetails {
   return {
     courtName: '',
     courtCaseNo: '',
+    bNumber: '',
     productionPR: '',
     productionPRTypes: [],
     productionPROtherDetail: '',

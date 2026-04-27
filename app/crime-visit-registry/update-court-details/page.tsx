@@ -9,6 +9,7 @@ import DatePicker from '@/components/forms/DatePicker';
 import Button from '@/components/buttons/Button';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { COURT_NAME_OPTIONAL_SELECT_OPTIONS } from '@/lib/courtNames';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
 import type { CrimeScene, CrimeSceneCourtDetails, CourtVisitOfficerDetailRow, CourtVisitUpdateDetails } from '@/types/crimeScene';
@@ -173,6 +174,14 @@ export default function UpdateCourtDetailsPage() {
     }));
   }
 
+  function patchCourtDetails(partial: Partial<CrimeSceneCourtDetails>) {
+    setCourtDraft((prev) => ({
+      ...emptyCrimeSceneCourtDetails(),
+      ...prev,
+      ...partial,
+    }));
+  }
+
   async function handleCourtVisitAttachment(index: number, file: File | null) {
     if (!file) {
       patchCourtVisitRow(index, { attachmentFileName: '', attachmentDataUrl: '' });
@@ -227,6 +236,16 @@ export default function UpdateCourtDetailsPage() {
   function validateCourtVisit(): string {
     if (!selectedSceneId) return 'Select a crime scene above, then complete the form below.';
     const filled = courtVisitDraft.rows.filter(isCourtVisitRowNonEmpty);
+    const hasCourtDetails = Boolean(
+      (courtDraft.courtName ?? '').trim() ||
+      (courtDraft.courtCaseNo ?? '').trim() ||
+      (courtDraft.bNumber ?? '').trim(),
+    );
+    if (filled.length === 0) {
+      return hasCourtDetails
+        ? ''
+        : 'Add at least one court visit detail (use “Add court visit detail”) and complete the required fields, or provide court details.';
+    }
     return validateCourtVisitRows(filled);
   }
 
@@ -289,13 +308,14 @@ export default function UpdateCourtDetailsPage() {
         };
       });
     const payload: CourtVisitUpdateDetails = { rows: filled };
-    const updated = crimeSceneService.updateCourtVisitDetails(selectedSceneId, payload);
+    const updated = crimeSceneService.updateCourtVisitDetails(selectedSceneId, payload, courtDraft);
     if (!updated) {
       setError('Could not save. The visit record may have been removed.');
       setSavedOk(false);
       return;
     }
     setScenes(crimeSceneService.getAll());
+    setCourtDraft(mergeCourtDetails(updated.courtDetails));
     setCourtVisitDraft(mergeCourtVisit(updated.courtVisitUpdate));
     setError('');
     setSavedOk(true);
@@ -474,6 +494,20 @@ export default function UpdateCourtDetailsPage() {
                                   </>
                                 )}
                               </p>
+                              <FieldGroup label="B number">
+                                <input
+                                  type="text"
+                                  value={courtDraft.bNumber ?? ''}
+                                  onChange={(e) => patchCourtDetails({ bNumber: e.target.value })}
+                                  readOnly={!isEditingProductionSentToCourt}
+                                  placeholder="Enter B number"
+                                  className={`w-full min-h-10 px-3 py-2 text-sm rounded-lg border text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 ${
+                                    isEditingProductionSentToCourt
+                                      ? 'bg-white border-gray-300'
+                                      : 'bg-gray-100 border-gray-200 cursor-default'
+                                  }`}
+                                />
+                              </FieldGroup>
                               <CourtProductionDetailsEditor
                                 mode="productionSentToCourt"
                                 courtDetails={courtDraft}
@@ -519,9 +553,47 @@ export default function UpdateCourtDetailsPage() {
                                 scene (team leader, SOCO, investigation) with their roles.
                               </p>
 
+                              <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/70">
+                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                                  <span className="w-1.5 h-4 rounded-full bg-orange-500 inline-block flex-shrink-0" />
+                                  Court Details
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <FieldGroup label="Court name">
+                                    <CustomSelect
+                                      value={courtDraft.courtName ?? ''}
+                                      onChange={(value) => patchCourtDetails({ courtName: value })}
+                                      options={COURT_NAME_OPTIONAL_SELECT_OPTIONS}
+                                      placeholder="Select court name"
+                                      searchable
+                                      searchPlaceholder="Search court name"
+                                    />
+                                  </FieldGroup>
+                                  <FieldGroup label="Court case number">
+                                    <input
+                                      type="text"
+                                      value={courtDraft.courtCaseNo ?? ''}
+                                      onChange={(e) => patchCourtDetails({ courtCaseNo: e.target.value })}
+                                      placeholder="Enter court case number"
+                                      className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
+                                    />
+                                  </FieldGroup>
+                                  <FieldGroup label="B number">
+                                    <input
+                                      type="text"
+                                      value={courtDraft.bNumber ?? ''}
+                                      onChange={(e) => patchCourtDetails({ bNumber: e.target.value })}
+                                      placeholder="Enter B number"
+                                      className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
+                                    />
+                                  </FieldGroup>
+                                </div>
+                              </div>
+
                               {officerOptions.length === 0 ? (
                                 <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                  No officers on this visit record. Add officers on the crime scene first.
+                                  No officers on this visit record. Add officers on the crime scene first. You can still
+                                  save court details.
                                 </p>
                               ) : (
                                 <>
@@ -659,7 +731,14 @@ export default function UpdateCourtDetailsPage() {
                                     variant="success"
                                     type="button"
                                     onClick={handleSaveCourtVisit}
-                                    disabled={officerOptions.length === 0}
+                                    disabled={
+                                      officerOptions.length === 0 &&
+                                      !(
+                                        (courtDraft.courtName ?? '').trim() ||
+                                        (courtDraft.courtCaseNo ?? '').trim() ||
+                                        (courtDraft.bNumber ?? '').trim()
+                                      )
+                                    }
                                   >
                                     Save court visit
                                   </Button>

@@ -95,9 +95,22 @@ const OFFENCE_OPTIONS = [
 
 const VISIT_TYPES: { value: CrimeSceneVisitType; label: string }[] = [
   { value: 'NEW_VISIT', label: 'New Visit' },
-  { value: 'COURT_VISIT', label: 'Court Visit' },
   { value: 'REVISIT', label: 'Revisit' },
 ];
+
+const COURT_DETAILS_NAME_OPTIONS = [
+  'Vavuniya High Court',
+  'Vavuniya MC',
+  'WALAPANE MC',
+  'WALASMULLA MC',
+  'WARAKAPOLA  MC',
+  'Warakapola MC',
+  'WARIYAPOLA MC',
+  'WELISARA MC',
+  'Wellawaya MC',
+]
+  .filter((value, index, arr) => arr.indexOf(value) === index)
+  .map((value) => ({ value, label: value }));
 
 const SPECIALIST_ROLE_OPTIONS = [
   'Magistrate',
@@ -1005,6 +1018,66 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             >
               Add Scene Guard
             </Button>
+          </div>
+
+          <div className="bg-orange-50/70 rounded-xl border border-orange-200 p-4 sm:p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-800">Court Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="min-w-0">
+                <span className="block text-sm font-semibold text-gray-700 mb-2">Court name</span>
+                <CustomSelect
+                  value={form.courtDetails?.courtName ?? ''}
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      courtDetails: {
+                        ...emptyCrimeSceneCourtDetails(),
+                        ...prev.courtDetails,
+                        courtName: value,
+                      },
+                    }))
+                  }
+                  options={[{ value: '', label: 'Select court name' }, ...COURT_DETAILS_NAME_OPTIONS]}
+                  placeholder="Select court name"
+                  searchable
+                  searchPlaceholder="Search court name"
+                />
+              </div>
+              <div className="min-w-0">
+                <FormInput
+                  label="Court case number"
+                  value={form.courtDetails?.courtCaseNo ?? ''}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      courtDetails: {
+                        ...emptyCrimeSceneCourtDetails(),
+                        ...prev.courtDetails,
+                        courtCaseNo: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Enter court case number"
+                />
+              </div>
+              <div className="min-w-0">
+                <FormInput
+                  label="B number"
+                  value={form.courtDetails?.bNumber ?? ''}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      courtDetails: {
+                        ...emptyCrimeSceneCourtDetails(),
+                        ...prev.courtDetails,
+                        bNumber: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Enter B number"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="bg-amber-50/70 rounded-xl border border-amber-200 p-4 sm:p-5 space-y-4">

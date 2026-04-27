@@ -142,9 +142,22 @@ const OFFENCE_TYPES = [
 
 const VISIT_TYPES: { value: CrimeSceneVisitType; label: string }[] = [
   { value: 'NEW_VISIT', label: 'New Crime Scene' },
-  { value: 'COURT_VISIT', label: 'Court Visit' },
   { value: 'REVISIT', label: 'Revisit' },
 ];
+
+const COURT_DETAILS_NAME_OPTIONS = [
+  'Vavuniya High Court',
+  'Vavuniya MC',
+  'WALAPANE MC',
+  'WALASMULLA MC',
+  'WARAKAPOLA  MC',
+  'Warakapola MC',
+  'WARIYAPOLA MC',
+  'WELISARA MC',
+  'Wellawaya MC',
+]
+  .filter((value, index, arr) => arr.indexOf(value) === index)
+  .map((value) => ({ value, label: value }));
 
 const SPECIALIST_ROLE_OPTIONS = [
   'Magistrate', 'GAD', 'JMO', 'Finger Print', 'Kannel',
@@ -1241,8 +1254,69 @@ export default function CreateCrimeSceneForm({
             </button>
           </div>
 
+          {/* ── Court Details ── */}
+          <div id="cvr-section-court" className="p-4 sm:p-5 rounded-xl border border-orange-200 bg-orange-50/70 scroll-mt-24">
+            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+              <span className="w-1.5 h-4 rounded-full bg-orange-500 inline-block flex-shrink-0" />
+              Court Details
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FieldGroup label="Court name">
+                <CustomSelect
+                  value={form.courtDetails?.courtName ?? ''}
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      courtDetails: {
+                        ...emptyCrimeSceneCourtDetails(),
+                        ...prev.courtDetails,
+                        courtName: value,
+                      },
+                    }))
+                  }
+                  options={[{ value: '', label: 'Select court name' }, ...COURT_DETAILS_NAME_OPTIONS]}
+                  placeholder="Select court name"
+                  searchable
+                  searchPlaceholder="Search court name"
+                />
+              </FieldGroup>
+              <FieldGroup label="Court case number">
+                <TextInput
+                  value={form.courtDetails?.courtCaseNo ?? ''}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      courtDetails: {
+                        ...emptyCrimeSceneCourtDetails(),
+                        ...prev.courtDetails,
+                        courtCaseNo: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Enter court case number"
+                />
+              </FieldGroup>
+              <FieldGroup label="B number">
+                <TextInput
+                  value={form.courtDetails?.bNumber ?? ''}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      courtDetails: {
+                        ...emptyCrimeSceneCourtDetails(),
+                        ...prev.courtDetails,
+                        bNumber: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Enter B number"
+                />
+              </FieldGroup>
+            </div>
+          </div>
+
           {/* ── Production details ── */}
-          <div id="cvr-section-court" className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70 scroll-mt-24">
+          <div className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
               Production details

@@ -256,7 +256,11 @@ export const crimeSceneService = {
   },
 
   /** Court visit: attending officer, date, results. */
-  updateCourtVisitDetails(sceneId: string, data: CourtVisitUpdateDetails): CrimeScene | null {
+  updateCourtVisitDetails(
+    sceneId: string,
+    data: CourtVisitUpdateDetails,
+    courtDetails?: CrimeSceneCourtDetails,
+  ): CrimeScene | null {
     const all = loadAll();
     const idx = all.findIndex((s) => s.id === sceneId);
     if (idx === -1) return null;
@@ -264,6 +268,9 @@ export const crimeSceneService = {
     const groupKey = normalizeCvrKey(scene);
     const ts = now();
     const payload = { ...data };
+    const normalizedCourtDetails = courtDetails
+      ? (normalizeCourtDetails(courtDetails) ?? courtDetails)
+      : undefined;
     let updated: CrimeScene | null = null;
     applyRegistryWorkflowUpdateToCvrGroup(all, sceneId, 'court_visit', ts);
     for (let i = 0; i < all.length; i += 1) {
@@ -272,6 +279,7 @@ export const crimeSceneService = {
       const next: CrimeScene = {
         ...s,
         courtVisitUpdate: payload,
+        ...(normalizedCourtDetails ? { courtDetails: normalizedCourtDetails } : {}),
         updatedAt: ts,
       };
       all[i] = next;
