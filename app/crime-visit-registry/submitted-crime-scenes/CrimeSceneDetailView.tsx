@@ -57,6 +57,11 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
     : scene.offence
       ? [scene.offence as string]
       : [];
+  const hasCourtDetails = Boolean(
+    scene.courtDetails?.courtName?.trim() ||
+      scene.courtDetails?.courtCaseNo?.trim() ||
+      scene.courtDetails?.bNumber?.trim(),
+  );
 
   return (
     <div className="space-y-5">
@@ -364,6 +369,17 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                 ) : null}
               </div>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {hasCourtDetails ? (
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+          <SectionTitle stripeClass="bg-orange-500">Court details</SectionTitle>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <DisplayField label="Court name" value={readValue(scene.courtDetails?.courtName)} />
+            <DisplayField label="Court case number" value={readValue(scene.courtDetails?.courtCaseNo)} />
+            <DisplayField label="B number" value={readValue(scene.courtDetails?.bNumber)} />
           </div>
         </div>
       ) : null}
