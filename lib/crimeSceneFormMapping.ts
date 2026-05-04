@@ -80,7 +80,7 @@ export function buildCrimeScenePayloadFromForm(
     ...form,
     cvrNo,
     incidentDateExactlyKnown,
-    visitId: crimeSceneUsesNewVisitFields(form.visitType) ? form.visitId : '',
+    visitId: form.visitId,
     revisitCvrNo: crimeSceneUsesRevisitFields(form.visitType) ? form.revisitCvrNo : '',
     socoOfficers: form.socoOfficers.filter((o) => o.name.trim()),
     specialistTeams: form.specialistTeams

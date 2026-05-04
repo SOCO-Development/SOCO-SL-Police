@@ -15,7 +15,11 @@ import {
   normalizeCvrKey,
   type CrimeSceneCvrGroup,
 } from '@/lib/crimeSceneGrouping';
-import { registryWorkflowFollowUpDisplay } from '@/lib/registryWorkflowDisplay';
+import {
+  registryWorkflowDisplayEntries,
+  registryWorkflowListRowClasses,
+  registryWorkflowBadgeClasses,
+} from '@/lib/registryWorkflowDisplay';
 import { ArrowLeft, CheckCircle, ExternalLink, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 
 type FilterTab = 'ALL' | 'TODAY';
@@ -92,9 +96,11 @@ function sceneSearchHaystack(scene: CrimeScene): string {
     scene.incidentTo?.time,
     scene.offenceType === 'Other' ? scene.offenceTypeOther : scene.offenceType,
     offenceText,
-    scene.registryWorkflowUpdate
-      ? 'revisit registry update court production analysis'
-      : '',
+    scene.registryWorkflowUpdates?.length
+      ? 'updated court details updated production analysis'
+      : scene.registryWorkflowUpdate
+        ? 'updated court details updated production analysis'
+        : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -122,20 +128,28 @@ function visitTypePill(scene: CrimeScene) {
 }
 
 function registryWorkflowPill(scene: CrimeScene) {
-  const d = registryWorkflowFollowUpDisplay(scene);
-  if (!d) return null;
+  const entries = registryWorkflowDisplayEntries(scene);
+  if (!entries.length) return null;
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${d.pillClass}`}
-      title={d.title}
-    >
-      {d.label}
-    </span>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {entries.map((entry) => (
+        <span
+          key={`${entry.kind}-${entry.at}`}
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${entry.pillClass}`}
+          title={entry.title}
+        >
+          {entry.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
-/** Expanded list row: strong left stripe + tint by visit type so visits are easy to tell apart. */
+/** Expanded list row: strong left stripe + tint by visit type or workflow update so visits are easy to tell apart. */
 function visitTypeListRowClasses(scene: CrimeScene) {
+  const workflowClasses = registryWorkflowListRowClasses(scene);
+  if (workflowClasses) return workflowClasses;
+  
   if (scene.visitType === 'REVISIT') {
     return 'border-amber-200 bg-amber-50/80 ring-1 ring-amber-200/70 border-l-[5px] border-l-amber-500';
   }
@@ -146,6 +160,9 @@ function visitTypeListRowClasses(scene: CrimeScene) {
 }
 
 function visitTypeVisitBadgeClasses(scene: CrimeScene) {
+  const workflowClasses = registryWorkflowBadgeClasses(scene);
+  if (workflowClasses) return workflowClasses;
+  
   if (scene.visitType === 'REVISIT') {
     return 'bg-amber-200 text-amber-950 border-amber-400';
   }
@@ -568,7 +585,7 @@ export default function SubmittedCrimeScenesPage() {
                               <td colSpan={8} className="px-4 py-4">
                                 <div className="space-y-3">
                                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                                    Other visits (same CVR) — color matches visit type
+                                    Other visits and updates (same CVR) — color matches visit type or update kind
                                   </p>
                                   <ul className="space-y-2.5">
                                     {chron.slice(1).map((child) => {

@@ -23,6 +23,10 @@ function visitTypeLabel(scene: CrimeScene) {
       : 'New visit';
 }
 
+function productionStatusLabel(scene: CrimeScene) {
+  return scene.courtDetails?.productionPR === 'Yes' ? 'Production available' : 'No production';
+}
+
 function mergeCourtDetails(base: CrimeSceneCourtDetails | undefined): CrimeSceneCourtDetails {
   return { ...emptyCrimeSceneCourtDetails(), ...base };
 }
@@ -229,6 +233,20 @@ export default function ProductionAnalysisPage() {
                                 <span className="text-gray-500 mx-2">·</span>
                                 <span className="text-gray-700">{visitTypeLabel(selectedScene)}</span>
                               </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                  Production status
+                                </span>
+                                <span
+                                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                    selectedScene.courtDetails?.productionPR === 'Yes'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}
+                                >
+                                  {productionStatusLabel(selectedScene)}
+                                </span>
+                              </div>
                               <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2 min-w-0">
                                 <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
                                 <span className="min-w-0">

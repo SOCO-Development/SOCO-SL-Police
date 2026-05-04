@@ -9,6 +9,12 @@ export interface RegistryWorkflowUpdate {
   at: string;
 }
 
+export interface RegistryWorkflowDisplayEntry extends RegistryWorkflowUpdate {
+  label: string;
+  title: string;
+  pillClass: string;
+}
+
 /** New crime scene only: initiated visit + new CVR text (not selecting an existing CVR). */
 export function crimeSceneUsesNewVisitFields(visitType: CrimeSceneVisitType): boolean {
   return visitType === 'NEW_VISIT';
@@ -321,6 +327,9 @@ export interface CrimeScene {
 
   /** Last registry workflow save touching this visit row (same CVR rows are updated together). */
   registryWorkflowUpdate?: RegistryWorkflowUpdate;
+
+  /** All registry workflow saves touching this visit row (same CVR rows are updated together). */
+  registryWorkflowUpdates?: RegistryWorkflowUpdate[];
 
   createdAt: string;
   updatedAt: string;

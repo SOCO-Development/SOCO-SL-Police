@@ -3,6 +3,7 @@ import { crimeSceneUsesRevisitFields, courtVisitUpdateHasDisplayableData, normal
 import { formatIncidentDuration } from '@/lib/dateUtils';
 import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
 import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
+import { registryWorkflowDisplayEntries } from '@/lib/registryWorkflowDisplay';
 
 interface CrimeSceneDetailViewProps {
   scene: CrimeScene;
@@ -62,6 +63,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       scene.courtDetails?.courtCaseNo?.trim() ||
       scene.courtDetails?.bNumber?.trim(),
   );
+  const workflowEntries = registryWorkflowDisplayEntries(scene);
 
   return (
     <div className="space-y-5">
@@ -86,6 +88,22 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             <DisplayField label="Existing CVR" value={readValue(scene.revisitCvrNo)} />
           ) : null}
         </div>
+        {workflowEntries.length ? (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-white px-3 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Workflow updates</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {workflowEntries.map((entry) => (
+                <span
+                  key={`${entry.kind}-${entry.at}`}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${entry.pillClass}`}
+                  title={entry.title}
+                >
+                  {entry.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">

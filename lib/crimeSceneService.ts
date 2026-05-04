@@ -9,6 +9,7 @@ import type {
   CrimeSceneOfficer,
   CvrAmendmentState,
   ProductionSentToCourtRow,
+  RegistryWorkflowUpdate,
   RegistryWorkflowUpdateKind,
   SentToAnalysisRow,
 } from '@/types/crimeScene';
@@ -135,10 +136,37 @@ function normalizeScene(raw: CrimeScene & { investigationOfficer?: CrimeSceneOff
     : legacy?.name?.trim() || legacy?.regNo?.trim() || legacy?.rank?.trim()
       ? [legacy]
       : [];
+  const workflowUpdates = (rest.registryWorkflowUpdates ?? (rest.registryWorkflowUpdate ? [rest.registryWorkflowUpdate] : []))
+    .filter((update): update is RegistryWorkflowUpdate => Boolean(update?.kind && update?.at))
+    .reduce<RegistryWorkflowUpdate[]>((acc, update) => {
+      const idx = acc.findIndex((item) => item.kind === update.kind);
+      if (idx >= 0) {
+        acc[idx] = update;
+      } else {
+        acc.push(update);
+      }
+      return acc;
+    }, []);
+  const latestWorkflowUpdate = workflowUpdates.length
+    ? [...workflowUpdates].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())[0]
+    : undefined;
   return {
     ...rest,
     investigationOfficers: list.length ? list : undefined,
     courtDetails: normalizeCourtDetails(rest.courtDetails),
+    registryWorkflowUpdates: workflowUpdates.length ? workflowUpdates : undefined,
+    registryWorkflowUpdate: latestWorkflowUpdate,
+  };
+}
+
+function applyRegistryWorkflowUpdate(scene: CrimeScene, kind: RegistryWorkflowUpdateKind, at: string): CrimeScene {
+  const existing = scene.registryWorkflowUpdates ?? (scene.registryWorkflowUpdate ? [scene.registryWorkflowUpdate] : []);
+  const workflowUpdates = existing.filter((update) => update.kind !== kind);
+  workflowUpdates.push({ kind, at });
+  return {
+    ...scene,
+    registryWorkflowUpdates: workflowUpdates,
+    registryWorkflowUpdate: { kind, at },
   };
 }
 
@@ -170,7 +198,7 @@ function applyRegistryWorkflowUpdateToCvrGroup(
   const groupKey = normalizeCvrKey(all[idx]);
   for (let i = 0; i < all.length; i += 1) {
     if (normalizeCvrKey(all[i]) !== groupKey) continue;
-    all[i] = { ...all[i], registryWorkflowUpdate: { kind, at } };
+    all[i] = applyRegistryWorkflowUpdate(all[i], kind, at);
   }
 }
 
@@ -209,11 +237,11 @@ export const crimeSceneService = {
     for (let i = 0; i < all.length; i += 1) {
       if (normalizeCvrKey(all[i]) !== groupKey) continue;
       const s = all[i];
+      const workflowUpdated = applyRegistryWorkflowUpdate(s, 'production_analysis', ts);
       const next: CrimeScene = {
-        ...s,
+        ...workflowUpdated,
         analysisReportReceived: payload,
         updatedAt: ts,
-        registryWorkflowUpdate: { kind: 'production_analysis', at: ts },
       };
       all[i] = next;
       if (s.id === sceneId) updated = next;
@@ -452,6 +480,7 @@ export const crimeSceneService = {
       investigationOfficers: inv.length ? inv : undefined,
       id,
       cvrNo,
+      visitId: data.visitId,
       createdAt: now(),
       updatedAt: now(),
       incidentDateExactlyKnown:

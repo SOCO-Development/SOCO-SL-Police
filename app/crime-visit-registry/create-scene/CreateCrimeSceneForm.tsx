@@ -373,7 +373,8 @@ export default function CreateCrimeSceneForm({
   // ── Validation & Save ─────────────────────────────────────────────────────
 
   const validate = (): string => {
-    if (crimeSceneUsesNewVisitFields(form.visitType) && !form.visitId) return 'Please select a Visit ID.';
+    if ((crimeSceneUsesNewVisitFields(form.visitType) || crimeSceneUsesRevisitFields(form.visitType)) && !form.visitId)
+      return 'Please select a Visit ID.';
     if (crimeSceneUsesNewVisitFields(form.visitType) && !form.cvrNo?.trim())
       return 'Please enter a CVR number for the new visit.';
     if (crimeSceneUsesRevisitFields(form.visitType) && !form.revisitCvrNo) {
@@ -519,6 +520,15 @@ export default function CreateCrimeSceneForm({
                 Scene Basics
               </h4>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <FieldGroup label="Visit ID with Date">
+                  <CustomSelect
+                    value={form.visitId}
+                    onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
+                    options={visitOptions}
+                    placeholder={visitOptions.length ? 'Select initiated visit' : 'No visits found'}
+                  />
+                </FieldGroup>
+
                 <FieldGroup label="Visit Type">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                     {VISIT_TYPES.map((option) => (
@@ -540,39 +550,28 @@ export default function CreateCrimeSceneForm({
                     ))}
                   </div>
                 </FieldGroup>
+              </div>
 
-                {crimeSceneUsesNewVisitFields(form.visitType) ? (
-                  <FieldGroup label="Visit ID with Date">
-                    <CustomSelect
-                      value={form.visitId}
-                      onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
-                      options={visitOptions}
-                      placeholder={visitOptions.length ? 'Select initiated visit' : 'No visits found'}
+              <div className="mt-3">
+                <FieldGroup
+                  label={crimeSceneUsesNewVisitFields(form.visitType) ? 'CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)' : 'CVR Number'}
+                >
+                  {crimeSceneUsesNewVisitFields(form.visitType) ? (
+                    <TextInput
+                      value={form.cvrNo ?? ''}
+                      onChange={(e) => setForm((prev) => ({ ...prev, cvrNo: e.target.value }))}
+                      placeholder="Ampara/01/2026"
                     />
-                  </FieldGroup>
-                ) : (
-                  <FieldGroup label="CVR Number">
+                  ) : (
                     <CustomSelect
                       value={form.revisitCvrNo}
                       onChange={(value) => setForm((prev) => ({ ...prev, revisitCvrNo: value }))}
                       options={cvrOptions}
                       placeholder={cvrOptions.length ? 'Select existing CVR' : 'No CVR numbers found'}
                     />
-                  </FieldGroup>
-                )}
+                  )}
+                </FieldGroup>
               </div>
-
-              {crimeSceneUsesNewVisitFields(form.visitType) && (
-                <div className="mt-3">
-                  <FieldGroup label="CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)">
-                    <TextInput
-                      value={form.cvrNo ?? ''}
-                      onChange={(e) => setForm((prev) => ({ ...prev, cvrNo: e.target.value }))}
-                      placeholder="Ampara/01/2026"
-                    />
-                  </FieldGroup>
-                </div>
-              )}
             </div>
           )}
 

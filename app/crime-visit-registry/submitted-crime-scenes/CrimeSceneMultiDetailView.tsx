@@ -1,7 +1,7 @@
 import type { CrimeScene } from '@/types/crimeScene';
 import CrimeSceneDetailView from './CrimeSceneDetailView';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
-import { registryWorkflowFollowUpDisplay } from '@/lib/registryWorkflowDisplay';
+import { registryWorkflowDisplayEntries } from '@/lib/registryWorkflowDisplay';
 
 function visitPresentation(scene: CrimeScene) {
   switch (scene.visitType) {
@@ -50,7 +50,7 @@ export default function CrimeSceneMultiDetailView({ scenes }: { scenes: CrimeSce
     <div className="space-y-10">
       {ordered.map((scene, idx) => {
         const p = visitPresentation(scene);
-        const rw = registryWorkflowFollowUpDisplay(scene);
+        const workflowEntries = registryWorkflowDisplayEntries(scene);
         return (
           <section
             key={scene.id}
@@ -77,14 +77,15 @@ export default function CrimeSceneMultiDetailView({ scenes }: { scenes: CrimeSce
                   >
                     {p.typeLabel}
                   </span>
-                  {rw ? (
+                  {workflowEntries.map((entry) => (
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shrink-0 ${rw.pillClass}`}
-                      title={rw.title}
+                      key={`${entry.kind}-${entry.at}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shrink-0 ${entry.pillClass}`}
+                      title={entry.title}
                     >
-                      {rw.label}
+                      {entry.label}
                     </span>
-                  ) : null}
+                  ))}
                 </div>
                 <span className="text-xs text-gray-600 tabular-nums shrink-0">
                   Submitted {formatDateTimeDDMMYYYY(scene.updatedAt)}
