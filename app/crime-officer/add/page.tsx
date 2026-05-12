@@ -89,6 +89,7 @@ interface OLSubjectResult {
 }
 
 interface OLOptionalSubject {
+    id: number;
     subject: string;
     grade: OLGrade;
 }
@@ -105,7 +106,8 @@ interface DegreeRow {
     id: number;
     degree: string;
     university: string;
-    year: string;
+    yearFrom: string;
+    yearTo: string;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -266,7 +268,11 @@ function defaultForm(): FormData {
             { subject: 'History', grade: '' },
             { subject: 'Religion', grade: '' },
         ],
-        olOptionalSubjects: [],
+        olOptionalSubjects: [
+            { id: newId(), subject: '', grade: '' },
+            { id: newId(), subject: '', grade: '' },
+            { id: newId(), subject: '', grade: '' },
+        ],
         alStream: '',
         alSubjects: [
             { id: newId(), subject: '', grade: '' },
@@ -275,8 +281,8 @@ function defaultForm(): FormData {
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degreesBefore: [{ id: newId(), degree: '', university: '', year: '' }],
-        degreesAfter: [{ id: newId(), degree: '', university: '', year: '' }],
+        degreesBefore: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
+        degreesAfter: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -310,56 +316,6 @@ function defaultForm(): FormData {
 // ─── Education Constants ──────────────────────────────────────────────────────
 
 const OL_GRADES: OLGrade[] = ['A', 'B', 'C', 'S', 'F'];
-
-const OL_OPTIONAL_GROUPS: { group: string; subjects: string[] }[] = [
-    {
-        group: 'Aesthetic Studies',
-        subjects: [
-            'Art',
-            'Dancing – Sinhala',
-            'Dancing – Bharatha',
-            'Music – Oriental',
-            'Music – Western',
-            'Music – Carnatic',
-            'Drama & Theatre',
-        ],
-    },
-    {
-        group: 'Languages & Humanities',
-        subjects: [
-            'Geography',
-            'Civic Education',
-            'Entrepreneurship Studies',
-            'Second Language – Sinhala',
-            'Second Language – Tamil',
-            'Pali',
-            'Sanskrit',
-            'French',
-            'German',
-            'Hindi',
-            'Japanese',
-            'Arabic',
-            'Korean',
-            'Chinese',
-            'Russian',
-        ],
-    },
-    {
-        group: 'Technical Subjects',
-        subjects: [
-            'Business & Accounting Studies',
-            'ICT',
-            'Agriculture',
-            'Health & Physical Education',
-            'Home Economics',
-            'Practical & Technical Skills 1',
-            'Practical & Technical Skills 2',
-            'Practical & Technical Skills 3',
-            'Practical & Technical Skills 4',
-            'Practical & Technical Skills 5',
-        ],
-    },
-];
 
 const AL_STREAMS: { value: ALStream; label: string }[] = [
     { value: 'Science', label: 'Science Stream' },
@@ -534,7 +490,6 @@ export default function AddOfficerPage() {
 
     // Children rows
     const addChild = () => {
-        if (form.children.length >= 4) return;
         set('children', [...form.children, { id: newId(), name: '', birthday: '', status: '' }]);
     };
     const updateChild = (id: number, patch: Partial<ChildRow>) =>
@@ -662,17 +617,8 @@ export default function AddOfficerPage() {
         set('olMandatorySubjects', updated);
     };
 
-    const toggleOLOptional = (subject: string) => {
-        const exists = form.olOptionalSubjects.find((s) => s.subject === subject);
-        if (exists) {
-            set('olOptionalSubjects', form.olOptionalSubjects.filter((s) => s.subject !== subject));
-        } else {
-            set('olOptionalSubjects', [...form.olOptionalSubjects, { subject, grade: '' }]);
-        }
-    };
-
-    const updateOLOptionalGrade = (subject: string, grade: OLGrade) => {
-        set('olOptionalSubjects', form.olOptionalSubjects.map((s) => s.subject === subject ? { ...s, grade } : s));
+    const updateOLOptional = (id: number, patch: Partial<OLOptionalSubject>) => {
+        set('olOptionalSubjects', form.olOptionalSubjects.map((s) => s.id === id ? { ...s, ...patch } : s));
     };
 
     const updateALSubject = (id: number, patch: Partial<ALSubjectRow>) => {
@@ -695,7 +641,7 @@ export default function AddOfficerPage() {
 
     const addDegree = (section: 'degreesBefore' | 'degreesAfter') => {
         if (form[section].length >= 6) return;
-        set(section, [...form[section], { id: newId(), degree: '', university: '', year: '' }]);
+        set(section, [...form[section], { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }]);
     };
 
     const removeDegree = (section: 'degreesBefore' | 'degreesAfter', id: number) => {
@@ -1047,12 +993,7 @@ export default function AddOfficerPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                    {form.children.length < 4 && (
-                                        <AddRowBtn onClick={addChild} label="Add Child" />
-                                    )}
-                                    {form.children.length >= 4 && (
-                                        <p className="text-xs text-gray-400 mt-1">Maximum 4 children reached.</p>
-                                    )}
+                                    <AddRowBtn onClick={addChild} label="Add Child" />
                                 </div>
                                 ) : null}
                             </div>
@@ -1182,52 +1123,50 @@ export default function AddOfficerPage() {
 
                                     {/* Optional subjects */}
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Optional Subjects</p>
-                                    <div className="space-y-4">
-                                        {OL_OPTIONAL_GROUPS.map((group) => (
-                                            <div key={group.group} className="rounded-xl border border-violet-100 bg-white overflow-hidden">
-                                                <div className="px-4 py-2.5 bg-violet-50/70 border-b border-violet-100">
-                                                    <span className="text-xs font-bold text-violet-800 uppercase tracking-wide">{group.group}</span>
-                                                </div>
-                                                <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                    {group.subjects.map((subject) => {
-                                                        const selected = form.olOptionalSubjects.find((s) => s.subject === subject);
-                                                        return (
-                                                            <div key={subject} className={`rounded-lg border p-2.5 transition-colors ${selected ? 'border-violet-300 bg-violet-50' : 'border-gray-200 bg-gray-50/50'}`}>
-                                                                <label className="flex items-center gap-2 cursor-pointer mb-1.5">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={!!selected}
-                                                                        onChange={() => toggleOLOptional(subject)}
-                                                                        className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                                                                    />
-                                                                    <span className="text-xs font-medium text-gray-700">{subject}</span>
-                                                                </label>
-                                                                {selected && (
-                                                                    <div className="flex gap-1 mt-1 pl-6">
-                                                                        {OL_GRADES.map((g) => (
-                                                                            <button
-                                                                                key={g}
-                                                                                type="button"
-                                                                                onClick={() => updateOLOptionalGrade(subject, g)}
-                                                                                className={`h-7 w-7 rounded border text-xs font-bold transition-colors ${
-                                                                                    selected.grade === g
-                                                                                        ? g === 'F'
-                                                                                            ? 'bg-red-500 border-red-500 text-white'
-                                                                                            : 'bg-violet-600 border-violet-600 text-white'
-                                                                                        : 'bg-white border-gray-200 text-gray-500 hover:border-violet-300'
-                                                                                }`}
-                                                                            >
-                                                                                {g}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
+                                    <div className="overflow-x-auto rounded-xl border border-violet-100">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-violet-50 border-b border-violet-100">
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-8">#</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-56">Grade</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {form.olOptionalSubjects.map((row, idx) => (
+                                                    <tr key={row.id} className="border-b border-violet-50 last:border-0 odd:bg-white even:bg-violet-50/20">
+                                                        <td className="px-3 py-2 text-xs text-gray-400 font-semibold">{idx + 1}</td>
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={row.subject}
+                                                                onChange={(v) => updateOLOptional(row.id, { subject: v })}
+                                                                placeholder="Subject name"
+                                                            />
+                                                        </td>
+                                                        <td className="px-2 py-1.5">
+                                                            <div className="flex gap-1.5 flex-wrap">
+                                                                {OL_GRADES.map((g) => (
+                                                                    <button
+                                                                        key={g}
+                                                                        type="button"
+                                                                        onClick={() => updateOLOptional(row.id, { grade: g })}
+                                                                        className={`h-9 w-9 rounded-lg border text-xs font-bold transition-colors ${
+                                                                            row.grade === g
+                                                                                ? g === 'F'
+                                                                                    ? 'bg-red-500 border-red-500 text-white'
+                                                                                    : 'bg-violet-600 border-violet-600 text-white'
+                                                                                : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700'
+                                                                        }`}
+                                                                    >
+                                                                        {g}
+                                                                    </button>
+                                                                ))}
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        ))}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
 
@@ -1348,44 +1287,50 @@ export default function AddOfficerPage() {
                                 </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                                <div className="grid grid-cols-1 gap-5">
                                     {/* Before joining police */}
                                     <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications Before Joining Police</h4>
                                             <p className="text-xs text-violet-700 mt-0.5">Obtained prior to joining the Police Department</p>
                                         </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-sm">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Degree / Qualification</th>
-                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">University / Institute</th>
-                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Year</th>
-                                                        <th className="px-2 py-2.5 w-px whitespace-nowrap"><span className="sr-only">Actions</span></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {form.degreesBefore.map((row) => (
-                                                        <tr key={row.id} className="border-b border-gray-100 last:border-0">
-                                                            <td className="px-2 py-1.5"><GInput value={row.degree} onChange={(v) => updateDegree('degreesBefore', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.university} onChange={(v) => updateDegree('degreesBefore', row.id, { university: v })} placeholder="University / Institute" /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.year} onChange={(v) => updateDegree('degreesBefore', row.id, { year: v })} placeholder="YYYY" maxLength={4} /></td>
-                                                            <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
-                                                                {form.degreesBefore.length > 1 && (
-                                                                    <button type="button" onClick={() => removeDegree('degreesBefore', row.id)}
-                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold">
-                                                                        Remove
-                                                                    </button>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                        <div className="p-4 space-y-3">
+                                            {form.degreesBefore.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
+                                                        {form.degreesBefore.length > 1 && (
+                                                            <button type="button" onClick={() => removeDegree('degreesBefore', row.id)}
+                                                                className="h-7 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-2.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold">
+                                                                Remove
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        <div>
+                                                            <FieldLabel label="Degree / Qualification" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesBefore', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
+                                                        </div>
+                                                        <div>
+                                                            <FieldLabel label="University / Institute" />
+                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesBefore', row.id, { university: v })} placeholder="University or Institute name" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <div className="w-32">
+                                                            <FieldLabel label="From" />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesBefore', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                        <div className="w-32">
+                                                            <FieldLabel label="To" />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesBefore', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                         {form.degreesBefore.length < 6 && (
-                                            <div className="px-4 pb-3"><AddRowBtn onClick={() => addDegree('degreesBefore')} label="Add Qualification" /></div>
+                                            <div className="px-4 pb-4"><AddRowBtn onClick={() => addDegree('degreesBefore')} label="Add Qualification" /></div>
                                         )}
                                     </div>
 
@@ -1395,37 +1340,43 @@ export default function AddOfficerPage() {
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications After Joining Police (Sponsored)</h4>
                                             <p className="text-xs text-violet-700 mt-0.5">Sponsored degrees obtained after joining the Police Department</p>
                                         </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-sm">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Degree / Qualification</th>
-                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">University / Institute</th>
-                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Year</th>
-                                                        <th className="px-2 py-2.5 w-px whitespace-nowrap"><span className="sr-only">Actions</span></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {form.degreesAfter.map((row) => (
-                                                        <tr key={row.id} className="border-b border-gray-100 last:border-0">
-                                                            <td className="px-2 py-1.5"><GInput value={row.degree} onChange={(v) => updateDegree('degreesAfter', row.id, { degree: v })} placeholder="e.g. LLB" /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.university} onChange={(v) => updateDegree('degreesAfter', row.id, { university: v })} placeholder="University / Institute" /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.year} onChange={(v) => updateDegree('degreesAfter', row.id, { year: v })} placeholder="YYYY" maxLength={4} /></td>
-                                                            <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
-                                                                {form.degreesAfter.length > 1 && (
-                                                                    <button type="button" onClick={() => removeDegree('degreesAfter', row.id)}
-                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold">
-                                                                        Remove
-                                                                    </button>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                        <div className="p-4 space-y-3">
+                                            {form.degreesAfter.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
+                                                        {form.degreesAfter.length > 1 && (
+                                                            <button type="button" onClick={() => removeDegree('degreesAfter', row.id)}
+                                                                className="h-7 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-2.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold">
+                                                                Remove
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        <div>
+                                                            <FieldLabel label="Degree / Qualification" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesAfter', row.id, { degree: v })} placeholder="e.g. LLB" />
+                                                        </div>
+                                                        <div>
+                                                            <FieldLabel label="University / Institute" />
+                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <div className="w-32">
+                                                            <FieldLabel label="From" />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                        <div className="w-32">
+                                                            <FieldLabel label="To" />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                         {form.degreesAfter.length < 6 && (
-                                            <div className="px-4 pb-3"><AddRowBtn onClick={() => addDegree('degreesAfter')} label="Add Qualification" /></div>
+                                            <div className="px-4 pb-4"><AddRowBtn onClick={() => addDegree('degreesAfter')} label="Add Qualification" /></div>
                                         )}
                                     </div>
                                 </div>
