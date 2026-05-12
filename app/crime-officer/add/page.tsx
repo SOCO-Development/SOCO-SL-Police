@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Button from '@/components/buttons/Button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import Footer from '@/components/layout/Footer';
 import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import CustomSelect from '@/components/forms/CustomSelect';
@@ -108,6 +108,18 @@ interface DegreeRow {
     year: string;
 }
 
+type ToggleChoice = 'Yes' | 'No' | '';
+
+interface AssignmentRow {
+    id: number;
+    socoLab: string;
+    from: string;
+    to: string;
+    duration: string;
+    oic: string;
+    reason: string;
+}
+
 interface FormData {
     // Section 1
     socoLab: string;
@@ -156,19 +168,83 @@ interface FormData {
     heavyVehicleQualified: string;
     lightVehicleQualified: string;
     motorcycleQualified: string;
-    // Section 7
-    servedAdminUnit: string;
-    servedAdminUnitYesNo: string;
-    attachedUnit: string;
-    attachedUnitYesNo: string;
-    attachedDivision: string;
-    attachedDivisionYesNo: string;
-    branch: string;
-    branchYesNo: string;
+    // Section 8
+    transferDraft: AssignmentRow;
+    transferHistory: AssignmentRow[];
+    // Section 9
+    specialDutyDraft: AssignmentRow;
+    specialDutyHistory: AssignmentRow[];
+    // Section 10
+    orderlyRoomStatus: ToggleChoice;
+    orderlyRoomResult: string;
+    preliminaryInquiryStatus: ToggleChoice;
+    preliminaryInquiryResult: string;
+    disciplinaryInquiryStatus: ToggleChoice;
+    disciplinaryInquiryResult: string;
 }
 
 let rowSeed = 1;
 const newId = () => rowSeed++;
+
+function createAssignmentRow(): AssignmentRow {
+    return {
+        id: newId(),
+        socoLab: '',
+        from: '',
+        to: '',
+        duration: '',
+        oic: '',
+        reason: '',
+    };
+}
+
+function parseFormDate(value: string): Date | null {
+    if (!value) return null;
+    const parts = value.split('-');
+    if (parts.length !== 3) return null;
+
+    const numbers = parts.map(Number);
+    if (numbers.some(Number.isNaN)) return null;
+
+    if (parts[0].length === 4) {
+        const [year, month, day] = numbers;
+        return new Date(year, month - 1, day);
+    }
+
+    const [day, month, year] = numbers;
+    return new Date(year, month - 1, day);
+}
+
+function formatAssignmentDuration(from: string, to: string): string {
+    const fromDate = parseFormDate(from);
+    const toDate = parseFormDate(to);
+
+    if (!fromDate || !toDate || Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime()) || toDate < fromDate) {
+        return '';
+    }
+
+    let months =
+        (toDate.getFullYear() - fromDate.getFullYear()) * 12 +
+        (toDate.getMonth() - fromDate.getMonth());
+
+    if (toDate.getDate() < fromDate.getDate()) {
+        months -= 1;
+    }
+
+    if (months <= 0) {
+        const dayDiff = Math.max(0, Math.round((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)));
+        return `${dayDiff} Day${dayDiff === 1 ? '' : 's'}`;
+    }
+
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    const parts: string[] = [];
+
+    if (years > 0) parts.push(`${years} Year${years === 1 ? '' : 's'}`);
+    if (remainingMonths > 0) parts.push(`${remainingMonths} Month${remainingMonths === 1 ? '' : 's'}`);
+
+    return parts.join(' ');
+}
 
 function defaultForm(): FormData {
     return {
@@ -218,10 +294,16 @@ function defaultForm(): FormData {
         heavyVehicleQualified: '',
         lightVehicleQualified: '',
         motorcycleQualified: '',
-        servedAdminUnit: '', servedAdminUnitYesNo: 'No',
-        attachedUnit: '', attachedUnitYesNo: 'No',
-        attachedDivision: '', attachedDivisionYesNo: 'No',
-        branch: '', branchYesNo: 'No',
+        transferDraft: createAssignmentRow(),
+        transferHistory: [],
+        specialDutyDraft: createAssignmentRow(),
+        specialDutyHistory: [],
+        orderlyRoomStatus: '',
+        orderlyRoomResult: '',
+        preliminaryInquiryStatus: '',
+        preliminaryInquiryResult: '',
+        disciplinaryInquiryStatus: '',
+        disciplinaryInquiryResult: '',
     };
 }
 
@@ -286,6 +368,15 @@ const AL_STREAMS: { value: ALStream; label: string }[] = [
     { value: 'Technology', label: 'Technology Stream' },
 ];
 
+const ASSIGNMENT_REASON_OPTIONS = [
+    'Administrative Requirement',
+    'Operational Requirement',
+    'Temporary Attachment',
+    'Training / Course',
+    'Relief Duty',
+    'Other',
+].map((label) => ({ value: label, label }));
+
 // ─── Shared UI Components ─────────────────────────────────────────────────────
 
 function SectionHeader({ sectionNo, title, titleSi }: { sectionNo: number; title: string; titleSi?: string }) {
@@ -340,6 +431,27 @@ function GInput({
     );
 }
 
+function GTextarea({
+    value,
+    onChange,
+    placeholder,
+    className = '',
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    className?: string;
+}) {
+    return (
+        <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={`w-full min-h-[124px] rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 hover:border-gray-400 transition-colors resize-y ${className}`}
+        />
+    );
+}
+
 function YesNo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     const groupId = useId();
 
@@ -351,10 +463,10 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
                 const base = 'min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors';
                 const yesStyle = isSelected
                     ? 'bg-green-50 border-green-300 text-green-800 font-medium'
-                    : 'bg-green-50/30 border-green-100 text-green-400 hover:border-green-200 hover:text-green-500';
+                    : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600';
                 const noStyle = isSelected
                     ? 'bg-red-50 border-red-300 text-red-800 font-medium'
-                    : 'bg-red-50/30 border-red-100 text-red-400 hover:border-red-200 hover:text-red-500';
+                    : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600';
                 return (
                     <label key={opt} className={`${base} ${isYes ? yesStyle : noStyle}`}>
                         <input
@@ -496,6 +608,53 @@ export default function AddOfficerPage() {
         set(section, form[section].filter((r) => r.id !== id));
     };
 
+    const updateAssignmentDraft = (section: 'transfer' | 'specialDuty', patch: Partial<AssignmentRow>) => {
+        setForm((f) => {
+            const currentDraft = section === 'transfer' ? f.transferDraft : f.specialDutyDraft;
+            const nextDraft = { ...currentDraft, ...patch };
+
+            if (patch.from !== undefined || patch.to !== undefined) {
+                nextDraft.duration = formatAssignmentDuration(nextDraft.from, nextDraft.to);
+            }
+
+            return section === 'transfer'
+                ? { ...f, transferDraft: nextDraft }
+                : { ...f, specialDutyDraft: nextDraft };
+        });
+    };
+
+    const addAssignmentRecord = (section: 'transfer' | 'specialDuty') => {
+        setForm((f) => {
+            const draft = section === 'transfer' ? f.transferDraft : f.specialDutyDraft;
+            const duration = draft.duration || formatAssignmentDuration(draft.from, draft.to);
+            const isComplete = Boolean(draft.socoLab && draft.from && draft.to && draft.reason && duration);
+
+            if (!isComplete) return f;
+
+            const nextRow = { ...draft, id: newId(), duration };
+
+            return section === 'transfer'
+                ? {
+                      ...f,
+                      transferHistory: [...f.transferHistory, nextRow],
+                      transferDraft: createAssignmentRow(),
+                  }
+                : {
+                      ...f,
+                      specialDutyHistory: [...f.specialDutyHistory, nextRow],
+                      specialDutyDraft: createAssignmentRow(),
+                  };
+        });
+    };
+
+    const removeAssignmentRecord = (section: 'transfer' | 'specialDuty', id: number) => {
+        setForm((f) =>
+            section === 'transfer'
+                ? { ...f, transferHistory: f.transferHistory.filter((row) => row.id !== id) }
+                : { ...f, specialDutyHistory: f.specialDutyHistory.filter((row) => row.id !== id) },
+        );
+    };
+
     // ── Education handlers ────────────────────────────────────────────────────
 
     const updateOLMandatory = (index: number, grade: OLGrade) => {
@@ -550,6 +709,22 @@ export default function AddOfficerPage() {
         // Future: POST to API
         alert('Officer details saved successfully!');
     };
+
+    const canConfirmTransfer = Boolean(
+        form.transferDraft.socoLab &&
+        form.transferDraft.from &&
+        form.transferDraft.to &&
+        form.transferDraft.reason &&
+        form.transferDraft.duration,
+    );
+
+    const canConfirmSpecialDuty = Boolean(
+        form.specialDutyDraft.socoLab &&
+        form.specialDutyDraft.from &&
+        form.specialDutyDraft.to &&
+        form.specialDutyDraft.reason &&
+        form.specialDutyDraft.duration,
+    );
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -1257,7 +1432,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/85 via-white to-orange-50/70">
+                            <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
                                     sectionNo={5}
                                     title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
@@ -1382,7 +1557,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50/85 via-white to-sky-50/70">
+                            <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
                                 <SectionHeader
                                     sectionNo={6}
                                     title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
@@ -1503,7 +1678,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 via-white to-pink-50/70">
+                            <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
                                 <SectionHeader sectionNo={7} title="Driving License Details" />
 
                                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -1573,6 +1748,304 @@ export default function AddOfficerPage() {
                                                 <span className="text-sm font-semibold text-gray-800">Motor Cycle</span>
                                                 <YesNo value={form.motorcycleQualified} onChange={(v) => set('motorcycleQualified', v)} />
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
+                            <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
+                                <SectionHeader sectionNo={8} title="Transfer" titleSi="මාරු" />
+
+                                <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50/80 p-4 sm:p-5 shadow-sm">
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="SOCO LAB" si="SOCO සේවාස්ථානය" />
+                                            <CustomSelect
+                                                value={form.transferDraft.socoLab}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { socoLab: v })}
+                                                options={SOCO_LABS_OPTIONS}
+                                                placeholder="Select SOCO LAB"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="From" />
+                                            <DatePicker
+                                                value={form.transferDraft.from}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { from: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="To" />
+                                            <DatePicker
+                                                value={form.transferDraft.to}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { to: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="Duration" />
+                                            <GInput
+                                                value={form.transferDraft.duration}
+                                                onChange={() => undefined}
+                                                placeholder="e.g. 12 years"
+                                                readOnly
+                                            />
+                                        </div>
+
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="OIC, A/OIC" />
+                                            <GInput
+                                                value={form.transferDraft.oic}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { oic: v })}
+                                                placeholder="Officer in charge"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-6">
+                                            <FieldLabel label="Reason" si="හේතුව" />
+                                            <CustomSelect
+                                                value={form.transferDraft.reason}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { reason: v })}
+                                                options={ASSIGNMENT_REASON_OPTIONS}
+                                                placeholder="Select Reason"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3 flex items-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => addAssignmentRecord('transfer')}
+                                                disabled={!canConfirmTransfer}
+                                                className={`min-h-10 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                                                    canConfirmTransfer
+                                                        ? 'border-fuchsia-300 bg-fuchsia-200 text-fuchsia-800 hover:bg-fuchsia-300'
+                                                        : 'cursor-not-allowed border-fuchsia-100 bg-fuchsia-50 text-fuchsia-300'
+                                                }`}
+                                            >
+                                                Confirm
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 overflow-x-auto rounded-2xl border border-fuchsia-200 bg-white shadow-sm">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-fuchsia-100 bg-fuchsia-50/80">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">SOCO LAB</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">From</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">To</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Duration</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">OIC, A/OIC</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Reason</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {form.transferHistory.length > 0 ? (
+                                                form.transferHistory.map((row) => (
+                                                    <tr key={row.id} className="border-b border-fuchsia-50 last:border-0">
+                                                        <td className="px-4 py-3 text-gray-800">{row.socoLab}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.from}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.to}</td>
+                                                        <td className="px-4 py-3 font-medium text-gray-800">{row.duration}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.oic || '-'}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.reason}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeAssignmentRecord('transfer', row.id)}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-100"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                                                        No transfer records added yet.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
+                            <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
+                                <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
+
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-sm">
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="SOCO LAB" si="SOCO සේවාස්ථානය" />
+                                            <CustomSelect
+                                                value={form.specialDutyDraft.socoLab}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { socoLab: v })}
+                                                options={SOCO_LABS_OPTIONS}
+                                                placeholder="Select SOCO LAB"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="From" />
+                                            <DatePicker
+                                                value={form.specialDutyDraft.from}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { from: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="To" />
+                                            <DatePicker
+                                                value={form.specialDutyDraft.to}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { to: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="Duration" />
+                                            <GInput
+                                                value={form.specialDutyDraft.duration}
+                                                onChange={() => undefined}
+                                                placeholder="e.g. 12 years"
+                                                readOnly
+                                            />
+                                        </div>
+
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="OIC, A/OIC" />
+                                            <GInput
+                                                value={form.specialDutyDraft.oic}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { oic: v })}
+                                                placeholder="Officer in charge"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-6">
+                                            <FieldLabel label="Reason" si="හේතුව" />
+                                            <CustomSelect
+                                                value={form.specialDutyDraft.reason}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { reason: v })}
+                                                options={ASSIGNMENT_REASON_OPTIONS}
+                                                placeholder="Select Reason"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3 flex items-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => addAssignmentRecord('specialDuty')}
+                                                disabled={!canConfirmSpecialDuty}
+                                                className={`min-h-10 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                                                    canConfirmSpecialDuty
+                                                        ? 'border-amber-300 bg-amber-200 text-amber-800 hover:bg-amber-300'
+                                                        : 'cursor-not-allowed border-amber-100 bg-amber-50 text-amber-300'
+                                                }`}
+                                            >
+                                                Confirm
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 overflow-x-auto rounded-2xl border border-amber-200 bg-white shadow-sm">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-amber-100 bg-amber-50/80">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">SOCO LAB</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">From</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">To</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Duration</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">OIC, A/OIC</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Reason</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {form.specialDutyHistory.length > 0 ? (
+                                                form.specialDutyHistory.map((row) => (
+                                                    <tr key={row.id} className="border-b border-amber-50 last:border-0">
+                                                        <td className="px-4 py-3 text-gray-800">{row.socoLab}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.from}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.to}</td>
+                                                        <td className="px-4 py-3 font-medium text-gray-800">{row.duration}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.oic || '-'}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.reason}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeAssignmentRecord('specialDuty', row.id)}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-100"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                                                        No special duty records added yet.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
+                            <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
+                                <SectionHeader sectionNo={10} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                                <p className="text-sm text-emerald-900/80 mb-4">
+                                    Record current inquiry status and any relevant findings for each disciplinary category.
+                                </p>
+
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                                    <div className="rounded-xl border border-emerald-100 bg-white shadow-sm p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Orderly Room</h4>
+                                            <YesNo value={form.orderlyRoomStatus} onChange={(v) => set('orderlyRoomStatus', v as ToggleChoice)} />
+                                        </div>
+                                        <div>
+                                            <FieldLabel label="Result / විස්තර" />
+                                            <GTextarea
+                                                value={form.orderlyRoomResult}
+                                                onChange={(v) => set('orderlyRoomResult', v)}
+                                                placeholder="Enter orderly room result or remarks"
+                                                className="min-h-[140px]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-emerald-100 bg-white shadow-sm p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Preliminary Inquiry</h4>
+                                            <YesNo value={form.preliminaryInquiryStatus} onChange={(v) => set('preliminaryInquiryStatus', v as ToggleChoice)} />
+                                        </div>
+                                        <div>
+                                            <FieldLabel label="Result / විස්තර" />
+                                            <GTextarea
+                                                value={form.preliminaryInquiryResult}
+                                                onChange={(v) => set('preliminaryInquiryResult', v)}
+                                                placeholder="Enter preliminary inquiry result or remarks"
+                                                className="min-h-[140px]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-emerald-100 bg-white shadow-sm p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Disciplinary Inquiry</h4>
+                                            <YesNo value={form.disciplinaryInquiryStatus} onChange={(v) => set('disciplinaryInquiryStatus', v as ToggleChoice)} />
+                                        </div>
+                                        <div>
+                                            <FieldLabel label="Result / විස්තර" />
+                                            <GTextarea
+                                                value={form.disciplinaryInquiryResult}
+                                                onChange={(v) => set('disciplinaryInquiryResult', v)}
+                                                placeholder="Enter disciplinary inquiry result or remarks"
+                                                className="min-h-[140px]"
+                                            />
                                         </div>
                                     </div>
                                 </div>
