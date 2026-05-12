@@ -4,8 +4,6 @@ import {
   crimeSceneUsesNewVisitFields,
   crimeSceneUsesRevisitFields,
   emptyCrimeSceneCourtDetails,
-  emptyProductionSentToCourtRow,
-  emptySentToAnalysisRow,
   type CrimeSceneFormData,
   type CrimeSceneOfficer,
   type CrimeSceneSpecialistTeam,
@@ -1372,6 +1370,19 @@ export default function CreateCrimeSceneForm({
                         onChange={(next) =>
                           setForm((prev) => {
                             const sel = new Set(next);
+                            const prevAnalysis = prev.courtDetails?.sentToAnalysisRows ?? [];
+                            const prevCourt = prev.courtDetails?.productionSentToCourtRows ?? [];
+
+                            // Keep existing rows for still-selected types, auto-add for new ones
+                            const newAnalysisRows = next.map((prodRef) => {
+                              const existing = prevAnalysis.find((r) => r.productionRef === prodRef);
+                              return existing ?? { productionRef: prodRef, sentToAnalysis: 'No' as const, institution: '', institutionOtherDetail: '', date: '', refNo: '' };
+                            });
+                            const newCourtRows = next.map((prodRef) => {
+                              const existing = prevCourt.find((r) => r.productionRef === prodRef);
+                              return existing ?? { productionRef: prodRef, sentToCourt: 'No' as const, date: '', courtName: '', courtCaseNo: '' };
+                            });
+
                             return {
                               ...prev,
                               courtDetails: {
@@ -1381,12 +1392,8 @@ export default function CreateCrimeSceneForm({
                                 ...(!next.includes(PRODUCTION_PR_OTHERS_VALUE)
                                   ? { productionPROtherDetail: '' }
                                   : {}),
-                                productionSentToCourtRows: (
-                                  prev.courtDetails?.productionSentToCourtRows ?? []
-                                ).filter((row) => sel.has(row.productionRef)),
-                                sentToAnalysisRows: (prev.courtDetails?.sentToAnalysisRows ?? []).filter(
-                                  (row) => sel.has(row.productionRef),
-                                ),
+                                sentToAnalysisRows: newAnalysisRows,
+                                productionSentToCourtRows: newCourtRows,
                               },
                             };
                           })
@@ -1443,7 +1450,7 @@ export default function CreateCrimeSceneForm({
                 </h4>
                 {!(form.courtDetails?.productionPRTypes ?? []).length ? (
                   <p className="text-xs text-gray-500 mb-2">
-                    Select production types under Production Availability first, then add analysis rows as needed.
+                    Select production types above — rows will be added automatically for each selected type.
                   </p>
                 ) : null}
                 <div className="space-y-4">
@@ -1653,26 +1660,6 @@ export default function CreateCrimeSceneForm({
                     </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      courtDetails: {
-                        ...emptyCrimeSceneCourtDetails(),
-                        ...prev.courtDetails,
-                        sentToAnalysisRows: [
-                          ...(prev.courtDetails?.sentToAnalysisRows ?? []),
-                          emptySentToAnalysisRow(),
-                        ],
-                      },
-                    }))
-                  }
-                  disabled={!(form.courtDetails?.productionPRTypes ?? []).length}
-                  className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  <span className="text-base leading-none">+</span> Add analysis institute row
-                </button>
               </div>
 
               {/* ── Production sent to court (repeatable) ── */}
@@ -1683,8 +1670,7 @@ export default function CreateCrimeSceneForm({
                 </h4>
                 {!(form.courtDetails?.productionPRTypes ?? []).length ? (
                   <p className="text-xs text-gray-500 mb-2">
-                    Select production types under Production Availability first, then add a row for each item sent to
-                    court.
+                    Select production types above — rows will be added automatically for each selected type.
                   </p>
                 ) : null}
                 <div className="space-y-4">
@@ -1860,26 +1846,6 @@ export default function CreateCrimeSceneForm({
                     </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      courtDetails: {
-                        ...emptyCrimeSceneCourtDetails(),
-                        ...prev.courtDetails,
-                        productionSentToCourtRows: [
-                          ...(prev.courtDetails?.productionSentToCourtRows ?? []),
-                          emptyProductionSentToCourtRow(),
-                        ],
-                      },
-                    }))
-                  }
-                  disabled={!(form.courtDetails?.productionPRTypes ?? []).length}
-                  className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  <span className="text-base leading-none">+</span> Add production sent to court
-                </button>
               </div>
             </div>
           </div>
