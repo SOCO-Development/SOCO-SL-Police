@@ -9,7 +9,7 @@ import {
   type CrimeSceneSpecialistTeam,
   type CrimeSceneVisitType,
 } from '@/types/crimeScene';
-import type { CrimeVisit } from '@/types/crimeVisit';
+import type { CrimeVisit, DateTimeEntry } from '@/types/crimeVisit';
 import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import CustomSelect from '@/components/forms/CustomSelect';
@@ -251,6 +251,8 @@ export default function CreateCrimeSceneForm({
   const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
   const [existingCvrs, setExistingCvrs] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '' });
+  const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
@@ -284,6 +286,34 @@ export default function CreateCrimeSceneForm({
       value: visit.id,
       label: `${visit.referenceNo ?? visit.id} - ${formatDateTimeDDMMYYYY(visit.createdAt)}`,
     }));
+
+  // Derive the currently selected visit object
+  const selectedVisit = allVisits.find((v) => v.id === form.visitId) ?? null;
+
+  // When visit selection changes, sync the in-time state from the visit record
+  useEffect(() => {
+    if (!selectedVisit) {
+      setVisitInTime({ date: '', time: '' });
+      setVisitInTimeSaved(false);
+      return;
+    }
+    const existingIn = selectedVisit.sectionA?.in;
+    if (existingIn?.date || existingIn?.time) {
+      setVisitInTime({ date: existingIn.date ?? '', time: existingIn.time ?? '' });
+      setVisitInTimeSaved(true);
+    } else {
+      setVisitInTime({ date: '', time: '' });
+      setVisitInTimeSaved(false);
+    }
+  }, [form.visitId, selectedVisit?.id]);
+
+  const handleSaveVisitInTime = () => {
+    if (!selectedVisit) return;
+    crimeVisitService.updateVisitInOut(selectedVisit.id, { in: visitInTime });
+    setVisitInTimeSaved(true);
+    // Refresh visits list so the saved value is reflected
+    setAllVisits(crimeVisitService.getAll());
+  };
 
   const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr, label: cvr }));
   const sceneDuration = formatDuration(form.sceneInTime, form.sceneOutTime);
@@ -492,6 +522,102 @@ export default function CreateCrimeSceneForm({
               : 'Create Crime Scene'}
           </h3>
 
+          {/* ── Visit Times Panel ── */}
+          {!isEditMode && (
+            <div className="p-4 sm:p-5 rounded-xl border border-teal-200 bg-teal-50/60">
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
+                Visit Times
+              </h4>
+              
+              {/* Visit ID with Date selector */}
+              <div className="mb-5">
+                <FieldGroup label="Visit ID with Date">
+                  <CustomSelect
+                    value={form.visitId}
+                    onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
+                    options={visitOptions}
+                    placeholder={visitOptions.length ? 'Select initiated visit' : 'No visits found'}
+                  />
+                </FieldGroup>
+              </div>
+
+              {!form.visitId ? (
+                <p className="text-xs text-gray-500">Select a visit above to manage visit times.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* OUT time — always read-only, sourced from the visit record */}
+                  <div className="rounded-lg border border-teal-100 bg-white p-3 space-y-2">
+                    <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">Out Time (from visit)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <FieldGroup label="Date">
+                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                          {selectedVisit?.sectionA?.out?.date || '—'}
+                        </div>
+                      </FieldGroup>
+                      <FieldGroup label="Time">
+                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                          {selectedVisit?.sectionA?.out?.time || '—'}
+                        </div>
+                      </FieldGroup>
+                    </div>
+                  </div>
+
+                  {/* IN time — editable if not yet set, read-only if already saved */}
+                  <div className="rounded-lg border border-teal-100 bg-white p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">In Time</p>
+                      {visitInTimeSaved && (
+                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 uppercase tracking-wide">
+                          Saved
+                        </span>
+                      )}
+                    </div>
+                    {visitInTimeSaved ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <FieldGroup label="Date">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitInTime.date || '—'}
+                          </div>
+                        </FieldGroup>
+                        <FieldGroup label="Time">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitInTime.time || '—'}
+                          </div>
+                        </FieldGroup>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <FieldGroup label="Date">
+                            <DatePicker
+                              value={visitInTime.date ?? ''}
+                              onChange={(v) => setVisitInTime((t) => ({ ...t, date: v }))}
+                            />
+                          </FieldGroup>
+                          <FieldGroup label="Time">
+                            <TimePicker
+                              value={visitInTime.time ?? ''}
+                              onChange={(v) => setVisitInTime((t) => ({ ...t, time: v }))}
+                            />
+                          </FieldGroup>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleSaveVisitInTime}
+                          disabled={!visitInTime.date || !visitInTime.time}
+                          className="mt-1 text-sm font-semibold text-teal-700 hover:text-teal-900 border border-teal-300 bg-teal-50 hover:bg-teal-100 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                        >
+                          Save In Time
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Scene Basics ── */}
           {isEditMode ? (
             <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
@@ -518,15 +644,6 @@ export default function CreateCrimeSceneForm({
                 Scene Basics
               </h4>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <FieldGroup label="Visit ID with Date">
-                  <CustomSelect
-                    value={form.visitId}
-                    onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
-                    options={visitOptions}
-                    placeholder={visitOptions.length ? 'Select initiated visit' : 'No visits found'}
-                  />
-                </FieldGroup>
-
                 <FieldGroup label="Visit Type">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                     {VISIT_TYPES.map((option) => (
