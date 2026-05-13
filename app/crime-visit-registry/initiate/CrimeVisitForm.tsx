@@ -866,30 +866,16 @@ export default function CrimeVisitForm({
           <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65 space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
-              OUT & IN Details
+              OUT Details
             </h4>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 lg:items-start">
-              <DateTimeRow
-                label="OUT"
-                value={sA.out ?? emptyDatetime()}
-                isReadOnly={locked}
-                onChange={(v) => updateA("out", v)}
-                layout="stack"
-              />
-              <div className="min-w-0 border-t border-dashed border-gray-300 pt-6 mt-2 lg:border-t-0 lg:pt-0 lg:mt-0 relative">
-                <span className="lg:hidden absolute left-0 -top-2.5 text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-indigo-50/65 pr-2">
-                  Return Details
-                </span>
-                <DateTimeRow
-                  label="IN"
-                  value={sA.in ?? emptyDatetime()}
-                  isReadOnly={ro}
-                  onChange={(v) => updateA("in", v)}
-                  layout="stack"
-                />
-              </div>
-            </div>
+            <DateTimeRow
+              label="OUT"
+              value={sA.out ?? emptyDatetime()}
+              isReadOnly={locked}
+              onChange={(v) => updateA("out", v)}
+              layout="stack"
+            />
           </div>
 
           <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/80 space-y-4">
@@ -990,14 +976,9 @@ export default function CrimeVisitForm({
             >
               Cancel
             </Button>
-            {!appendMode && (
-              <Button variant="success" type="button" onClick={handleSaveDraft}>
-                Save as Draft
-              </Button>
-            )}
-            {onSubmit && appendMode && (
+            {onSubmit && (
               <Button variant="success" type="button" onClick={() => onSubmit(formData)}>
-                Submit
+                Submit Visit
               </Button>
             )}
           </div>

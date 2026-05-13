@@ -20,16 +20,6 @@ export default function InitiateCrimeVisitPage() {
         setTimeout(() => setToast(null), 3500);
     }
 
-    function handleSaveDraft(data: CrimeVisitFormData) {
-        try {
-            const created = crimeVisitService.createDraft(data);
-            showToast(`Draft saved — ${created.referenceNo}`);
-            setTimeout(() => router.push('/crime-visit-registry/drafts'), 1500);
-        } catch {
-            showToast('Failed to save draft.', 'error');
-        }
-    }
-
     function handleSubmit(data: CrimeVisitFormData) {
         try {
             const created = crimeVisitService.createSubmitted(data);
@@ -59,13 +49,12 @@ export default function InitiateCrimeVisitPage() {
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900">Initiate Visit</h2>
                                 <p className="text-sm text-gray-600 mt-0.5">
-                                    Fill in the required details. Save as Draft anytime, or Submit when complete.
+                                    Fill in the required details and submit. After returning from the scene, create a Crime Scene record linked to this visit.
                                 </p>
                             </div>
                         </div>
 
                         <CrimeVisitForm
-                            onSaveDraft={handleSaveDraft}
                             onSubmit={handleSubmit}
                             onCancel={() => router.push('/crime-visit-registry')}
                         />

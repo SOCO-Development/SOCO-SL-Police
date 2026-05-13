@@ -165,9 +165,31 @@ export const crimeVisitService = {
         return visit;
     },
 
-    /** Delete by id (drafts only in UI, but service allows any) */
-    delete(id: string): boolean {
+    /**
+     * Save the IN time (and optionally OUT time) back to a visit record.
+     * Works on both DRAFT and SUBMITTED visits.
+     */
+    updateVisitInOut(id: string, patch: { in?: import('@/types/crimeVisit').DateTimeEntry; out?: import('@/types/crimeVisit').DateTimeEntry }): CrimeVisit | null {
         const all = loadAll();
+        const idx = all.findIndex((v) => v.id === id);
+        if (idx === -1) return null;
+        const visit = all[idx];
+        const updated: CrimeVisit = {
+            ...visit,
+            sectionA: {
+                ...visit.sectionA,
+                ...(patch.in !== undefined ? { in: patch.in } : {}),
+                ...(patch.out !== undefined ? { out: patch.out } : {}),
+            },
+            updatedAt: now(),
+        };
+        all[idx] = updated;
+        saveAll(all);
+        return updated;
+    },
+
+    /** Delete by id (drafts only in UI, but service allows any) */
+    delete(id: string): boolean {        const all = loadAll();
         const next = all.filter((v) => v.id !== id);
         if (next.length === all.length) return false;
         saveAll(next);
