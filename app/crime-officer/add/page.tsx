@@ -120,6 +120,7 @@ interface AssignmentRow {
     duration: string;
     oic: string;
     reason: string;
+    reasonOther: string;
 }
 
 interface FormData {
@@ -165,7 +166,6 @@ interface FormData {
     foreignAfterCourses: CourseAfterRow[];
     // Section 7
     drivingLicenseNo: string;
-    /** Vehicle categories (Annex 13) — multi-select. */
     vehicleCategories: string[];
     heavyVehicleQualified: string;
     lightVehicleQualified: string;
@@ -197,6 +197,7 @@ function createAssignmentRow(): AssignmentRow {
         duration: '',
         oic: '',
         reason: '',
+        reasonOther: '',
     };
 }
 
@@ -582,7 +583,10 @@ export default function AddOfficerPage() {
         setForm((f) => {
             const draft = section === 'transfer' ? f.transferDraft : f.specialDutyDraft;
             const duration = draft.duration || formatAssignmentDuration(draft.from, draft.to);
-            const isComplete = Boolean(draft.socoLab && draft.from && draft.to && draft.reason && duration);
+            const reasonValid = draft.reason === 'Other'
+                ? Boolean(draft.reasonOther.trim())
+                : Boolean(draft.reason);
+            const isComplete = Boolean(draft.socoLab && draft.from && draft.to && reasonValid && duration);
 
             if (!isComplete) return f;
 
@@ -660,16 +664,18 @@ export default function AddOfficerPage() {
         form.transferDraft.socoLab &&
         form.transferDraft.from &&
         form.transferDraft.to &&
+        form.transferDraft.duration &&
         form.transferDraft.reason &&
-        form.transferDraft.duration,
+        (form.transferDraft.reason !== 'Other' || form.transferDraft.reasonOther.trim()),
     );
 
     const canConfirmSpecialDuty = Boolean(
         form.specialDutyDraft.socoLab &&
         form.specialDutyDraft.from &&
         form.specialDutyDraft.to &&
+        form.specialDutyDraft.duration &&
         form.specialDutyDraft.reason &&
-        form.specialDutyDraft.duration,
+        (form.specialDutyDraft.reason !== 'Other' || form.specialDutyDraft.reasonOther.trim()),
     );
 
     return (
@@ -1738,7 +1744,7 @@ export default function AddOfficerPage() {
                                             <GInput
                                                 value={form.transferDraft.duration}
                                                 onChange={() => undefined}
-                                                placeholder="e.g. 12 years"
+                                                placeholder="Auto-calculated"
                                                 readOnly
                                             />
                                         </div>
@@ -1751,15 +1757,34 @@ export default function AddOfficerPage() {
                                                 placeholder="Officer in charge"
                                             />
                                         </div>
-                                        <div className="lg:col-span-6">
-                                            <FieldLabel label="Reason" si="හේතුව" />
-                                            <CustomSelect
-                                                value={form.transferDraft.reason}
-                                                onChange={(v) => updateAssignmentDraft('transfer', { reason: v })}
-                                                options={ASSIGNMENT_REASON_OPTIONS}
-                                                placeholder="Select Reason"
-                                            />
+
+                                        {/* ── Reason + Other text box ── */}
+                                        <div className="lg:col-span-6 space-y-2">
+                                            <div>
+                                                <FieldLabel label="Reason" si="හේතුව" />
+                                                <CustomSelect
+                                                    value={form.transferDraft.reason}
+                                                    onChange={(v) =>
+                                                        updateAssignmentDraft('transfer', { reason: v, reasonOther: '' })
+                                                    }
+                                                    options={ASSIGNMENT_REASON_OPTIONS}
+                                                    placeholder="Select Reason"
+                                                />
+                                            </div>
+                                            {form.transferDraft.reason === 'Other' && (
+                                                <div>
+                                                    <FieldLabel label="Specify Reason" si="හේතුව සඳහන් කරන්න" />
+                                                    <GInput
+                                                        value={form.transferDraft.reasonOther}
+                                                        onChange={(v) =>
+                                                            updateAssignmentDraft('transfer', { reasonOther: v })
+                                                        }
+                                                        placeholder="Enter specific reason"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
+
                                         <div className="lg:col-span-3 flex items-end">
                                             <button
                                                 type="button"
@@ -1799,7 +1824,11 @@ export default function AddOfficerPage() {
                                                         <td className="px-4 py-3 text-gray-700">{row.to}</td>
                                                         <td className="px-4 py-3 font-medium text-gray-800">{row.duration}</td>
                                                         <td className="px-4 py-3 text-gray-700">{row.oic || '-'}</td>
-                                                        <td className="px-4 py-3 text-gray-700">{row.reason}</td>
+                                                        <td className="px-4 py-3 text-gray-700">
+                                                            {row.reason === 'Other' && row.reasonOther
+                                                                ? `Other: ${row.reasonOther}`
+                                                                : row.reason}
+                                                        </td>
                                                         <td className="px-4 py-3 text-right">
                                                             <button
                                                                 type="button"
@@ -1858,7 +1887,7 @@ export default function AddOfficerPage() {
                                             <GInput
                                                 value={form.specialDutyDraft.duration}
                                                 onChange={() => undefined}
-                                                placeholder="e.g. 12 years"
+                                                placeholder="Auto-calculated"
                                                 readOnly
                                             />
                                         </div>
@@ -1871,15 +1900,34 @@ export default function AddOfficerPage() {
                                                 placeholder="Officer in charge"
                                             />
                                         </div>
-                                        <div className="lg:col-span-6">
-                                            <FieldLabel label="Reason" si="හේතුව" />
-                                            <CustomSelect
-                                                value={form.specialDutyDraft.reason}
-                                                onChange={(v) => updateAssignmentDraft('specialDuty', { reason: v })}
-                                                options={ASSIGNMENT_REASON_OPTIONS}
-                                                placeholder="Select Reason"
-                                            />
+
+                                        {/* ── Reason + Other text box ── */}
+                                        <div className="lg:col-span-6 space-y-2">
+                                            <div>
+                                                <FieldLabel label="Reason" si="හේතුව" />
+                                                <CustomSelect
+                                                    value={form.specialDutyDraft.reason}
+                                                    onChange={(v) =>
+                                                        updateAssignmentDraft('specialDuty', { reason: v, reasonOther: '' })
+                                                    }
+                                                    options={ASSIGNMENT_REASON_OPTIONS}
+                                                    placeholder="Select Reason"
+                                                />
+                                            </div>
+                                            {form.specialDutyDraft.reason === 'Other' && (
+                                                <div>
+                                                    <FieldLabel label="Specify Reason" si="හේතුව සඳහන් කරන්න" />
+                                                    <GInput
+                                                        value={form.specialDutyDraft.reasonOther}
+                                                        onChange={(v) =>
+                                                            updateAssignmentDraft('specialDuty', { reasonOther: v })
+                                                        }
+                                                        placeholder="Enter specific reason"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
+
                                         <div className="lg:col-span-3 flex items-end">
                                             <button
                                                 type="button"
@@ -1919,7 +1967,11 @@ export default function AddOfficerPage() {
                                                         <td className="px-4 py-3 text-gray-700">{row.to}</td>
                                                         <td className="px-4 py-3 font-medium text-gray-800">{row.duration}</td>
                                                         <td className="px-4 py-3 text-gray-700">{row.oic || '-'}</td>
-                                                        <td className="px-4 py-3 text-gray-700">{row.reason}</td>
+                                                        <td className="px-4 py-3 text-gray-700">
+                                                            {row.reason === 'Other' && row.reasonOther
+                                                                ? `Other: ${row.reasonOther}`
+                                                                : row.reason}
+                                                        </td>
                                                         <td className="px-4 py-3 text-right">
                                                             <button
                                                                 type="button"
@@ -2004,7 +2056,7 @@ export default function AddOfficerPage() {
 
                             </div>
 
-                            {/* ─── Action Bar (matches Initiate Crime Visit) ───────────────── */}
+                            {/* ─── Action Bar ──────────────────────────────────────────────── */}
                             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
                                 <div />
                                 <div className="flex items-center gap-2">
