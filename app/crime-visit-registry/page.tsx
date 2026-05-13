@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FeatureCard from '@/components/cards/FeatureCard';
-import { Clipboard, FileText, List, MapPin } from 'phosphor-react';
+import { Clipboard, FileText, MapPin } from 'phosphor-react';
 import { CheckCircle, FileEdit, ListChecks, Scale, UserSearch } from 'lucide-react';
 
 export default function CrimeVisitRegistryPage() {
@@ -22,14 +22,6 @@ export default function CrimeVisitRegistryPage() {
             description: 'Start a new scene-of-crime visit record and assign officers.',
             icon: <Clipboard className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,
             href: '/crime-visit-registry/initiate',
-        },
-
-        {
-            title: 'Crime Visits',
-            subtitle: 'අපරාධ ස්ථාන නිරීක්ෂණ ලැයිස්තුව',
-            description: 'Browse and manage all completed crime visit entries.',
-            icon: <List className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
-            href: '/crime-visit-registry/crime-visits',
         },
         {
             title: 'Create Crime Scene',
