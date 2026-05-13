@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import MultiSelect from '@/components/forms/MultiSelect';
@@ -48,6 +49,85 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
           : 'bg-white hover:border-gray-400'
       } ${className}`}
     />
+  );
+}
+
+// ─── Attachment helper ────────────────────────────────────────────────────────
+
+interface AnalysisAttachmentProps {
+  index: number;
+  row: import('@/types/crimeScene').SentToAnalysisRow;
+  readOnly: boolean;
+  onUpdate: (patch: Partial<import('@/types/crimeScene').SentToAnalysisRow>) => void;
+}
+
+function AnalysisAttachment({ index, row, readOnly, onUpdate }: AnalysisAttachmentProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      onUpdate({ attachmentFileName: file.name, attachmentDataUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemove = () => {
+    onUpdate({ attachmentFileName: '', attachmentDataUrl: '' });
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
+      <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Attachment</p>
+      {row.attachmentFileName ? (
+        <div className="flex items-center gap-3 flex-wrap">
+          {row.attachmentDataUrl ? (
+            <a
+              href={row.attachmentDataUrl}
+              download={row.attachmentFileName}
+              className="text-sm text-blue-700 font-medium hover:underline truncate max-w-xs"
+            >
+              {row.attachmentFileName}
+            </a>
+          ) : (
+            <span className="text-sm text-gray-700 truncate max-w-xs">{row.attachmentFileName}</span>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="text-xs text-red-600 hover:text-red-800 font-semibold border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg px-2.5 py-1 transition-colors"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      ) : readOnly ? (
+        <p className="text-xs text-gray-400 italic">No attachment</p>
+      ) : (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="text-sm font-semibold text-sky-700 border border-sky-200 bg-sky-50 hover:bg-sky-100 hover:border-sky-300 rounded-lg px-3 py-2 transition-colors"
+          >
+            Upload file
+          </button>
+          <span className="text-xs text-gray-400">PDF, image, or document</span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.bmp,.webp"
+            className="hidden"
+            onChange={handleFile}
+            aria-label={`Attachment for production ${index + 1}`}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -291,69 +371,182 @@ export default function CourtProductionDetailsEditor({
                 </FieldGroup>
               </div>
               {row.sentToAnalysis === 'Yes' ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
-                  <FieldGroup label="Institution" className="min-w-0">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <div className="min-w-0 flex-1">
-                        <CustomSelect
-                          value={row.institution ?? ''}
-                          onChange={(value) => {
-                            const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
-                            rows[index] = {
-                              ...rows[index],
-                              institution: value,
-                              institutionOtherDetail: analysisInstitutionIsOthers(value)
-                                ? rows[index].institutionOtherDetail
-                                : '',
-                            };
-                            patch({ sentToAnalysisRows: rows });
-                          }}
-                          options={ANALYSIS_INSTITUTION_OPTIONS}
-                          placeholder="Select institute"
-                          searchable
-                          searchPlaceholder="Search…"
-                          disabled={readOnly}
-                        />
+                <div className="space-y-3">
+                  {/* Institution / Date / Ref */}
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
+                    <FieldGroup label="Institution" className="min-w-0">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="min-w-0 flex-1">
+                          <CustomSelect
+                            value={row.institution ?? ''}
+                            onChange={(value) => {
+                              const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                              rows[index] = {
+                                ...rows[index],
+                                institution: value,
+                                institutionOtherDetail: analysisInstitutionIsOthers(value)
+                                  ? rows[index].institutionOtherDetail
+                                  : '',
+                              };
+                              patch({ sentToAnalysisRows: rows });
+                            }}
+                            options={ANALYSIS_INSTITUTION_OPTIONS}
+                            placeholder="Select institute"
+                            searchable
+                            searchPlaceholder="Search…"
+                            disabled={readOnly}
+                          />
+                        </div>
+                        {analysisInstitutionIsOthers(row.institution) ? (
+                          <TextInput
+                            className="flex-1 min-w-0"
+                            value={row.institutionOtherDetail ?? ''}
+                            readOnly={readOnly}
+                            onChange={(e) => {
+                              const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                              rows[index] = { ...rows[index], institutionOtherDetail: e.target.value };
+                              patch({ sentToAnalysisRows: rows });
+                            }}
+                            placeholder="Specify institute"
+                            aria-label="Institution (other)"
+                          />
+                        ) : null}
                       </div>
-                      {analysisInstitutionIsOthers(row.institution) ? (
-                        <TextInput
-                          className="flex-1 min-w-0"
-                          value={row.institutionOtherDetail ?? ''}
-                          readOnly={readOnly}
-                          onChange={(e) => {
-                            const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
-                            rows[index] = { ...rows[index], institutionOtherDetail: e.target.value };
-                            patch({ sentToAnalysisRows: rows });
-                          }}
-                          placeholder="Specify institute"
-                          aria-label="Institution (other)"
-                        />
-                      ) : null}
+                    </FieldGroup>
+                    <FieldGroup label="Date (DD/MM/YY)">
+                      <DatePicker
+                        value={row.date ?? ''}
+                        onChange={(value) => {
+                          const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                          rows[index] = { ...rows[index], date: value };
+                          patch({ sentToAnalysisRows: rows });
+                        }}
+                        disabled={readOnly}
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Ref. no.">
+                      <TextInput
+                        value={row.refNo ?? ''}
+                        readOnly={readOnly}
+                        onChange={(e) => {
+                          const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                          rows[index] = { ...rows[index], refNo: e.target.value };
+                          patch({ sentToAnalysisRows: rows });
+                        }}
+                        placeholder="Reference number"
+                      />
+                    </FieldGroup>
+                  </div>
+
+                  {/* Result Received */}
+                  <div className="rounded-lg border border-sky-100 bg-sky-50/40 p-3 space-y-3">
+                    <p className="text-xs font-bold text-sky-800 uppercase tracking-wide">Result Received</p>
+                    <div className="flex flex-wrap gap-3">
+                      {(['Positive', 'Negative'] as const).map((opt) => {
+                        const isSelected = (row.resultReceived ?? '') === opt;
+                        return (
+                          <label
+                            key={opt}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold cursor-pointer transition-colors ${
+                              readOnly ? 'cursor-default' : ''
+                            } ${
+                              isSelected
+                                ? opt === 'Positive'
+                                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                                  : 'bg-red-500 border-red-500 text-white'
+                                : 'bg-white border-gray-200 text-gray-600 hover:border-sky-300'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`result-received-${index}`}
+                              checked={isSelected}
+                              disabled={readOnly}
+                              onChange={() => {
+                                const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                                rows[index] = {
+                                  ...rows[index],
+                                  resultReceived: opt,
+                                  ...(opt === 'Positive'
+                                    ? { resultNegativeReason: '', resultNegativeOtherDetail: '' }
+                                    : {}),
+                                };
+                                patch({ sentToAnalysisRows: rows });
+                              }}
+                              className="sr-only"
+                            />
+                            {opt}
+                          </label>
+                        );
+                      })}
                     </div>
-                  </FieldGroup>
-                  <FieldGroup label="Date (DD/MM/YY)">
-                    <DatePicker
-                      value={row.date ?? ''}
-                      onChange={(value) => {
-                        const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
-                        rows[index] = { ...rows[index], date: value };
-                        patch({ sentToAnalysisRows: rows });
-                      }}
-                      disabled={readOnly}
-                    />
-                  </FieldGroup>
-                  <FieldGroup label="Ref. no.">
-                    <TextInput
-                      value={row.refNo ?? ''}
-                      readOnly={readOnly}
-                      onChange={(e) => {
-                        const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
-                        rows[index] = { ...rows[index], refNo: e.target.value };
-                        patch({ sentToAnalysisRows: rows });
-                      }}
-                      placeholder="Reference number"
-                    />
-                  </FieldGroup>
+
+                    {/* Negative reason */}
+                    {row.resultReceived === 'Negative' && (
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Reason</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(['Insufficient', 'Destruction of Evidence', 'Other'] as const).map((reason) => {
+                            const isSelected = (row.resultNegativeReason ?? '') === reason;
+                            return (
+                              <label
+                                key={reason}
+                                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors ${
+                                  readOnly ? 'cursor-default' : ''
+                                } ${
+                                  isSelected
+                                    ? 'bg-red-50 border-red-400 text-red-800 font-semibold'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:border-red-200'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`result-negative-reason-${index}`}
+                                  checked={isSelected}
+                                  disabled={readOnly}
+                                  onChange={() => {
+                                    const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                                    rows[index] = {
+                                      ...rows[index],
+                                      resultNegativeReason: reason,
+                                      ...(reason !== 'Other' ? { resultNegativeOtherDetail: '' } : {}),
+                                    };
+                                    patch({ sentToAnalysisRows: rows });
+                                  }}
+                                  className="sr-only"
+                                />
+                                {reason}
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {row.resultNegativeReason === 'Other' && (
+                          <TextInput
+                            value={row.resultNegativeOtherDetail ?? ''}
+                            readOnly={readOnly}
+                            onChange={(e) => {
+                              const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                              rows[index] = { ...rows[index], resultNegativeOtherDetail: e.target.value };
+                              patch({ sentToAnalysisRows: rows });
+                            }}
+                            placeholder="Specify reason"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Attachment */}
+                  <AnalysisAttachment
+                    index={index}
+                    row={row}
+                    readOnly={readOnly}
+                    onUpdate={(patch_) => {
+                      const rows = [...(courtDetails.sentToAnalysisRows ?? [])];
+                      rows[index] = { ...rows[index], ...patch_ };
+                      patch({ sentToAnalysisRows: rows });
+                    }}
+                  />
                 </div>
               ) : null}
             </div>

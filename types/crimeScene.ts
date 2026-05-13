@@ -221,6 +221,16 @@ export interface SentToAnalysisRow {
   institutionOtherDetail?: string;
   date?: string;
   refNo?: string;
+  /** Result received from the analysis institute. */
+  resultReceived?: 'Positive' | 'Negative' | '';
+  /** Reason when resultReceived is Negative. */
+  resultNegativeReason?: 'Insufficient' | 'Destruction of Evidence' | 'Other' | '';
+  /** Free text when resultNegativeReason is Other. */
+  resultNegativeOtherDetail?: string;
+  /** Attachment file name for this production's analysis result. */
+  attachmentFileName?: string;
+  /** Data URL for client-side persistence. */
+  attachmentDataUrl?: string;
 }
 
 export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
@@ -235,6 +245,11 @@ export function emptySentToAnalysisRow(): SentToAnalysisRow {
     institutionOtherDetail: '',
     date: '',
     refNo: '',
+    resultReceived: '',
+    resultNegativeReason: '',
+    resultNegativeOtherDetail: '',
+    attachmentFileName: '',
+    attachmentDataUrl: '',
   };
 }
 
