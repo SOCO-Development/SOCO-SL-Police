@@ -1,32 +1,27 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CrimeVisitForm from './CrimeVisitForm';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import type { CrimeVisitFormData } from '@/types/crimeVisit';
 import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
 
 export default function InitiateCrimeVisitPage() {
     const router = useRouter();
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-    function showToast(message: string, type: 'success' | 'error' = 'success') {
-        setToast({ message, type });
-        setTimeout(() => setToast(null), 3500);
-    }
+    const [popup, showPopup, closePopup] = useResultPopup();
 
     function handleSubmit(data: CrimeVisitFormData) {
         try {
             const created = crimeVisitService.createSubmitted(data);
-            showToast(`Crime Visit submitted — ${created.referenceNo}`);
-            setTimeout(() => router.push('/crime-visit-registry/crime-visits'), 1500);
+            showPopup('success', 'Visit Submitted', `Crime visit submitted successfully — ${created.referenceNo}`);
+            setTimeout(() => router.push('/crime-visit-registry'), 2500);
         } catch {
-            showToast('Failed to submit.', 'error');
+            showPopup('error', 'Submission Failed', 'An error occurred while submitting the visit. Please try again.');
         }
     }
 
@@ -63,16 +58,7 @@ export default function InitiateCrimeVisitPage() {
                 </main>
             </div>
 
-            {/* Toast */}
-            {toast && (
-                <div
-                    className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-                        }`}
-                >
-                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                    {toast.message}
-                </div>
-            )}
+            <ResultPopup {...popup} onClose={closePopup} />
         </div>
     );
 }

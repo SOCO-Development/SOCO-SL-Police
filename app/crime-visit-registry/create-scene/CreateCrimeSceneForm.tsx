@@ -251,7 +251,7 @@ export default function CreateCrimeSceneForm({
   const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
   const [existingCvrs, setExistingCvrs] = useState<string[]>([]);
   const [error, setError] = useState('');
-  const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '' });
+  const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
   const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
   const isEditMode = Boolean(editSceneId);
 
@@ -293,16 +293,21 @@ export default function CreateCrimeSceneForm({
   // When visit selection changes, sync the in-time state from the visit record
   useEffect(() => {
     if (!selectedVisit) {
-      setVisitInTime({ date: '', time: '' });
+      setVisitInTime({ date: '', time: '', page: '', para: '' });
       setVisitInTimeSaved(false);
       return;
     }
     const existingIn = selectedVisit.sectionA?.in;
     if (existingIn?.date || existingIn?.time) {
-      setVisitInTime({ date: existingIn.date ?? '', time: existingIn.time ?? '' });
+      setVisitInTime({
+        date: existingIn.date ?? '',
+        time: existingIn.time ?? '',
+        page: existingIn.page ?? '',
+        para: existingIn.para ?? '',
+      });
       setVisitInTimeSaved(true);
     } else {
-      setVisitInTime({ date: '', time: '' });
+      setVisitInTime({ date: '', time: '', page: '', para: '' });
       setVisitInTimeSaved(false);
     }
   }, [form.visitId, selectedVisit?.id]);
@@ -549,7 +554,7 @@ export default function CreateCrimeSceneForm({
                   {/* OUT time — always read-only, sourced from the visit record */}
                   <div className="rounded-lg border border-teal-100 bg-white p-3 space-y-2">
                     <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">Out Time (from visit)</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       <FieldGroup label="Date">
                         <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
                           {selectedVisit?.sectionA?.out?.date || '—'}
@@ -558,6 +563,16 @@ export default function CreateCrimeSceneForm({
                       <FieldGroup label="Time">
                         <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
                           {selectedVisit?.sectionA?.out?.time || '—'}
+                        </div>
+                      </FieldGroup>
+                      <FieldGroup label="Page">
+                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                          {selectedVisit?.sectionA?.out?.page || '—'}
+                        </div>
+                      </FieldGroup>
+                      <FieldGroup label="Para">
+                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                          {selectedVisit?.sectionA?.out?.para || '—'}
                         </div>
                       </FieldGroup>
                     </div>
@@ -574,7 +589,7 @@ export default function CreateCrimeSceneForm({
                       )}
                     </div>
                     {visitInTimeSaved ? (
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         <FieldGroup label="Date">
                           <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
                             {visitInTime.date || '—'}
@@ -585,10 +600,20 @@ export default function CreateCrimeSceneForm({
                             {visitInTime.time || '—'}
                           </div>
                         </FieldGroup>
+                        <FieldGroup label="Page">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitInTime.page || '—'}
+                          </div>
+                        </FieldGroup>
+                        <FieldGroup label="Para">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitInTime.para || '—'}
+                          </div>
+                        </FieldGroup>
                       </div>
                     ) : (
                       <>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                           <FieldGroup label="Date">
                             <DatePicker
                               value={visitInTime.date ?? ''}
@@ -599,6 +624,20 @@ export default function CreateCrimeSceneForm({
                             <TimePicker
                               value={visitInTime.time ?? ''}
                               onChange={(v) => setVisitInTime((t) => ({ ...t, time: v }))}
+                            />
+                          </FieldGroup>
+                          <FieldGroup label="Page">
+                            <TextInput
+                              value={visitInTime.page ?? ''}
+                              onChange={(e) => setVisitInTime((t) => ({ ...t, page: e.target.value }))}
+                              placeholder="Page"
+                            />
+                          </FieldGroup>
+                          <FieldGroup label="Para">
+                            <TextInput
+                              value={visitInTime.para ?? ''}
+                              onChange={(e) => setVisitInTime((t) => ({ ...t, para: e.target.value }))}
+                              placeholder="Para"
                             />
                           </FieldGroup>
                         </div>

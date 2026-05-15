@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -21,6 +22,7 @@ import {
 } from '@/types/crimeScene';
 import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import { ArrowLeft } from 'lucide-react';
+import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
 
 type FlowMode = 'production_sent' | 'court_visit';
 
@@ -119,6 +121,7 @@ function FieldGroup({ label, children, className = '' }: { label: string; childr
 }
 
 export default function UpdateCourtDetailsPage() {
+  const router = useRouter();
   const [scenes, setScenes] = useState<CrimeScene[]>([]);
   const [selectedSceneId, setSelectedSceneId] = useState('');
   const [flowMode, setFlowMode] = useState<FlowMode>('production_sent');
@@ -127,6 +130,7 @@ export default function UpdateCourtDetailsPage() {
   const [error, setError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
   const [isEditingProductionSentToCourt, setIsEditingProductionSentToCourt] = useState(false);
+  const [popup, showPopup, closePopup] = useResultPopup();
 
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
@@ -253,18 +257,22 @@ export default function UpdateCourtDetailsPage() {
     if (!selectedSceneId) {
       setError('Select a crime scene first.');
       setSavedOk(false);
+      showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
       return;
     }
     const v = validateProductionSentToCourtSection(courtDraft);
     if (v) {
       setError(v);
       setSavedOk(false);
+      showPopup('error', 'Validation Error', v);
       return;
     }
     const updated = crimeSceneService.updateCourtDetailsProduction(selectedSceneId, courtDraft);
     if (!updated) {
-      setError('Could not save. The visit record may have been removed.');
+      const msg = 'Could not save. The visit record may have been removed.';
+      setError(msg);
       setSavedOk(false);
+      showPopup('error', 'Save Failed', msg);
       return;
     }
     setScenes(crimeSceneService.getAll());
@@ -272,6 +280,8 @@ export default function UpdateCourtDetailsPage() {
     setError('');
     setSavedOk(true);
     setIsEditingProductionSentToCourt(false);
+    showPopup('success', 'Production Details Saved', 'Production sent to court details have been saved successfully.');
+    setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
   function handleCancelEditProductionSentToCourt() {
@@ -288,12 +298,14 @@ export default function UpdateCourtDetailsPage() {
     if (!selectedSceneId) {
       setError('Select a crime scene first.');
       setSavedOk(false);
+      showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
       return;
     }
     const v = validateCourtVisit();
     if (v) {
       setError(v);
       setSavedOk(false);
+      showPopup('error', 'Validation Error', v);
       return;
     }
     const filled = courtVisitDraft.rows
@@ -310,8 +322,10 @@ export default function UpdateCourtDetailsPage() {
     const payload: CourtVisitUpdateDetails = { rows: filled };
     const updated = crimeSceneService.updateCourtVisitDetails(selectedSceneId, payload, courtDraft);
     if (!updated) {
-      setError('Could not save. The visit record may have been removed.');
+      const msg = 'Could not save. The visit record may have been removed.';
+      setError(msg);
       setSavedOk(false);
+      showPopup('error', 'Save Failed', msg);
       return;
     }
     setScenes(crimeSceneService.getAll());
@@ -319,6 +333,8 @@ export default function UpdateCourtDetailsPage() {
     setCourtVisitDraft(mergeCourtVisit(updated.courtVisitUpdate));
     setError('');
     setSavedOk(true);
+    showPopup('success', 'Court Visit Saved', 'Court visit details have been saved successfully.');
+    setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
   return (
@@ -517,12 +533,6 @@ export default function UpdateCourtDetailsPage() {
                               {isEditingProductionSentToCourt ? (
                                 <>
                                   {error ? <p className="text-sm text-red-600">{error}</p> : null}
-                                  {savedOk ? (
-                                    <p className="text-sm text-green-700 font-medium">
-                                      Production details saved. View them under Production details on the submitted
-                                      scene.
-                                    </p>
-                                  ) : null}
                                   <div className="flex justify-center">
                                     <Button variant="success" type="button" onClick={handleSaveProduction}>
                                       Save production details
@@ -532,11 +542,6 @@ export default function UpdateCourtDetailsPage() {
                               ) : null}
                               {!isEditingProductionSentToCourt && error ? (
                                 <p className="text-sm text-red-600">{error}</p>
-                              ) : null}
-                              {!isEditingProductionSentToCourt && savedOk ? (
-                                <p className="text-sm text-green-700 font-medium">
-                                  Production details saved. View them under Production details on the submitted scene.
-                                </p>
                               ) : null}
                             </div>
                           ) : (
@@ -757,6 +762,8 @@ export default function UpdateCourtDetailsPage() {
           <Footer />
         </main>
       </div>
+
+      <ResultPopup {...popup} onClose={closePopup} />
     </div>
   );
 }

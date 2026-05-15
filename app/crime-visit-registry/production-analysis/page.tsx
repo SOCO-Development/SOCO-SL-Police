@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -14,6 +15,7 @@ import { ArrowLeft } from 'lucide-react';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import { validateSentToAnalysisSection } from '@/lib/courtDetailsValidation';
 import { emptyCrimeSceneCourtDetails, type CrimeSceneCourtDetails } from '@/types/crimeScene';
+import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
 
 function visitTypeLabel(scene: CrimeScene) {
   return scene.visitType === 'REVISIT'
@@ -41,14 +43,15 @@ function FieldGroup({ label, children, className = '' }: { label: string; childr
 }
 
 export default function ProductionAnalysisPage() {
+  const router = useRouter();
   const [scenes, setScenes] = useState<CrimeScene[]>([]);
   const [selectedSceneId, setSelectedSceneId] = useState('');
   const [courtDetailsDraft, setCourtDetailsDraft] = useState<CrimeSceneCourtDetails>(() =>
     emptyCrimeSceneCourtDetails(),
   );
   const [courtDetailsError, setCourtDetailsError] = useState('');
-  const [courtDetailsSavedOk, setCourtDetailsSavedOk] = useState(false);
   const [isEditingSentToAnalysis, setIsEditingSentToAnalysis] = useState(false);
+  const [popup, showPopup, closePopup] = useResultPopup();
 
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
@@ -95,7 +98,6 @@ export default function ProductionAnalysisPage() {
     if (!scene) return;
     setCourtDetailsDraft(mergeCourtDetails(scene.courtDetails));
     setCourtDetailsError('');
-    setCourtDetailsSavedOk(false);
     setIsEditingSentToAnalysis(false);
   }, [selectedSceneId, scenes]);
 
@@ -111,13 +113,12 @@ export default function ProductionAnalysisPage() {
   function handleSaveCourtDetails() {
     if (!selectedSceneId) {
       setCourtDetailsError('Select a crime scene first.');
-      setCourtDetailsSavedOk(false);
       return;
     }
     const v = validateSentToAnalysisSection(courtDetailsDraft);
     if (v) {
       setCourtDetailsError(v);
-      setCourtDetailsSavedOk(false);
+      showPopup('error', 'Validation Error', v);
       return;
     }
     const updated = crimeSceneService.updateCourtDetailsProduction(
@@ -126,15 +127,17 @@ export default function ProductionAnalysisPage() {
       'production_analysis',
     );
     if (!updated) {
-      setCourtDetailsError('Could not save. The visit record may have been removed.');
-      setCourtDetailsSavedOk(false);
+      const msg = 'Could not save. The visit record may have been removed.';
+      setCourtDetailsError(msg);
+      showPopup('error', 'Save Failed', msg);
       return;
     }
     setScenes(crimeSceneService.getAll());
     setCourtDetailsDraft(mergeCourtDetails(updated.courtDetails));
     setCourtDetailsError('');
-    setCourtDetailsSavedOk(true);
     setIsEditingSentToAnalysis(false);
+    showPopup('success', 'Analysis Details Saved', 'Productions sent to analysis institutes have been saved successfully.');
+    setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
   function handleCancelEdit() {
@@ -143,7 +146,6 @@ export default function ProductionAnalysisPage() {
     if (!scene) return;
     setCourtDetailsDraft(mergeCourtDetails(scene.courtDetails));
     setCourtDetailsError('');
-    setCourtDetailsSavedOk(false);
     setIsEditingSentToAnalysis(false);
   }
 
@@ -271,7 +273,6 @@ export default function ProductionAnalysisPage() {
                                   onClick={() => {
                                     setIsEditingSentToAnalysis(true);
                                     setCourtDetailsError('');
-                                    setCourtDetailsSavedOk(false);
                                   }}
                                   className="!min-h-[40px] !px-3 !py-2 !text-sm"
                                 >
@@ -304,11 +305,6 @@ export default function ProductionAnalysisPage() {
                           {isEditingSentToAnalysis ? (
                             <>
                               {courtDetailsError ? <p className="text-sm text-red-600">{courtDetailsError}</p> : null}
-                              {courtDetailsSavedOk ? (
-                                <p className="text-sm text-green-700 font-medium">
-                                  Production details (sent to analysis) saved.
-                                </p>
-                              ) : null}
                               <div className="flex justify-center">
                                 <Button variant="success" type="button" onClick={handleSaveCourtDetails}>
                                   Save sent to analysis (production details)
@@ -318,11 +314,6 @@ export default function ProductionAnalysisPage() {
                           ) : null}
                           {!isEditingSentToAnalysis && courtDetailsError ? (
                             <p className="text-sm text-red-600">{courtDetailsError}</p>
-                          ) : null}
-                          {!isEditingSentToAnalysis && courtDetailsSavedOk ? (
-                            <p className="text-sm text-green-700 font-medium">
-                              Production details (sent to analysis) saved.
-                            </p>
                           ) : null}
                         </div>
                       )}
@@ -335,6 +326,7 @@ export default function ProductionAnalysisPage() {
           <Footer />
         </main>
       </div>
+      <ResultPopup {...popup} onClose={closePopup} />
     </div>
   );
 }
