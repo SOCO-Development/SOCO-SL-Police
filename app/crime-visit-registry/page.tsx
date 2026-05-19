@@ -63,7 +63,7 @@ export default function CrimeVisitRegistryPage() {
             title: 'Court Details',
             subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
             description:
-                'Select a CVR visit: update production sent to court (registry fields) or record a court visit (officer, date, results).',
+                'Select a CVR visit: update production sent to court, record a court visit, or nominate court rewards.',
             icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
             href: '/crime-visit-registry/update-court-details',
         },

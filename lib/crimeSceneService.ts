@@ -2,6 +2,7 @@
 
 import type {
   AnalysisReportReceived,
+  CourtRewardsUpdateDetails,
   CourtVisitUpdateDetails,
   CrimeScene,
   CrimeSceneCourtDetails,
@@ -13,6 +14,8 @@ import type {
   RegistryWorkflowUpdateKind,
   SentToAnalysisRow,
 } from '@/types/crimeScene';
+import { normalizeCourtRewardsUpdate } from '@/types/crimeScene';
+import { sanitizeCourtRewardsUpdate } from '@/lib/courtRewardUtils';
 import {
   applyPayloadToScene,
   buildCrimeScenePayloadFromForm,
@@ -154,6 +157,9 @@ function normalizeScene(raw: CrimeScene & { investigationOfficer?: CrimeSceneOff
     ...rest,
     investigationOfficers: list.length ? list : undefined,
     courtDetails: normalizeCourtDetails(rest.courtDetails),
+    courtRewardsUpdate: rest.courtRewardsUpdate
+      ? sanitizeCourtRewardsUpdate(normalizeCourtRewardsUpdate(rest.courtRewardsUpdate))
+      : undefined,
     registryWorkflowUpdates: workflowUpdates.length ? workflowUpdates : undefined,
     registryWorkflowUpdate: latestWorkflowUpdate,
   };
@@ -308,6 +314,32 @@ export const crimeSceneService = {
         ...s,
         courtVisitUpdate: payload,
         ...(normalizedCourtDetails ? { courtDetails: normalizedCourtDetails } : {}),
+        updatedAt: ts,
+      };
+      all[i] = next;
+      if (s.id === sceneId) updated = next;
+    }
+    saveAll(all);
+    return updated;
+  },
+
+  /** Court rewards: nominate officers by Police / D/CRD / Division. */
+  updateCourtRewardsDetails(sceneId: string, data: CourtRewardsUpdateDetails): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    const groupKey = normalizeCvrKey(scene);
+    const ts = now();
+    const payload = sanitizeCourtRewardsUpdate(data);
+    let updated: CrimeScene | null = null;
+    applyRegistryWorkflowUpdateToCvrGroup(all, sceneId, 'court_rewards', ts);
+    for (let i = 0; i < all.length; i += 1) {
+      if (normalizeCvrKey(all[i]) !== groupKey) continue;
+      const s = all[i];
+      const next: CrimeScene = {
+        ...s,
+        courtRewardsUpdate: payload,
         updatedAt: ts,
       };
       all[i] = next;

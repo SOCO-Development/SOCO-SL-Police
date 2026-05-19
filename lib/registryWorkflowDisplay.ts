@@ -5,19 +5,18 @@ function workflowEntryForKind(kind: RegistryWorkflowUpdateKind, at: string): Reg
   const when = formatDateTimeDDMMYYYY(at);
   switch (kind) {
     case 'court_production':
-      return {
-        kind,
-        at,
-        label: 'Updated Court Details',
-        title: `Production sent to court updated ${when} via Update Court Details`,
-        pillClass: 'bg-orange-100 text-orange-900 border-orange-400',
-      };
     case 'court_visit':
+    case 'court_rewards':
       return {
         kind,
         at,
         label: 'Updated Court Details',
-        title: `Court visit book updated ${when} via Update Court Details`,
+        title:
+          kind === 'court_rewards'
+            ? `Court rewards updated ${when} via Update Court Details`
+            : kind === 'court_visit'
+              ? `Court visit book updated ${when} via Update Court Details`
+              : `Production sent to court updated ${when} via Update Court Details`,
         pillClass: 'bg-orange-100 text-orange-900 border-orange-400',
       };
     case 'production_analysis':
@@ -66,6 +65,7 @@ export function registryWorkflowListRowClasses(scene: CrimeScene): string | null
   switch (d.kind) {
     case 'court_production':
     case 'court_visit':
+    case 'court_rewards':
       return 'border-orange-200 bg-orange-50/80 ring-1 ring-orange-200/70 border-l-[5px] border-l-orange-500';
     case 'production_analysis':
       return 'border-emerald-200 bg-emerald-50/80 ring-1 ring-emerald-200/70 border-l-[5px] border-l-emerald-500';
@@ -81,6 +81,7 @@ export function registryWorkflowBadgeClasses(scene: CrimeScene): string | null {
   switch (d.kind) {
     case 'court_production':
     case 'court_visit':
+    case 'court_rewards':
       return 'bg-orange-200 text-orange-950 border-orange-400';
     case 'production_analysis':
       return 'bg-emerald-200 text-emerald-950 border-emerald-400';

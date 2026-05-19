@@ -9,22 +9,26 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import Button from '@/components/buttons/Button';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
+import CourtRewardsEditor from '@/app/crime-visit-registry/components/CourtRewardsEditor';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { sanitizeCourtRewardsUpdate } from '@/lib/courtRewardUtils';
 import { COURT_NAME_OPTIONAL_SELECT_OPTIONS } from '@/lib/courtNames';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
-import type { CrimeScene, CrimeSceneCourtDetails, CourtVisitOfficerDetailRow, CourtVisitUpdateDetails } from '@/types/crimeScene';
+import type { CrimeScene, CrimeSceneCourtDetails, CourtVisitOfficerDetailRow, CourtVisitUpdateDetails, CourtRewardsUpdateDetails } from '@/types/crimeScene';
 import {
   emptyCourtVisitOfficerDetailRow,
   emptyCourtVisitUpdate,
+  emptyCourtRewardsUpdate,
   emptyCrimeSceneCourtDetails,
   normalizeCourtVisitUpdate,
+  normalizeCourtRewardsUpdate,
 } from '@/types/crimeScene';
 import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import { ArrowLeft } from 'lucide-react';
 import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
 
-type FlowMode = 'production_sent' | 'court_visit';
+type FlowMode = 'production_sent' | 'court_visit' | 'rewards';
 
 function visitTypeLabel(scene: CrimeScene) {
   return scene.visitType === 'REVISIT'
@@ -40,6 +44,10 @@ function mergeCourtDetails(base: CrimeSceneCourtDetails | undefined): CrimeScene
 
 function mergeCourtVisit(base: CourtVisitUpdateDetails | undefined): CourtVisitUpdateDetails {
   return normalizeCourtVisitUpdate(base);
+}
+
+function mergeCourtRewards(base: CourtRewardsUpdateDetails | undefined): CourtRewardsUpdateDetails {
+  return sanitizeCourtRewardsUpdate(normalizeCourtRewardsUpdate(base));
 }
 
 function buildOfficerOptions(scene: CrimeScene): { value: string; label: string }[] {
@@ -127,6 +135,7 @@ export default function UpdateCourtDetailsPage() {
   const [flowMode, setFlowMode] = useState<FlowMode>('production_sent');
   const [courtDraft, setCourtDraft] = useState<CrimeSceneCourtDetails>(() => emptyCrimeSceneCourtDetails());
   const [courtVisitDraft, setCourtVisitDraft] = useState<CourtVisitUpdateDetails>(() => emptyCourtVisitUpdate());
+  const [rewardsDraft, setRewardsDraft] = useState<CourtRewardsUpdateDetails>(() => emptyCourtRewardsUpdate());
   const [error, setError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
   const [isEditingProductionSentToCourt, setIsEditingProductionSentToCourt] = useState(false);
@@ -210,6 +219,7 @@ export default function UpdateCourtDetailsPage() {
     if (!selectedSceneId) {
       setCourtDraft(emptyCrimeSceneCourtDetails());
       setCourtVisitDraft(emptyCourtVisitUpdate());
+      setRewardsDraft(emptyCourtRewardsUpdate());
       setIsEditingProductionSentToCourt(false);
       return;
     }
@@ -217,6 +227,7 @@ export default function UpdateCourtDetailsPage() {
     if (!scene) return;
     setCourtDraft(mergeCourtDetails(scene.courtDetails));
     setCourtVisitDraft(mergeCourtVisit(scene.courtVisitUpdate));
+    setRewardsDraft(mergeCourtRewards(scene.courtRewardsUpdate));
     setError('');
     setSavedOk(false);
     setIsEditingProductionSentToCourt(false);
@@ -226,7 +237,13 @@ export default function UpdateCourtDetailsPage() {
     setIsEditingProductionSentToCourt(false);
     setError('');
     setSavedOk(false);
-  }, [flowMode]);
+    if (flowMode === 'rewards' && selectedSceneId) {
+      const scene = scenes.find((s) => s.id === selectedSceneId);
+      if (scene) {
+        setRewardsDraft(mergeCourtRewards(scene.courtRewardsUpdate));
+      }
+    }
+  }, [flowMode, selectedSceneId, scenes]);
 
   function selectScene(id: string) {
     setSelectedSceneId(id);
@@ -337,6 +354,45 @@ export default function UpdateCourtDetailsPage() {
     setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
+  function handleCancelRewards() {
+    if (!selectedSceneId) return;
+    const scene = scenes.find((s) => s.id === selectedSceneId);
+    if (!scene) return;
+    setRewardsDraft(mergeCourtRewards(scene.courtRewardsUpdate));
+    setError('');
+    setSavedOk(false);
+  }
+
+  function handleSaveRewards() {
+    if (!selectedSceneId) {
+      setError('Select a crime scene first.');
+      setSavedOk(false);
+      showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
+      return;
+    }
+    if (rewardsDraft.rewardsEnabled !== 'Yes' && rewardsDraft.rewardsEnabled !== 'No') {
+      const msg = 'Select Yes or No for rewards.';
+      setError(msg);
+      setSavedOk(false);
+      showPopup('error', 'Validation Error', msg);
+      return;
+    }
+    const updated = crimeSceneService.updateCourtRewardsDetails(selectedSceneId, rewardsDraft);
+    if (!updated) {
+      const msg = 'Could not save. The visit record may have been removed.';
+      setError(msg);
+      setSavedOk(false);
+      showPopup('error', 'Save Failed', msg);
+      return;
+    }
+    setScenes(crimeSceneService.getAll());
+    setRewardsDraft(mergeCourtRewards(updated.courtRewardsUpdate));
+    setError('');
+    setSavedOk(true);
+    showPopup('success', 'Rewards Saved', 'Court rewards have been saved successfully.');
+    setTimeout(() => router.push('/crime-visit-registry'), 2500);
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -352,7 +408,7 @@ export default function UpdateCourtDetailsPage() {
                 <h2 className="text-2xl font-bold text-gray-900">Update Court Details</h2>
                 <p className="text-sm text-gray-600 mt-0.5">
                   Choose a crime scene below, then pick <strong>Production sent to court</strong> (use <strong>Edit</strong>{' '}
-                  to change rows) or <strong>Court visit</strong> and save. Saving applies to{' '}
+                  to change rows), <strong>Court visit</strong>, or <strong>Rewards</strong> and save. Saving applies to{' '}
                   <strong>every visit record for the same CVR</strong> (new visit, revisit, court visit), like a shared
                   case file. Updates appear under{' '}
                   <Link
@@ -421,7 +477,7 @@ export default function UpdateCourtDetailsPage() {
                               What are you updating?
                             </h4>
                             <FieldGroup label="Update type">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-h-10 rounded-lg border border-gray-200 bg-white/90 p-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-white/90 p-2">
                                 <label className="inline-flex items-center gap-2 text-sm text-gray-700">
                                   <input
                                     type="radio"
@@ -449,6 +505,20 @@ export default function UpdateCourtDetailsPage() {
                                     className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                                   />
                                   Court visit
+                                </label>
+                                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                                  <input
+                                    type="radio"
+                                    name="court-update-flow"
+                                    checked={flowMode === 'rewards'}
+                                    onChange={() => {
+                                      setFlowMode('rewards');
+                                      setError('');
+                                      setSavedOk(false);
+                                    }}
+                                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                  />
+                                  Rewards
                                 </label>
                               </div>
                             </FieldGroup>
@@ -544,7 +614,7 @@ export default function UpdateCourtDetailsPage() {
                                 <p className="text-sm text-red-600">{error}</p>
                               ) : null}
                             </div>
-                          ) : (
+                          ) : flowMode === 'court_visit' ? (
                             <div
                               id="court-update-visit"
                               className="p-4 sm:p-5 rounded-xl border border-fuchsia-200 bg-fuchsia-50/65 scroll-mt-24 space-y-4"
@@ -746,6 +816,49 @@ export default function UpdateCourtDetailsPage() {
                                     }
                                   >
                                     Save court visit
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              id="court-update-rewards"
+                              className="p-4 sm:p-5 rounded-xl border border-teal-200 bg-teal-50/65 scroll-mt-24 space-y-4"
+                            >
+                              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-teal-200/80 flex items-center gap-2">
+                                <span className="w-1.5 h-4 rounded-full bg-teal-600 inline-block flex-shrink-0" />
+                                Court rewards
+                              </h4>
+                              <p className="text-xs text-gray-600">
+                                Record reward types granted by court for Police, D/CRD, and Division categories.
+                              </p>
+
+                              <CourtRewardsEditor
+                                value={rewardsDraft}
+                                onChange={setRewardsDraft}
+                              />
+
+                              <div className="mt-2 pt-4 border-t border-teal-200/80 space-y-3">
+                                {error ? <p className="text-sm text-red-600">{error}</p> : null}
+                                {savedOk ? (
+                                  <p className="text-sm text-green-700 font-medium">
+                                    Court rewards saved. View them on the submitted crime scene.
+                                  </p>
+                                ) : null}
+                                <div className="flex flex-wrap items-center justify-center gap-3">
+                                  <Button
+                                    variant="secondary"
+                                    type="button"
+                                    onClick={handleCancelRewards}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    variant="success"
+                                    type="button"
+                                    onClick={handleSaveRewards}
+                                  >
+                                    Save rewards
                                   </Button>
                                 </div>
                               </div>

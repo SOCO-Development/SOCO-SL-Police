@@ -1,8 +1,15 @@
 import type { AnalysisReportReceived, CrimeScene } from '@/types/crimeScene';
-import { crimeSceneUsesRevisitFields, courtVisitUpdateHasDisplayableData, normalizeCourtVisitUpdate } from '@/types/crimeScene';
+import {
+  crimeSceneUsesRevisitFields,
+  courtRewardsUpdateHasDisplayableData,
+  courtVisitUpdateHasDisplayableData,
+  normalizeCourtRewardsUpdate,
+  normalizeCourtVisitUpdate,
+} from '@/types/crimeScene';
 import { formatIncidentDuration } from '@/lib/dateUtils';
 import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
 import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
+import { COURT_REWARD_CATEGORY_LABELS, getCourtRewardTypesForCategory } from '@/lib/courtRewardUtils';
 import { registryWorkflowDisplayEntries } from '@/lib/registryWorkflowDisplay';
 
 interface CrimeSceneDetailViewProps {
@@ -388,6 +395,48 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
               </div>
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {courtRewardsUpdateHasDisplayableData(scene.courtRewardsUpdate) ? (
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-4">
+          <SectionTitle stripeClass="bg-teal-600">Court rewards</SectionTitle>
+          <p className="text-xs text-gray-500">
+            Updated via <span className="font-medium text-gray-700">Update court details</span> → Rewards.
+          </p>
+          <DisplayField
+            label="Rewards applicable"
+            value={readValue(normalizeCourtRewardsUpdate(scene.courtRewardsUpdate).rewardsEnabled)}
+          />
+          {normalizeCourtRewardsUpdate(scene.courtRewardsUpdate).rewardsEnabled === 'Yes' ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(['police', 'dcrd', 'division'] as const).map((key) => {
+                const cat = normalizeCourtRewardsUpdate(scene.courtRewardsUpdate).categories[key];
+                const selected = getCourtRewardTypesForCategory(key).filter((t) =>
+                  cat.starredIds.includes(t.id),
+                );
+                return (
+                  <div key={key} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-2">
+                      {COURT_REWARD_CATEGORY_LABELS[key]}
+                      {!cat.enabled ? (
+                        <span className="ml-2 font-normal normal-case text-gray-500">(not included)</span>
+                      ) : null}
+                    </p>
+                    {selected.length > 0 ? (
+                      <ul className="space-y-1.5 text-sm text-gray-900">
+                        {selected.map((t) => (
+                          <li key={`${key}-${t.id}`} className="font-noto-sinhala">{t.label}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-500">No reward types selected.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

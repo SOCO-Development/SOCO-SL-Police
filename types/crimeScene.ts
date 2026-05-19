@@ -1,7 +1,11 @@
 export type CrimeSceneVisitType = 'NEW_VISIT' | 'REVISIT' | 'COURT_VISIT';
 
 /** Saved from Update Court Details or Production Analysis (shared CVR data), for Submitted list highlighting. */
-export type RegistryWorkflowUpdateKind = 'court_production' | 'court_visit' | 'production_analysis';
+export type RegistryWorkflowUpdateKind =
+  | 'court_production'
+  | 'court_visit'
+  | 'court_rewards'
+  | 'production_analysis';
 
 export interface RegistryWorkflowUpdate {
   kind: RegistryWorkflowUpdateKind;
@@ -116,6 +120,67 @@ export function emptyCourtVisitOfficerDetailRow(): CourtVisitOfficerDetailRow {
 /** Court visit book — multiple officer visit rows. */
 export interface CourtVisitUpdateDetails {
   rows: CourtVisitOfficerDetailRow[];
+}
+
+export type CourtRewardCategoryKey = 'police' | 'dcrd' | 'division';
+
+export interface CourtRewardCategoryState {
+  enabled: boolean;
+  /** Reward type ids starred for this category (money, salary_increment, commendation). */
+  starredIds: string[];
+}
+
+/** Court rewards — maintained from Update court details → Rewards. */
+export interface CourtRewardsUpdateDetails {
+  rewardsEnabled: '' | 'Yes' | 'No';
+  categories: Record<CourtRewardCategoryKey, CourtRewardCategoryState>;
+}
+
+export function emptyCourtRewardsUpdate(): CourtRewardsUpdateDetails {
+  return {
+    rewardsEnabled: '',
+    categories: {
+      police: { enabled: true, starredIds: [] },
+      dcrd: { enabled: true, starredIds: [] },
+      division: { enabled: true, starredIds: [] },
+    },
+  };
+}
+
+function toRewardTypeIdArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+function normalizeRewardCategory(
+  raw: CourtRewardCategoryState | undefined,
+): CourtRewardCategoryState {
+  return {
+    enabled: raw?.enabled !== false,
+    starredIds: toRewardTypeIdArray(raw?.starredIds),
+  };
+}
+
+export function normalizeCourtRewardsUpdate(
+  raw: CourtRewardsUpdateDetails | undefined | null,
+): CourtRewardsUpdateDetails {
+  if (!raw) return emptyCourtRewardsUpdate();
+  return {
+    rewardsEnabled: raw.rewardsEnabled === 'Yes' || raw.rewardsEnabled === 'No' ? raw.rewardsEnabled : '',
+    categories: {
+      police: normalizeRewardCategory(raw.categories?.police),
+      dcrd: normalizeRewardCategory(raw.categories?.dcrd),
+      division: normalizeRewardCategory(raw.categories?.division),
+    },
+  };
+}
+
+export function courtRewardsUpdateHasDisplayableData(
+  raw: CourtRewardsUpdateDetails | undefined | null,
+): boolean {
+  const data = normalizeCourtRewardsUpdate(raw);
+  if (data.rewardsEnabled === 'Yes' || data.rewardsEnabled === 'No') return true;
+  return Object.values(data.categories).some((c) => c.starredIds.length > 0);
 }
 
 /** @internal Legacy single-record shape before rows[] (kept for migration from stored JSON). */
@@ -330,6 +395,9 @@ export interface CrimeScene {
 
   /** Court visit attendance / outcome — maintained from Update court details → Court visit. */
   courtVisitUpdate?: CourtVisitUpdateDetails;
+
+  /** Court rewards nominations — maintained from Update court details → Rewards. */
+  courtRewardsUpdate?: CourtRewardsUpdateDetails;
 
   courtDetails?: CrimeSceneCourtDetails;
 
