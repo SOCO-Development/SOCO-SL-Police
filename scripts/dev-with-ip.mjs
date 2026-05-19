@@ -1,5 +1,9 @@
 import { networkInterfaces } from "os";
 import { spawn } from "child_process";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const nextBin = require.resolve("next/dist/bin/next");
 
 const reset = "\x1b[0m";
 const bold = "\x1b[1m";
@@ -42,9 +46,8 @@ console.log(`  ${dim}Press${reset} ${bold}Ctrl+C${reset} ${dim}to stop the serve
 console.log(`  ${dim}${"─".repeat(48)}${reset}`);
 console.log("");
 
-const child = spawn("npx", ["next", "dev", "-H", "0.0.0.0", "-p", String(port)], {
+const child = spawn(process.execPath, [nextBin, "dev", "-H", "0.0.0.0", "-p", String(port)], {
   stdio: ["inherit", "pipe", "pipe"],
-  shell: true,
 });
 
 function transformOutput(data) {
