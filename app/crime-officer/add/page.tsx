@@ -183,6 +183,9 @@ interface FormData {
     preliminaryInquiryResult: string;
     disciplinaryInquiryStatus: ToggleChoice;
     disciplinaryInquiryResult: string;
+    // Section 11
+    specialIllnesses: string;
+    specialNotes: string;
 }
 
 let rowSeed = 1;
@@ -311,6 +314,8 @@ function defaultForm(): FormData {
         preliminaryInquiryResult: '',
         disciplinaryInquiryStatus: '',
         disciplinaryInquiryResult: '',
+        specialIllnesses: '',
+        specialNotes: '',
     };
 }
 
@@ -2054,6 +2059,45 @@ export default function AddOfficerPage() {
                                 </div>
                             </div>
 
+                            {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
+                            <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
+                                <SectionHeader
+                                    sectionNo={11}
+                                    title="Special Illnesses & Special Notes"
+                                    titleSi="විශේෂ රෝග හා විශේෂ සටහන්"
+                                />
+                                <p className="text-sm text-sky-900/80 mb-4">
+                                    Record any known medical conditions and additional notes relevant to this officer.
+                                </p>
+
+                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="rounded-xl border border-sky-100 bg-white shadow-sm p-4">
+                                        <h4 className="text-sm font-bold text-sky-900 uppercase tracking-wide mb-3">
+                                            Special Illnesses
+                                        </h4>
+                                        <FieldLabel label="Known Medical Conditions / විශේෂ රෝග" />
+                                        <GTextarea
+                                            value={form.specialIllnesses}
+                                            onChange={(v) => set('specialIllnesses', v)}
+                                            placeholder="Enter any known illnesses or medical conditions..."
+                                            className="min-h-[160px]"
+                                        />
+                                    </div>
+
+                                    <div className="rounded-xl border border-sky-100 bg-white shadow-sm p-4">
+                                        <h4 className="text-sm font-bold text-sky-900 uppercase tracking-wide mb-3">
+                                            Special Notes
+                                        </h4>
+                                        <FieldLabel label="Additional Notes / විශේෂ සටහන්" />
+                                        <GTextarea
+                                            value={form.specialNotes}
+                                            onChange={(v) => set('specialNotes', v)}
+                                            placeholder="Enter any additional remarks or special notes..."
+                                            className="min-h-[160px]"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                             </div>
 
                             {/* ─── Action Bar ──────────────────────────────────────────────── */}
