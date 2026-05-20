@@ -1,4 +1,6 @@
 'use client';
+
+import { AddRowButton, RemoveRowButton, Button, IconButton } from '@/components/ui';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   crimeSceneUsesNewVisitFields,
@@ -14,7 +16,6 @@ import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
-import Button from '@/components/buttons/Button';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import {
@@ -641,14 +642,15 @@ export default function CreateCrimeSceneForm({
                             />
                           </FieldGroup>
                         </div>
-                        <button
+                        <Button
+                          variant="teal-outline"
                           type="button"
                           onClick={handleSaveVisitInTime}
                           disabled={!visitInTime.date || !visitInTime.time}
-                          className="mt-1 text-sm font-semibold text-teal-700 hover:text-teal-900 border border-teal-300 bg-teal-50 hover:bg-teal-100 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          className="mt-1"
                         >
                           Save In Time
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>
@@ -1055,13 +1057,9 @@ export default function CreateCrimeSceneForm({
                     >
                       <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
                       <span className="text-xs font-medium text-violet-900 leading-snug">{off}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeOffence(idx)}
-                        className="ml-1 text-violet-400 hover:text-red-500 transition-colors"
-                      >
+                      <IconButton variant="danger" type="button" onClick={() => removeOffence(idx)} className="ml-1">
                         ×
-                      </button>
+                      </IconButton>
                     </div>
                   ))}
                 </div>
@@ -1173,28 +1171,24 @@ export default function CreateCrimeSceneForm({
                         />
                       </FieldGroup>
                       <div className="shrink-0">
-                        <button
-                          type="button"
+                        <RemoveRowButton
                           onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
-                          className="h-10 self-end whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
+                          className="h-10 self-end whitespace-nowrap px-3 text-xs"
                           disabled={form.socoOfficers.length <= 1}
                           aria-label="Remove officer"
-                        >
-                          Remove
-                        </button>
+                        />
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <button
-              type="button"
+            <AddRowButton
               onClick={() => setForm((prev) => ({ ...prev, socoOfficers: [...prev.socoOfficers, emptyOfficer()] }))}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+              className="mt-3"
             >
-              <span className="text-base leading-none">+</span> Add Officer
-            </button>
+              Add Officer
+            </AddRowButton>
           </div>
 
           {/* ── Expert Teams ── */}
@@ -1208,14 +1202,11 @@ export default function CreateCrimeSceneForm({
                 <div key={`specialist-${index}`} className="border border-gray-200 rounded-lg p-3 space-y-3 bg-white">
                   <div className="flex justify-between items-start">
                     <div className="text-sm font-medium text-gray-700">Expert Team {index + 1}</div>
-                    <button
-                      type="button"
+                    <RemoveRowButton
                       onClick={() => setForm((prev) => ({ ...prev, specialistTeams: prev.specialistTeams.filter((_, i) => i !== index) }))}
-                      className="h-8 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-2.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
+                      className="h-8 px-2.5 text-xs"
                       disabled={form.specialistTeams.length <= 1}
-                    >
-                      Remove
-                    </button>
+                    />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <FieldGroup label="Expert Role">
@@ -1256,13 +1247,7 @@ export default function CreateCrimeSceneForm({
                           </FieldGroup>
                           {mIndex > 0 && (
                             <div className="shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => removeSpecialistMember(index, mIndex)}
-                                className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                              >
-                                Remove
-                              </button>
+                              <RemoveRowButton onClick={() => removeSpecialistMember(index, mIndex)} />
                             </div>
                           )}
                           {mIndex === 0 && (
@@ -1271,24 +1256,19 @@ export default function CreateCrimeSceneForm({
                         </div>
                       ))}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => addSpecialistMember(index)}
-                      className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
-                    >
-                      <span className="text-base leading-none">+</span> Add Member
-                    </button>
+                    <AddRowButton onClick={() => addSpecialistMember(index)} className="mt-2">
+                      Add Member
+                    </AddRowButton>
                   </div>
                 </div>
               ))}
             </div>
-            <button
-              type="button"
+            <AddRowButton
               onClick={() => setForm((prev) => ({ ...prev, specialistTeams: [...prev.specialistTeams, emptySpecialist()] }))}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+              className="mt-3"
             >
-              <span className="text-base leading-none">+</span> Add Expert Team
-            </button>
+              Add Expert Team
+            </AddRowButton>
           </div>
 
           {/* ── Investigation Officers ── */}
@@ -1322,36 +1302,32 @@ export default function CreateCrimeSceneForm({
                     />
                   </FieldGroup>
                   <div className="shrink-0">
-                    <button
-                      type="button"
+                    <RemoveRowButton
                       onClick={() =>
                         setForm((prev) => ({
                           ...prev,
                           investigationOfficers: (prev.investigationOfficers ?? []).filter((_, i) => i !== index),
                         }))
                       }
-                      className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
+                      className="h-10 px-3 text-xs"
                       disabled={(form.investigationOfficers ?? []).length <= 1}
                       aria-label="Remove investigation officer"
-                    >
-                      Remove
-                    </button>
+                    />
                   </div>
                 </div>
               ))}
             </div>
-            <button
-              type="button"
+            <AddRowButton
               onClick={() =>
                 setForm((prev) => ({
                   ...prev,
                   investigationOfficers: [...(prev.investigationOfficers ?? []), emptyOfficer()],
                 }))
               }
-              className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+              className="mt-3"
             >
-              <span className="text-base leading-none">+</span> Add Investigation Officer
-            </button>
+              Add Investigation Officer
+            </AddRowButton>
           </div>
 
           {/* ── Scene Guards ── */}
@@ -1385,26 +1361,22 @@ export default function CreateCrimeSceneForm({
                     />
                   </FieldGroup>
                   <div className="shrink-0">
-                    <button
-                      type="button"
+                    <RemoveRowButton
                       onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
-                      className="h-10 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold disabled:opacity-40"
+                      className="h-10 px-3 text-xs"
                       disabled={(form.sceneGuards ?? []).length <= 1}
                       aria-label="Remove guard"
-                    >
-                      Remove
-                    </button>
+                    />
                   </div>
                 </div>
               ))}
             </div>
-            <button
-              type="button"
+            <AddRowButton
               onClick={() => setForm((prev) => ({ ...prev, sceneGuards: [...(prev.sceneGuards ?? []), emptyOfficer()] }))}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+              className="mt-3"
             >
-              <span className="text-base leading-none">+</span> Add Guard
-            </button>
+              Add Guard
+            </AddRowButton>
           </div>
 
           {/* ── Court Details ── */}
@@ -1619,8 +1591,7 @@ export default function CreateCrimeSceneForm({
                         <p className="text-sm font-semibold text-sky-900">
                           Production {String(index + 1).padStart(2, '0')}
                         </p>
-                        <button
-                          type="button"
+                        <RemoveRowButton
                           onClick={() =>
                             setForm((prev) => ({
                               ...prev,
@@ -1633,11 +1604,9 @@ export default function CreateCrimeSceneForm({
                               },
                             }))
                           }
-                          className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                          className="h-9 shrink-0 px-3 text-xs"
                           aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
-                        >
-                          Remove
-                        </button>
+                        />
                       </div>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
                         <FieldGroup label="Production type" className="min-w-0">
@@ -1839,8 +1808,7 @@ export default function CreateCrimeSceneForm({
                         <p className="text-sm font-semibold text-teal-900">
                           Production {String(index + 1).padStart(2, '0')}
                         </p>
-                        <button
-                          type="button"
+                        <RemoveRowButton
                           onClick={() =>
                             setForm((prev) => ({
                               ...prev,
@@ -1853,11 +1821,9 @@ export default function CreateCrimeSceneForm({
                               },
                             }))
                           }
-                          className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                          className="h-9 shrink-0 px-3 text-xs"
                           aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
-                        >
-                          Remove
-                        </button>
+                        />
                       </div>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
                         <FieldGroup label="Production type" className="min-w-0">
