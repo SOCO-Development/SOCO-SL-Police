@@ -1,20 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
+import { PageHeader, PageLayout } from '@/components/ui';
 import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
-import Button from '@/components/buttons/Button';
 import FilterPrimaryButton from '@/components/buttons/FilterPrimaryButton';
 import FilterSection from '@/components/layout/FilterSection';
 import ContentCard from '@/components/layout/ContentCard';
 import TableToolbar from '@/components/layout/TableToolbar';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
-import { FaArrowLeft } from 'react-icons/fa';
 
 // Aggregate row: complaint category with counts per type
 interface CategoryRow {
@@ -116,7 +112,6 @@ const REPORT_COLUMNS: AppTableColumn<CategoryRow>[] = [
 ];
 
 export default function ComplaintReportPage() {
-  const router = useRouter();
   const [dateFrom, setDateFrom] = useState('01-02-2026');
   const [timeFrom, setTimeFrom] = useState('12:18');
   const [dateTo, setDateTo] = useState('02-02-2026');
@@ -189,22 +184,8 @@ export default function ComplaintReportPage() {
   };
 
   return (
-    <div className="complaint-report-page min-h-screen flex flex-col print:bg-white">
-      <Header />
-      <div className="flex flex-1 w-full relative z-10 pt-14 print:pt-0">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen print:ml-0">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-10 flex-1 print:py-4">
-            <div className="flex items-center gap-4 mb-6 print:mb-4">
-              <Button
-                variant="secondary"
-                onClick={() => router.push('/reports')}
-                className="print:hidden"
-              >
-                <FaArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <h1 className="text-3xl font-bold text-gray-900">Complaint Report</h1>
-            </div>
+    <PageLayout className="complaint-report-page print:bg-white" contentClassName="py-10 print:py-4">
+      <PageHeader backHref="/reports" title="Complaint Report" />
 
             {/* Filters - 4 Columns, 2 Rows (same as View Complaints / Dashboard) */}
             <FilterSection className="print:hidden">
@@ -271,10 +252,6 @@ export default function ComplaintReportPage() {
                 }}
               />
             </ContentCard>
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+    </PageLayout>
   );
 }
