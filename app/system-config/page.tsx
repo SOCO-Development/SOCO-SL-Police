@@ -1,8 +1,7 @@
 'use client';
 
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import FeatureCard from '@/components/cards/FeatureCard';
+import { PageHeader, PageLayout } from '@/components/ui';
 import { MapPin, Truck, UserGear, ListBullets } from 'phosphor-react';
 
 export default function SystemConfigPage() {
@@ -38,36 +37,25 @@ export default function SystemConfigPage() {
     ];
 
     return (
-        <div className="min-h-screen flex flex-col">
-            <Header />
-            <div className="flex flex-1 relative z-10 w-full pt-14">
-                <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-                    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-                        <section className="mb-12">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                                Configuration
-                            </h2>
-                            <p className="text-sm text-gray-500 mb-8 font-noto-sinhala">
-                                පද්ධති වින්‍යාස කළමනාකරණය
-                            </p>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-3xl lg:max-w-none">
-                                {cards.map((card) => (
-                                    <FeatureCard
-                                        key={card.href}
-                                        title={card.title}
-                                        icon={card.icon}
-                                        href={card.href}
-                                        subtitle={<span className="font-noto-sinhala">{card.subtitle}</span>}
-                                        description={card.description}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    </div>
-                    <Footer />
-                </main>
-            </div>
-        </div>
+        <PageLayout>
+            <PageHeader
+                title="Configuration"
+                description="පද්ධති වින්‍යාස කළමනාකරණය"
+            />
+            <section className="mb-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-3xl lg:max-w-none">
+                    {cards.map((card) => (
+                        <FeatureCard
+                            key={card.href}
+                            title={card.title}
+                            icon={card.icon}
+                            href={card.href}
+                            subtitle={<span className="font-noto-sinhala">{card.subtitle}</span>}
+                            description={card.description}
+                        />
+                    ))}
+                </div>
+            </section>
+        </PageLayout>
     );
 }
