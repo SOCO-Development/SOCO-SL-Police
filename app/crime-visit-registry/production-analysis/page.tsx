@@ -3,15 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import CustomSelect from '@/components/forms/CustomSelect';
 import Button from '@/components/buttons/Button';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
-import { ArrowLeft } from 'lucide-react';
+import { PageHeader, PageLayout } from '@/components/ui';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import { validateSentToAnalysisSection } from '@/lib/courtDetailsValidation';
 import { emptyCrimeSceneCourtDetails, type CrimeSceneCourtDetails } from '@/types/crimeScene';
@@ -150,32 +147,23 @@ export default function ProductionAnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex flex-1 relative z-10 w-full pt-14">
-        <main className="flex flex-1 overflow-x-hidden min-w-0 flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            <div className="flex items-center gap-3 mb-6">
-              <Link href="/crime-visit-registry" className={registryBackLinkClass} aria-label="Back">
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </Link>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Update Production Analysis</h2>
-                <p className="text-sm text-gray-600 mt-0.5">
-                  Choose a crime scene below, then click <strong>Edit</strong> to change{' '}
-                  <strong>Productions sent to analysis institutes</strong> and save. Saving applies to{' '}
-                  <strong>every visit record for the same CVR</strong>. Saved data appears under{' '}
-                  <Link
-                    href="/crime-visit-registry/submitted-crime-scenes"
-                    className="text-blue-600 font-medium hover:underline"
-                  >
-                    Submitted crime scenes
-                  </Link>
-                  .
-                </p>
-              </div>
-            </div>
+    <>
+      <PageLayout>
+        <PageHeader
+          backHref="/crime-visit-registry"
+          title="Update Production Analysis"
+          description="Choose a crime scene below, then click Edit to change Productions sent to analysis institutes and save. Saving applies to every visit record for the same CVR."
+        />
+        <p className="text-sm text-gray-600 mb-6 -mt-2">
+          Saved data appears under{' '}
+          <Link
+            href="/crime-visit-registry/submitted-crime-scenes"
+            className="text-blue-600 font-medium hover:underline"
+          >
+            Submitted crime scenes
+          </Link>
+          .
+        </p>
 
             {scenes.length === 0 ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -322,11 +310,8 @@ export default function ProductionAnalysisPage() {
                 </div>
               </>
             )}
-          </div>
-          <Footer />
-        </main>
-      </div>
+      </PageLayout>
       <ResultPopup {...popup} onClose={closePopup} />
-    </div>
+    </>
   );
 }
