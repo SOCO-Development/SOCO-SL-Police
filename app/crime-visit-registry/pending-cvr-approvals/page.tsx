@@ -2,15 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import CrimeSceneRevisionDiff from '@/components/cvr/CrimeSceneRevisionDiff';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
-import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { ActionChipButton, ApproveRejectActions, PageHeader, PageLayout, SearchInput, TabBar } from '@/components/ui';
 
 type FilterTab = 'REQUESTS' | 'REVISIONS';
 
@@ -160,30 +157,16 @@ export default function PendingCvrApprovalsPage() {
       label: 'Actions',
       align: 'right',
       render: (_, row) => (
-        <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              crimeSceneService.approveAmendmentRequest(row.id);
-              reload();
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border border-green-200"
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            Approve
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              crimeSceneService.rejectAmendmentRequest(row.id);
-              reload();
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
-          >
-            <XCircle className="w-3.5 h-3.5" />
-            Reject
-          </button>
-        </div>
+        <ApproveRejectActions
+          onApprove={() => {
+            crimeSceneService.approveAmendmentRequest(row.id);
+            reload();
+          }}
+          onReject={() => {
+            crimeSceneService.rejectAmendmentRequest(row.id);
+            reload();
+          }}
+        />
       ),
     },
   ];
@@ -217,92 +200,45 @@ export default function PendingCvrApprovalsPage() {
       align: 'right',
       render: (_, row) => (
         <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedRevisionId(row.id)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
-          >
+          <ActionChipButton variant="blue" onClick={() => setSelectedRevisionId(row.id)}>
             Review diff
-          </button>
-          <button
-            type="button"
-            onClick={() => {
+          </ActionChipButton>
+          <ApproveRejectActions
+            showIcons={false}
+            onApprove={() => {
               crimeSceneService.approveRevision(row.id);
               reload();
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border border-green-200"
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            onClick={() => {
+            onReject={() => {
               crimeSceneService.rejectRevision(row.id);
               reload();
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
-          >
-            Reject
-          </button>
+          />
         </div>
       ),
     },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 relative z-10 w-full pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/crime-visit-registry"
-                  className={registryBackLinkClass}
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </Link>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Pending CVR Approvals</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Approve or reject permission requests first, then review amended records with field-level diffs.
-                  </p>
-                </div>
-              </div>
-            </div>
+    <PageLayout>
+      <PageHeader
+        backHref="/crime-visit-registry"
+        title="Pending CVR Approvals"
+        description="Approve or reject permission requests first, then review amended records with field-level diffs."
+      />
 
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
-              <div className="flex gap-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => setFilter(tab.value)}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-                      filter === tab.value
-                        ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {tab.label}
-                    <span
-                      className={`ml-2 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                        filter === tab.value ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {countFor(tab.value)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
+              <TabBar
+                tabs={tabs.map((tab) => ({ ...tab, count: countFor(tab.value) }))}
+                value={filter}
+                onChange={setFilter}
+              />
+              <SearchInput
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by CVR no, visit type, or updated date..."
-                className="w-full md:w-96 min-h-10 mb-2 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                wrapperClassName="w-full md:w-96 mb-2"
+                className="min-h-10"
               />
             </div>
 
@@ -339,28 +275,19 @@ export default function PendingCvrApprovalsPage() {
                         <p className="font-mono font-semibold text-gray-900">{selectedRevision.cvrNo}</p>
                         <p className="text-xs text-gray-500">Compare previous vs proposed below</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            crimeSceneService.approveRevision(selectedRevision.id);
-                            reload();
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border border-green-200"
-                        >
-                          Approve changes
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            crimeSceneService.rejectRevision(selectedRevision.id);
-                            reload();
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
-                        >
-                          Reject &amp; restore
-                        </button>
-                      </div>
+                      <ApproveRejectActions
+                        approveLabel="Approve changes"
+                        rejectLabel="Reject & restore"
+                        showIcons={false}
+                        onApprove={() => {
+                          crimeSceneService.approveRevision(selectedRevision.id);
+                          reload();
+                        }}
+                        onReject={() => {
+                          crimeSceneService.rejectRevision(selectedRevision.id);
+                          reload();
+                        }}
+                      />
                     </div>
                     <div className="p-4">
                       {baselineScene(selectedRevision) ? (
@@ -373,10 +300,6 @@ export default function PendingCvrApprovalsPage() {
                 ) : null}
               </div>
             ) : null}
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+    </PageLayout>
   );
 }
