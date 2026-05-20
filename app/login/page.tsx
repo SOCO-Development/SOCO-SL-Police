@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { publicAssetSrc } from "@/lib/publicAsset";
 import FormInput from "@/components/forms/FormInput";
+import { Button } from "@/components/ui";
 import { Lock, Shield, User, CheckCircle } from "lucide-react";
 
 export default function LoginPage() {
@@ -301,10 +302,10 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-[#0b2f64] to-[#0a4685] hover:from-[#0e3c7f] hover:to-[#0e57a3] text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-noto flex items-center justify-center gap-2"
+                    className="w-full !min-h-[48px] bg-gradient-to-r from-[#0b2f64] to-[#0a4685] hover:from-[#0e3c7f] hover:to-[#0e57a3] text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-noto"
                   >
                     {isLoading ? (
                       <>
@@ -336,7 +337,7 @@ export default function LoginPage() {
                         Sign In
                       </>
                     )}
-                  </button>
+                  </Button>
                 </form>
               )}
 
