@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import CrimeVisitList from './CrimeVisitList';
 import CrimeVisitDetailView from '@/app/crime-visit-registry/crime-visits/CrimeVisitDetailView';
 import CrimeVisitForm from '../initiate/CrimeVisitForm';
@@ -12,9 +10,8 @@ import { crimeVisitService } from '@/lib/crimeVisitService';
 import { sortCrimeVisits } from '@/lib/crimeVisitSort';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeVisit, CrimeVisitStatus, CrimeVisitFormData, DraftAdditions } from '@/types/crimeVisit';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
-import Button from '@/components/buttons/Button';
-import { ArrowLeft, CheckCircle, Clock, Plus } from 'lucide-react';
+import { PageHeader, PageLayout, Button, TabBar, SearchInput } from '@/components/ui';
+import { CheckCircle, Plus } from 'lucide-react';
 
 type FilterTab = 'ALL' | CrimeVisitStatus;
 
@@ -75,62 +72,32 @@ function ListView() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex flex-1 relative z-10 w-full pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/crime-visit-registry"
-                  className={registryBackLinkClass}
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </Link>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Crime Visits</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">All crime visit records — draft and submitted.</p>
-                </div>
-              </div>
-              <Button variant="primary" asChild>
-                <Link href="/crime-visit-registry/initiate">
-                  <Plus className="w-4 h-4" /> New Visit
-                </Link>
-              </Button>
-            </div>
+    <PageLayout>
+      <PageHeader
+        backHref="/crime-visit-registry"
+        title="Crime Visits"
+        description="All crime visit records — draft and submitted."
+        actions={
+          <Button variant="primary" asChild>
+            <Link href="/crime-visit-registry/initiate">
+              <Plus className="w-4 h-4" /> New Visit
+            </Link>
+          </Button>
+        }
+      />
 
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
-              <div className="flex gap-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => setFilter(tab.value)}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-                      filter === tab.value
-                        ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {tab.label}
-                    <span
-                      className={`ml-2 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                        filter === tab.value ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {countFor(tab.value)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
+              <TabBar
+                tabs={tabs.map((tab) => ({ ...tab, count: countFor(tab.value) }))}
+                value={filter}
+                onChange={setFilter}
+              />
+              <SearchInput
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by reference no, vehicle, station, division, offence..."
-                className="w-full md:w-96 min-h-10 mb-2 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                placeholder="Search by reference, vehicle, station..."
+                wrapperClassName="w-full md:w-96 mb-2"
+                className="min-h-10"
               />
             </div>
 
@@ -143,11 +110,7 @@ function ListView() {
               onSort={handleSort}
               emptyMessage="No crime visits found for this filter."
             />
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+    </PageLayout>
   );
 }
 
@@ -215,26 +178,18 @@ function DetailView({ id }: { id: string }) {
     };
 
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex flex-1 relative z-10 w-full pt-14">
-          <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-              <div className="flex items-center gap-3 mb-6 flex-wrap">
-                <Link href="/crime-visit-registry/crime-visits" className={registryBackLinkClass} aria-label="Back">
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </Link>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-2xl font-bold text-gray-900">{visit.referenceNo}</h2>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                      Draft
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-0.5">Last updated: {formatDateTimeDDMMYYYY(visit.updatedAt)}</p>
-                </div>
-              </div>
+      <>
+        <PageLayout>
+          <PageHeader
+            backHref="/crime-visit-registry/crime-visits"
+            title={visit.referenceNo ?? visit.id}
+            description={`Last updated: ${formatDateTimeDDMMYYYY(visit.updatedAt)}`}
+          />
+          <div className="flex flex-wrap items-center gap-2 mb-6 -mt-4">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              Draft
+            </span>
+          </div>
 
               <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 sm:px-5">
                 <div className="flex items-start gap-3">
@@ -252,43 +207,30 @@ function DetailView({ id }: { id: string }) {
                 onSubmit={handleSubmitDraft}
                 onCancel={() => router.push('/crime-visit-registry/crime-visits')}
               />
-            </div>
-            <Footer />
-          </main>
-        </div>
+        </PageLayout>
         {toast && (
           <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
             <CheckCircle className="w-4 h-4 flex-shrink-0" />
             {toast.message}
           </div>
         )}
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex flex-1 relative z-10 w-full pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            <div className="flex items-center gap-3 mb-6 flex-wrap">
-              <Link href="/crime-visit-registry/crime-visits" className={registryBackLinkClass} aria-label="Back">
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </Link>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-2xl font-bold text-gray-900">{visit.referenceNo}</h2>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-                    <CheckCircle className="w-3 h-3" /> Submitted
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> Submitted: {formatDateTimeDDMMYYYY(visit.updatedAt)}
-                </p>
-              </div>
-            </div>
+    <>
+      <PageLayout>
+        <PageHeader
+          backHref="/crime-visit-registry/crime-visits"
+          title={visit.referenceNo ?? visit.id}
+          description={`Submitted: ${formatDateTimeDDMMYYYY(visit.updatedAt)}`}
+        />
+        <div className="flex flex-wrap items-center gap-2 mb-6 -mt-4">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+            <CheckCircle className="w-3 h-3" /> Submitted
+          </span>
+        </div>
 
             <div className="mb-6 flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
               <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
@@ -296,17 +238,14 @@ function DetailView({ id }: { id: string }) {
             </div>
 
             <CrimeVisitDetailView visit={visit} />
-          </div>
-          <Footer />
-        </main>
-      </div>
+      </PageLayout>
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           <CheckCircle className="w-4 h-4 flex-shrink-0" />
           {toast.message}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
