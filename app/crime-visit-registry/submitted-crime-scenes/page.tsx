@@ -2,13 +2,11 @@
 import { Fragment, useEffect, useMemo, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
+import { PageHeader, PageLayout, TabBar, SearchInput, TableSortButton } from '@/components/ui';
 import {
   flattenGroupChronological,
   groupScenesByCvr,
@@ -20,7 +18,7 @@ import {
   registryWorkflowListRowClasses,
   registryWorkflowBadgeClasses,
 } from '@/lib/registryWorkflowDisplay';
-import { ArrowLeft, CheckCircle, ExternalLink, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
 
 type FilterTab = 'ALL' | 'TODAY';
 
@@ -300,65 +298,37 @@ export default function SubmittedCrimeScenesPage() {
   if (isDetailMode) {
     if (relatedScenesForDetail.length === 0) {
       return (
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <div className="flex flex-1 relative z-10 w-full pt-14">
-            <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-              <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-                <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 text-gray-500">
-                  <p className="text-lg font-semibold">Crime scene not found.</p>
-                  <Link href="/crime-visit-registry/submitted-crime-scenes" className="text-sm text-blue-600 hover:underline">
-                    ← Back to Submitted Crime Scenes
-                  </Link>
-                </div>
-              </div>
-              <Footer />
-            </main>
+        <PageLayout>
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 text-gray-500">
+            <p className="text-lg font-semibold">Crime scene not found.</p>
+            <Link href="/crime-visit-registry/submitted-crime-scenes" className="text-sm text-blue-600 hover:underline">
+              ← Back to Submitted Crime Scenes
+            </Link>
           </div>
-        </div>
+        </PageLayout>
       );
     }
 
     return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <div className="flex flex-1 relative z-10 w-full pt-14">
-          <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-              <div className="flex items-center gap-3 mb-6 flex-wrap">
-                <Link
-                  href="/crime-visit-registry/submitted-crime-scenes"
-                  className={registryBackLinkClass}
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </Link>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-2xl font-bold text-gray-900">{detailTitle}</h2>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-                      <CheckCircle className="w-3 h-3" /> Submitted
-                    </span>
-                    {relatedScenesForDetail.length > 1 ? (
-                      <span className="text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-full px-2.5 py-0.5">
-                        {relatedScenesForDetail.length} visits
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    All visits for this CVR are listed below.
-                  </p>
-                </div>
-              </div>
-
-              <CrimeSceneMultiDetailView scenes={relatedScenesForDetail} />
-            </div>
-            <Footer />
-          </main>
+      <PageLayout>
+        <PageHeader
+          backHref="/crime-visit-registry/submitted-crime-scenes"
+          title={detailTitle}
+          description="All visits for this CVR are listed below."
+        />
+        <div className="flex flex-wrap items-center gap-2 mb-6 -mt-4">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+            <CheckCircle className="w-3 h-3" /> Submitted
+          </span>
+          {relatedScenesForDetail.length > 1 ? (
+            <span className="text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-full px-2.5 py-0.5">
+              {relatedScenesForDetail.length} visits
+            </span>
+          ) : null}
         </div>
-      </div>
+
+        <CrimeSceneMultiDetailView scenes={relatedScenesForDetail} />
+      </PageLayout>
     );
   }
 
@@ -371,35 +341,18 @@ export default function SubmittedCrimeScenesPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex flex-1 relative z-10 w-full pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            {/* Page header */}
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/crime-visit-registry"
-                  className={registryBackLinkClass}
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </Link>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Submitted Crime Scenes</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    One row per CVR — expand for other visits. View shows every visit for that CVR. Reported today
-                    lists a CVR if any visit was submitted today or has today&apos;s date in reported to police.
-                  </p>
-                </div>
-              </div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-                <CheckCircle className="w-3.5 h-3.5" />
-                {allGroups.length} CVR{allGroups.length === 1 ? '' : 's'} · {scenes.length} visit{scenes.length === 1 ? '' : 's'}
-              </span>
-            </div>
+    <PageLayout>
+      <PageHeader
+        backHref="/crime-visit-registry"
+        title="Submitted Crime Scenes"
+        description="One row per CVR — expand for other visits. View shows every visit for that CVR. Reported today lists a CVR if any visit was submitted today or has today's date in reported to police."
+        actions={
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+            <CheckCircle className="w-3.5 h-3.5" />
+            {allGroups.length} CVR{allGroups.length === 1 ? '' : 's'} · {scenes.length} visit{scenes.length === 1 ? '' : 's'}
+          </span>
+        }
+      />
 
             {targetCvr && (
               <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
@@ -408,36 +361,17 @@ export default function SubmittedCrimeScenesPage() {
             )}
 
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
-              <div className="flex gap-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() => setFilter(tab.value)}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-                      filter === tab.value
-                        ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {tab.label}
-                    <span
-                      className={`ml-2 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                        filter === tab.value ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {countFor(tab.value)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              <input
-                type="text"
+              <TabBar
+                tabs={tabs.map((tab) => ({ ...tab, count: countFor(tab.value) }))}
+                value={filter}
+                onChange={setFilter}
+              />
+              <SearchInput
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by CVR no, station, division, place, offence..."
-                className="w-full md:w-96 min-h-10 mb-2 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                wrapperClassName="w-full md:w-96 mb-2"
+                className="min-h-10"
               />
             </div>
 
@@ -450,58 +384,22 @@ export default function SubmittedCrimeScenesPage() {
                     <tr className={tableClasses.thead}>
                       <th className={`${tableClasses.th} w-10`} aria-label="Expand" />
                       <th className={tableClasses.th}>
-                        <button
-                          type="button"
-                          onClick={() => handleSort('cvrNo')}
-                          className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-                        >
-                          CVR No.
-                        </button>
+                        <TableSortButton onClick={() => handleSort('cvrNo')}>CVR No.</TableSortButton>
                       </th>
                       <th className={tableClasses.th}>
-                        <button
-                          type="button"
-                          onClick={() => handleSort('visitType')}
-                          className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-                        >
-                          Visit Type
-                        </button>
+                        <TableSortButton onClick={() => handleSort('visitType')}>Visit Type</TableSortButton>
                       </th>
                       <th className={tableClasses.th}>
-                        <button
-                          type="button"
-                          onClick={() => handleSort('policeStation')}
-                          className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-                        >
-                          Police Station
-                        </button>
+                        <TableSortButton onClick={() => handleSort('policeStation')}>Police Station</TableSortButton>
                       </th>
                       <th className={tableClasses.th}>
-                        <button
-                          type="button"
-                          onClick={() => handleSort('division')}
-                          className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-                        >
-                          Division
-                        </button>
+                        <TableSortButton onClick={() => handleSort('division')}>Division</TableSortButton>
                       </th>
                       <th className={tableClasses.th}>
-                        <button
-                          type="button"
-                          onClick={() => handleSort('placeOfCrimeScene')}
-                          className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-                        >
-                          Crime Scene
-                        </button>
+                        <TableSortButton onClick={() => handleSort('placeOfCrimeScene')}>Crime Scene</TableSortButton>
                       </th>
                       <th className={tableClasses.th}>
-                        <button
-                          type="button"
-                          onClick={() => handleSort('updatedAt')}
-                          className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-                        >
-                          Submitted
-                        </button>
+                        <TableSortButton onClick={() => handleSort('updatedAt')}>Submitted</TableSortButton>
                       </th>
                       <th className={tableClasses.thRight}>Actions</th>
                     </tr>
@@ -629,10 +527,6 @@ export default function SubmittedCrimeScenesPage() {
                 </table>
               </div>
             )}
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+    </PageLayout>
   );
 }
