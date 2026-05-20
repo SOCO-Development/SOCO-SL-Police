@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import Button from '@/components/buttons/Button';
+import Badge from '@/components/ui/Badge';
 import type { CrimeVisit } from '@/types/crimeVisit';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { Clock, CheckCircle, Trash2, ExternalLink } from 'lucide-react';
@@ -21,17 +22,15 @@ interface CrimeVisitListProps {
 function statusBadge(status: CrimeVisit['status']) {
     if (status === 'DRAFT') {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                <Clock className="w-3 h-3" />
+            <Badge variant="draft" icon={<Clock className="w-3 h-3" />}>
                 Draft
-            </span>
+            </Badge>
         );
     }
     return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-            <CheckCircle className="w-3 h-3" />
+        <Badge variant="submitted" icon={<CheckCircle className="w-3 h-3" />}>
             Submitted
-        </span>
+        </Badge>
     );
 }
 
