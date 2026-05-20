@@ -22,7 +22,7 @@ import {
   Settings,
 } from 'lucide-react';
 
-interface HeaderProps {
+export interface HeaderProps {
   userName?: string;
   homeTheme?: 'dark' | 'light';
   onToggleHomeTheme?: () => void;
@@ -193,7 +193,7 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
                 fetchPriority="high"
               />
               <div className="hidden sm:block min-w-0">
-                <span className={`text-base font-semibold truncate block transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>SOCO CMS</span>
+                <span className={`text-base font-semibold truncate block transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>SOCO - SL Police</span>
                 <span className={`text-[10px] truncate block transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>SL Police</span>
               </div>
             </Link>
@@ -339,7 +339,7 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
                     <LogOut className="w-7 h-7 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-800">Sign out of SOCO CMS?</h3>
+                    <h3 className="text-base font-bold text-gray-800">Sign out of SOCO - SL Police?</h3>
                     <p className="text-sm text-gray-500 mt-1">
                       You will be returned to the login screen.
                     </p>
