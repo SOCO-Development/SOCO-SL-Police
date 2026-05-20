@@ -1,5 +1,6 @@
 'use client';
 
+import { AddRowButton, RemoveRowButton, FileUploadButton } from '@/components/ui';
 import { useRef } from 'react';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
@@ -96,26 +97,14 @@ function AnalysisAttachment({ index, row, readOnly, onUpdate }: AnalysisAttachme
             <span className="text-sm text-gray-700 truncate max-w-xs">{row.attachmentFileName}</span>
           )}
           {!readOnly && (
-            <button
-              type="button"
-              onClick={handleRemove}
-              className="text-xs text-red-600 hover:text-red-800 font-semibold border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg px-2.5 py-1 transition-colors"
-            >
-              Remove
-            </button>
+            <RemoveRowButton onClick={handleRemove} />
           )}
         </div>
       ) : readOnly ? (
         <p className="text-xs text-gray-400 italic">No attachment</p>
       ) : (
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="text-sm font-semibold text-sky-700 border border-sky-200 bg-sky-50 hover:bg-sky-100 hover:border-sky-300 rounded-lg px-3 py-2 transition-colors"
-          >
-            Upload file
-          </button>
+          <FileUploadButton type="button" onClick={() => fileRef.current?.click()}>Upload file</FileUploadButton>
           <span className="text-xs text-gray-400">PDF, image, or document</span>
           <input
             ref={fileRef}
@@ -285,20 +274,11 @@ export default function CourtProductionDetailsEditor({
                     aria-hidden
                   />
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      patch({
+                  <RemoveRowButton size="md" className="h-9 shrink-0 px-3" onClick={() => patch({
                         sentToAnalysisRows: (courtDetails.sentToAnalysisRows ?? []).filter(
                           (_, i) => i !== index,
                         ),
-                      })
-                    }
-                    className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
-                    aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
-                  >
-                    Remove
-                  </button>
+                      })} />
                 )}
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
@@ -553,18 +533,17 @@ export default function CourtProductionDetailsEditor({
           ))}
         </div>
         {readOnly ? null : (
-          <button
-            type="button"
+          <AddRowButton
             onClick={() =>
               patch({
                 sentToAnalysisRows: [...(courtDetails.sentToAnalysisRows ?? []), emptySentToAnalysisRow()],
               })
             }
             disabled={!(courtDetails.productionPRTypes ?? []).length}
-            className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            className="disabled:opacity-40 disabled:pointer-events-none"
           >
-            <span className="text-base leading-none">+</span> Add analysis institute row
-          </button>
+            Add analysis institute row
+          </AddRowButton>
         )}
       </div>
       ) : null}
@@ -593,8 +572,9 @@ export default function CourtProductionDetailsEditor({
                 {readOnly ? (
                   <span className="h-9 w-[4.5rem] shrink-0 inline-block" aria-hidden />
                 ) : (
-                  <button
-                    type="button"
+                  <RemoveRowButton
+                    size="md"
+                    className="h-9 shrink-0 px-3"
                     onClick={() =>
                       patch({
                         productionSentToCourtRows: (courtDetails.productionSentToCourtRows ?? []).filter(
@@ -602,11 +582,7 @@ export default function CourtProductionDetailsEditor({
                         ),
                       })
                     }
-                    className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 text-xs font-semibold"
-                    aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
-                  >
-                    Remove
-                  </button>
+                  />
                 )}
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
@@ -722,8 +698,7 @@ export default function CourtProductionDetailsEditor({
           ))}
         </div>
         {readOnly ? null : (
-          <button
-            type="button"
+          <AddRowButton
             onClick={() =>
               patch({
                 productionSentToCourtRows: [
@@ -733,10 +708,10 @@ export default function CourtProductionDetailsEditor({
               })
             }
             disabled={!(courtDetails.productionPRTypes ?? []).length}
-            className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            className="disabled:opacity-40 disabled:pointer-events-none"
           >
-            <span className="text-base leading-none">+</span> Add production sent to court
-          </button>
+            Add production sent to court
+          </AddRowButton>
         )}
       </div>
       ) : null}
