@@ -2,19 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
+import { PageHeader, PageLayout, TabBar, SearchInput, ActionChipButton } from '@/components/ui';
 import {
   sceneHasRevisionPending,
   sceneMayEditAmended,
   sceneMayRequestUpdate,
 } from '@/lib/cvrWorkflow';
-import { ArrowLeft, ExternalLink, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 type FilterTab = 'REQUEST' | 'PENDING' | 'APPROVED';
 
@@ -209,77 +207,32 @@ export default function CvrUpdateRequestPage() {
       render: (_, row) => {
         const canRequest = sceneMayRequestUpdate(row);
         return (
-          <button
-            type="button"
-            onClick={() => requestUpdate(row.id)}
-            disabled={!canRequest}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors border ${
-              canRequest
-                ? 'text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200'
-                : 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed'
-            }`}
-          >
-            Request update permission
-          </button>
+          <ActionChipButton variant="blue" onClick={() => requestUpdate(row.id)} disabled={!canRequest} className={!canRequest ? '!text-gray-400 !bg-gray-50 !border-gray-200 !cursor-not-allowed' : ''}>Request update permission</ActionChipButton>
         );
       },
     },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 relative z-10 w-full pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/crime-visit-registry"
-                  className={registryBackLinkClass}
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </Link>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">CVR Update Request</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Ask permission to amend a submitted CVR, then edit and submit for re-approval.
-                  </p>
-                </div>
-              </div>
-            </div>
+    <PageLayout>
+      <PageHeader
+        backHref="/crime-visit-registry"
+        title="CVR Update Request"
+        description="Ask permission to amend a submitted CVR, then edit and submit for re-approval."
+      />
 
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
-              <div className="flex gap-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => setFilter(tab.value)}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-                      filter === tab.value
-                        ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {tab.label}
-                    <span
-                      className={`ml-2 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                        filter === tab.value ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {countFor(tab.value)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
+              <TabBar
+                tabs={tabs.map((tab) => ({ ...tab, count: countFor(tab.value) }))}
+                value={filter}
+                onChange={setFilter}
+              />
+              <SearchInput
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by CVR no, visit type, or updated date..."
-                className="w-full md:w-96 min-h-10 mb-2 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                placeholder="Search by CVR no, visit type, or status..."
+                wrapperClassName="w-full md:w-96 mb-2"
+                className="min-h-10"
               />
             </div>
 
@@ -377,10 +330,6 @@ export default function CvrUpdateRequestPage() {
                 )}
               </div>
             ) : null}
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

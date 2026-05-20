@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import { ArrowLeft, Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import CustomSelect from "@/components/forms/CustomSelect";
 import AppTable, { type AppTableColumn } from "@/components/layout/AppTable";
+import { PageHeader, PageLayout, Button, UnderlineTab, TableIconButton } from "@/components/ui";
 
 interface LocationEntry {
   id: string;
@@ -150,88 +148,32 @@ export default function LocationConfigPage() {
       align: "right",
       render: (_, row) => (
         <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={() => handleEdit(row)}
-            className="text-gray-400 hover:text-blue-600 transition-colors p-1"
-            title="Edit"
-          >
-            <Pencil size={15} />
-          </button>
-          <button
-            onClick={() => removeLocation(row.id)}
-            className="text-gray-400 hover:text-red-600 transition-colors p-1"
-            title="Delete"
-          >
-            <Trash2 size={15} />
-          </button>
+          <TableIconButton variant="edit" onClick={() => handleEdit(row)} title="Edit"><Pencil size={15} /></TableIconButton>
+          <TableIconButton variant="delete" onClick={() => removeLocation(row.id)} title="Delete"><Trash2 size={15} /></TableIconButton>
         </div>
       ),
     },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex flex-1 relative z-10 w-full pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            {/* Page Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/system-config"
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Link>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Location Configuration
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Manage SOCO locations — add and view location assignments.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={openAddNew}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors shadow-sm"
-              >
-                <Plus size={16} />
-                Add New Location
-              </button>
-            </div>
+    <PageLayout>
+      <PageHeader
+        backHref="/system-config"
+        title="Location Configuration"
+        description="Manage SOCO locations — add and view location assignments."
+        actions={
+          <Button variant="primary" onClick={openAddNew}>
+            <Plus size={16} />
+            Add New Location
+          </Button>
+        }
+      />
 
             {/* Tabs */}
             <div className="flex items-center border-b border-gray-200 mb-6">
-              <button
-                onClick={() => setActiveTab("all")}
-                className={`flex items-center gap-1.5 px-1 pb-3 mr-6 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                  activeTab === "all"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                All
-                <span
-                  className={`text-sm font-semibold ${activeTab === "all" ? "text-blue-600" : "text-gray-500"}`}
-                >
-                  {locations.length}
-                </span>
-              </button>
-              <button
-                onClick={openAddNew}
-                className={`px-1 pb-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                  activeTab === "addNew"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Add New
-              </button>
+              <UnderlineTab active={activeTab === 'all'} onClick={() => setActiveTab('all')} count={locations.length}>All</UnderlineTab>
+              <UnderlineTab active={activeTab === 'addNew'} onClick={openAddNew}>Add New</UnderlineTab>
             </div>
-
             {/* All Tab */}
             {activeTab === "all" && (
               <div>
@@ -334,26 +276,15 @@ export default function LocationConfigPage() {
                 </div>
 
                 <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
+                  <Button variant="secondary" type="button" onClick={handleReset}>
                     {editingId ? "Cancel" : "Reset"}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm"
-                  >
+                  </Button>
+                  <Button variant="success" type="submit">
                     {editingId ? "Update Location" : "Save Location"}
-                  </button>
+                  </Button>
                 </div>
               </form>
             )}
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

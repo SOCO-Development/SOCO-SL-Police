@@ -2,7 +2,7 @@
 
 import { cloneElement, isValidElement, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'amber';
+type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'amber' | 'teal-outline';
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
@@ -17,6 +17,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     'min-h-[42px] px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100 rounded-lg transition-colors',
   amber:
     'min-h-[42px] px-5 py-2.5 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 hover:border-amber-300 active:bg-amber-200 transition-colors',
+  'teal-outline':
+    'text-sm font-semibold text-teal-700 hover:text-teal-900 border border-teal-300 bg-teal-50 hover:bg-teal-100 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40 disabled:pointer-events-none',
 };
 
 const baseClasses =

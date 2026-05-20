@@ -2,14 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import CustomSelect from '@/components/forms/CustomSelect';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
+import { PageHeader, PageLayout, Button, SearchInput, ActionChipButton, PaginationControls } from '@/components/ui';
 import { ANNEX_01_SOCO_LABS, ANNEX_12_RANK } from '@/lib/annexData';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
 import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
-import { ArrowLeft, Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 
 const LAB_FILTER_OPTIONS = [{ value: '', label: 'All Labs' }, ...ANNEX_01_SOCO_LABS.map((l) => ({ value: l, label: l }))];
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
@@ -156,15 +154,7 @@ export default function ViewOfficersPage() {
                 align: 'right' as const,
                 render: (_, row) => (
                     <div className="flex items-center justify-end gap-2 flex-wrap">
-                        <button
-                            type="button"
-                            title="View"
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
-                            onClick={() => setViewingOfficer(row)}
-                        >
-                            <Eye className="w-3 h-3" />
-                            View
-                        </button>
+                        <ActionChipButton variant="blue" title="View" onClick={() => setViewingOfficer(row)}><Eye className="w-3 h-3" /> View</ActionChipButton>
                         <Link
                             href={`/crime-officer/add?edit=${row.id}`}
                             title="Edit"
@@ -173,15 +163,7 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <button
-                            type="button"
-                            title="Delete"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
-                            onClick={() => handleDelete(row.id)}
-                        >
-                            <Trash2 className="w-3 h-3" />
-                            Delete
-                        </button>
+                        <ActionChipButton variant="red" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 className="w-3 h-3" /> Delete</ActionChipButton>
                     </div>
                 ),
             },
@@ -190,59 +172,41 @@ export default function ViewOfficersPage() {
     );
 
     return (
-        <div className="min-h-screen flex flex-col">
-            <Header />
-            <div className="flex flex-1 relative z-10 w-full pt-14">
-                <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-                    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-
-                        {/* Page header */}
-                        <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-                            <div className="flex items-center gap-3">
-                                <Link
-                                    href="/crime-officer"
-                                    className={registryBackLinkClass}
-                                    aria-label="Back"
-                                >
-                                    <ArrowLeft className="w-4 h-4" />
-                                    <span>Back</span>
-                                </Link>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">View SOCO Officers</h2>
-                                    <p className="text-sm text-gray-600 mt-0.5 font-noto-sinhala">
-                                        SOCO නිලධාරීන් — {filtered.length} records found
-                                    </p>
-                                </div>
-                            </div>
-                            <Link
-                                href="/crime-officer/add"
-                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
-                            >
-                                <Plus className="w-4 h-4" /> Add Officer
-                            </Link>
-                        </div>
+        <>
+        <PageLayout>
+            <PageHeader
+                backHref="/crime-officer"
+                title="View SOCO Officers"
+                description={`SOCO නිලධාරීන් — ${filtered.length} records found`}
+                actions={
+                    <Button variant="primary" asChild>
+                        <Link href="/crime-officer/add">
+                            <Plus className="w-4 h-4" /> Add Officer
+                        </Link>
+                    </Button>
+                }
+            />
 
                         {/* Search & Filters */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
                             <div className="flex gap-3 flex-wrap items-center">
-                                <div className="flex-1 min-w-[200px] relative">
-                                    <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        value={search}
-                                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                        placeholder="Search name, reg no, mobile..."
-                                        className="w-full pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
-                                    />
-                                </div>
+                                <SearchInput
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                    placeholder="Search name, reg no, mobile..."
+                                    wrapperClassName="flex-1 min-w-[200px]"
+                                    icon={<MagnifyingGlass size={15} />}
+                                />
 
-                                <button
+                                <Button
                                     type="button"
+                                    variant={showFilters ? 'primary' : 'secondary'}
                                     onClick={() => setShowFilters((f) => !f)}
-                                    className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border rounded-lg transition-colors ${showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'}`}
+                                    className={showFilters ? '!min-h-[38px] !py-2 !text-sm' : '!min-h-[38px] !py-2 !text-sm'}
                                 >
                                     <FunnelSimple size={15} />
                                     Filters
-                                </button>
+                                </Button>
                             </div>
 
                             {showFilters && (
@@ -276,13 +240,14 @@ export default function ViewOfficersPage() {
                                     </div>
                                     {(filterLab || filterRank || search) && (
                                         <div className="flex items-end">
-                                            <button
+                                            <Button
                                                 type="button"
+                                                variant="ghost"
                                                 onClick={() => { setFilterLab(''); setFilterRank(''); setSearch(''); setPage(1); }}
-                                                className="px-3 py-2 text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
+                                                className="!min-h-9 !px-3 !text-xs !text-red-500 hover:!text-red-700"
                                             >
                                                 Clear filters
-                                            </button>
+                                            </Button>
                                         </div>
                                     )}
                                 </div>
@@ -308,49 +273,16 @@ export default function ViewOfficersPage() {
                                         Showing {filtered.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1} to{' '}
                                         {Math.min(effectivePage * pageSize, filtered.length)} of {filtered.length} officers
                                     </p>
-                                    <div className="flex items-center space-x-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                            disabled={effectivePage === 1}
-                                            className="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                                            aria-label="Previous page"
-                                        >
-                                            Previous
-                                        </button>
-                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                            <button
-                                                key={p}
-                                                type="button"
-                                                onClick={() => setPage(p)}
-                                                className={`px-3 py-1.5 text-sm border rounded font-medium transition-colors ${
-                                                    p === effectivePage
-                                                        ? 'border-blue-500 bg-blue-500 text-white'
-                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                                                }`}
-                                                aria-current={p === effectivePage ? 'page' : undefined}
-                                            >
-                                                {p}
-                                            </button>
-                                        ))}
-                                        <button
-                                            type="button"
-                                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                            disabled={effectivePage === totalPages}
-                                            className="px-3 py-1.5 text-sm border border-gray-300 rounded bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                                            aria-label="Next page"
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
+                                    <PaginationControls
+                                        page={effectivePage}
+                                        totalPages={totalPages}
+                                        onPageChange={setPage}
+                                    />
                                 </div>
                             )}
                         </div>
 
-                    </div>
-                    <Footer />
-                </main>
-            </div>
+        </PageLayout>
 
             {/* View Officer Modal */}
             {viewingOfficer && (
@@ -364,14 +296,15 @@ export default function ViewOfficersPage() {
                     >
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/80">
                             <h3 className="text-lg font-semibold text-gray-900">Officer Details</h3>
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={() => setViewingOfficer(null)}
-                                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                                className="!min-h-9 !w-9 !p-2"
                                 aria-label="Close"
                             >
                                 <span className="text-xl leading-none">×</span>
-                            </button>
+                            </Button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             <div className="flex items-center gap-4">
@@ -407,17 +340,13 @@ export default function ViewOfficersPage() {
                             >
                                 Edit
                             </Link>
-                            <button
-                                type="button"
-                                onClick={() => setViewingOfficer(null)}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
-                            >
+                            <Button type="button" variant="secondary" onClick={() => setViewingOfficer(null)}>
                                 Close
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }

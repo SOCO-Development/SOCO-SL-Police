@@ -3,13 +3,11 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import CreateCrimeSceneForm from '../create-scene/CreateCrimeSceneForm';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { sceneMayEditAmended, sceneHasRevisionPending } from '@/lib/cvrWorkflow';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { PageHeader, PageLayout } from '@/components/ui';
+import { CheckCircle } from 'lucide-react';
 
 function EditCrimeSceneContent() {
   const router = useRouter();
@@ -112,37 +110,18 @@ function EditCrimeSceneContent() {
 
 export default function EditCrimeScenePage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 relative z-10 w-full pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            <div className="flex items-center gap-3 mb-6">
-              <Link
-                href="/crime-visit-registry/cvr-update-request"
-                className={registryBackLinkClass}
-                aria-label="Back"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </Link>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Amend crime scene</h2>
-                <p className="text-sm text-gray-600 mt-0.5">
-                  Changes are saved as a pending revision until an approver accepts them.
-                </p>
-              </div>
-            </div>
+    <PageLayout>
+      <PageHeader
+        backHref="/crime-visit-registry/cvr-update-request"
+        title="Amend crime scene"
+        description="Changes are saved as a pending revision until an approver accepts them."
+      />
 
-            <Suspense
-              fallback={<div className="text-sm text-gray-500 py-12 text-center">Loading…</div>}
-            >
-              <EditCrimeSceneContent />
-            </Suspense>
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+      <Suspense
+        fallback={<div className="text-sm text-gray-500 py-12 text-center">Loading…</div>}
+      >
+        <EditCrimeSceneContent />
+      </Suspense>
+    </PageLayout>
   );
 }

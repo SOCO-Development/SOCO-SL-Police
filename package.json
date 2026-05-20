@@ -1,7 +1,10 @@
 {
-  "name": "client",
+  "name": "soco-sl-police",
   "version": "0.1.0",
   "private": true,
+  "description": "Sri Lanka Police Scene of Crime Operations (SOCO) web application",
+  "author": "Sri Lanka Police",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "node scripts/dev-with-ip.mjs",
     "build": "next build",

@@ -16,6 +16,7 @@ import CustomSelect from "@/components/forms/CustomSelect";
 import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
+import { IconButton } from "@/components/ui";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -746,21 +747,7 @@ export default function CrimeVisitForm({
                             {off}
                           </span>
                           {!locked && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = (sA.offence as string[]).filter(
-                                  (_, i) => i !== idx,
-                                );
-                                setFormData((f) => ({
-                                  ...f,
-                                  sectionA: { ...f.sectionA, offence: updated },
-                                }));
-                              }}
-                              className="ml-1 text-violet-400 hover:text-red-500 transition-colors"
-                            >
-                              ×
-                            </button>
+                            <IconButton variant="danger" className="ml-1" aria-label="Remove offence" onClick={() => { const updated = (sA.offence as string[]).filter((_, i) => i !== idx); setFormData((f) => ({ ...f, sectionA: { ...f.sectionA, offence: updated } })); }}>×</IconButton>
                           )}
                         </div>
                       ))}

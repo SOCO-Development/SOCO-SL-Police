@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useRef, useCallback, useId } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/layout/Header';
-import Button from '@/components/buttons/Button';
-import { ArrowLeft, Trash2 } from 'lucide-react';
-import Footer from '@/components/layout/Footer';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
+import { Trash2 } from 'lucide-react';
+import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import {
@@ -447,18 +443,6 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
     );
 }
 
-function AddRowBtn({ onClick, label }: { onClick: () => void; label?: string }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="mt-3 text-sm text-blue-700 hover:text-blue-800 font-semibold flex items-center gap-1 transition-colors"
-        >
-            <span className="text-base leading-none">+</span> {label ?? 'Add Row'}
-        </button>
-    );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AddOfficerPage() {
@@ -684,35 +668,19 @@ export default function AddOfficerPage() {
     );
 
     return (
-        <div className="min-h-screen flex flex-col">
-            <Header />
-            <div className="flex flex-1 relative z-10 w-full pt-14">
-                <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-                    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-                        {/* Page header */}
-                        <div className="flex items-center gap-3 mb-6">
-                            <Link
-                                href="/crime-officer"
-                                className={registryBackLinkClass}
-                                aria-label="Back"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                <span>Back</span>
-                            </Link>
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900">Add SOCO Officer</h2>
-                                <p className="text-sm text-gray-600 mt-0.5">
-                                    Complete all required details to register a new officer profile.
-                                </p>
-                                {submitted && (
-                                    <p className="mt-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 inline-block">
-                                        Officer details saved successfully.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
+        <PageLayout>
+            <PageHeader
+                backHref="/crime-officer"
+                title="Add SOCO Officer"
+                description="Complete all required details to register a new officer profile."
+            />
+            {submitted && (
+                <p className="mb-6 -mt-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 inline-block">
+                    Officer details saved successfully.
+                </p>
+            )}
 
-                        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
+            <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
                             {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
@@ -839,17 +807,7 @@ export default function AddOfficerPage() {
                                                         )}
                                                 </div>
                                                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => fileRef.current?.click()}
-                                                    className="w-full min-w-0 rounded-lg border border-sky-200/60 bg-sky-50/50 px-3 py-2.5 text-xs font-semibold text-sky-800
-                                                        transition-all duration-200 ease-out
-                                                        hover:border-sky-400 hover:bg-sky-100 hover:text-sky-900 hover:shadow-sm
-                                                        active:scale-[0.98]
-                                                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-                                                >
-                                                    Upload Photo
-                                                </button>
+                                                <FileUploadButton variant="sky-block" type="button" onClick={() => fileRef.current?.click()}>Upload Photo</FileUploadButton>
                                             </div>
                                         </div>
                                     </div>
@@ -989,14 +947,7 @@ export default function AddOfficerPage() {
                                                         </td>
                                                         <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
                                                             {form.children.length > 1 ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeChild(child.id)}
-                                                                    className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                    aria-label="Remove child row"
-                                                                >
-                                                                    Remove
-                                                                </button>
+                                                                <RemoveRowButton onClick={() => removeChild(child.id)} />
                                                             ) : null}
                                                         </td>
                                                     </tr>
@@ -1004,7 +955,7 @@ export default function AddOfficerPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                    <AddRowBtn onClick={addChild} label="Add Child" />
+                                    <AddRowButton onClick={addChild}>Add Child</AddRowButton>
                                 </div>
                                 ) : null}
                             </div>
@@ -1058,14 +1009,7 @@ export default function AddOfficerPage() {
                                                         </td>
                                                         <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
                                                             {form.promotions.length > 1 ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removePromotion(promo.id)}
-                                                                    className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                    aria-label="Remove promotion row"
-                                                                >
-                                                                    Remove
-                                                                </button>
+                                                                <RemoveRowButton onClick={() => removePromotion(promo.id)} />
                                                             ) : null}
                                                         </td>
                                                     </tr>
@@ -1074,7 +1018,7 @@ export default function AddOfficerPage() {
                                         </table>
                                     </div>
                                     {form.promotions.length < 4 && (
-                                        <AddRowBtn onClick={addPromotion} label="Add Promotion" />
+                                        <AddRowButton onClick={addPromotion}>Add Promotion</AddRowButton>
                                     )}
                                     {form.promotions.length >= 4 && (
                                         <p className="text-xs text-gray-400 mt-1">Maximum 4 promotions reached.</p>
@@ -1109,20 +1053,7 @@ export default function AddOfficerPage() {
                                                         <td className="px-2 py-1.5">
                                                             <div className="flex gap-1.5 flex-wrap">
                                                                 {OL_GRADES.map((g) => (
-                                                                    <button
-                                                                        key={g}
-                                                                        type="button"
-                                                                        onClick={() => updateOLMandatory(idx, g)}
-                                                                        className={`h-9 w-9 rounded-lg border text-xs font-bold transition-colors ${
-                                                                            row.grade === g
-                                                                                ? g === 'F'
-                                                                                    ? 'bg-red-500 border-red-500 text-white'
-                                                                                    : 'bg-violet-600 border-violet-600 text-white'
-                                                                                : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700'
-                                                                        }`}
-                                                                    >
-                                                                        {g}
-                                                                    </button>
+                                                                    <ToggleChip key={g} size="grade" active={row.grade === g} activeVariant={g === 'F' ? 'danger' : 'violet'} onClick={() => updateOLMandatory(idx, g)}>{g}</ToggleChip>
                                                                 ))}
                                                             </div>
                                                         </td>
@@ -1157,20 +1088,7 @@ export default function AddOfficerPage() {
                                                         <td className="px-2 py-1.5">
                                                             <div className="flex gap-1.5 flex-wrap">
                                                                 {OL_GRADES.map((g) => (
-                                                                    <button
-                                                                        key={g}
-                                                                        type="button"
-                                                                        onClick={() => updateOLOptional(row.id, { grade: g })}
-                                                                        className={`h-9 w-9 rounded-lg border text-xs font-bold transition-colors ${
-                                                                            row.grade === g
-                                                                                ? g === 'F'
-                                                                                    ? 'bg-red-500 border-red-500 text-white'
-                                                                                    : 'bg-violet-600 border-violet-600 text-white'
-                                                                                : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700'
-                                                                        }`}
-                                                                    >
-                                                                        {g}
-                                                                    </button>
+                                                                    <ToggleChip key={g} size="grade" active={row.grade === g} activeVariant={g === 'F' ? 'danger' : 'violet'} onClick={() => updateOLOptional(row.id, { grade: g })}>{g}</ToggleChip>
                                                                 ))}
                                                             </div>
                                                         </td>
@@ -1191,18 +1109,7 @@ export default function AddOfficerPage() {
                                         <FieldLabel label="Stream / ධාරාව" />
                                         <div className="flex flex-wrap gap-2">
                                             {AL_STREAMS.map((s) => (
-                                                <button
-                                                    key={s.value}
-                                                    type="button"
-                                                    onClick={() => set('alStream', s.value)}
-                                                    className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${
-                                                        form.alStream === s.value
-                                                            ? 'bg-violet-600 border-violet-600 text-white shadow-sm'
-                                                            : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700'
-                                                    }`}
-                                                >
-                                                    {s.label}
-                                                </button>
+                                                <ToggleChip key={s.value} active={form.alStream === s.value} onClick={() => set('alStream', s.value)}>{s.label}</ToggleChip>
                                             ))}
                                         </div>
                                     </div>
@@ -1243,13 +1150,7 @@ export default function AddOfficerPage() {
                                                                 </td>
                                                                 <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
                                                                     {form.alSubjects.length > 1 && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removeALSubject(row.id)}
-                                                                            className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                        >
-                                                                            Remove
-                                                                        </button>
+                                                                        <RemoveRowButton onClick={() => removeALSubject(row.id)} />
                                                                     )}
                                                                 </td>
                                                             </tr>
@@ -1287,7 +1188,7 @@ export default function AddOfficerPage() {
                                             </div>
                                             {form.alSubjects.length < 5 && (
                                                 <div className="px-4 pb-3">
-                                                    <AddRowBtn onClick={addALSubject} label="Add Subject" />
+                                                    <AddRowButton onClick={addALSubject}>Add Subject</AddRowButton>
                                                 </div>
                                             )}
                                             {form.alSubjects.length >= 5 && (
@@ -1311,10 +1212,7 @@ export default function AddOfficerPage() {
                                                     <div className="flex items-center justify-between gap-2 mb-1">
                                                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
                                                         {form.degreesBefore.length > 1 && (
-                                                            <button type="button" onClick={() => removeDegree('degreesBefore', row.id)}
-                                                                className="h-7 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-2.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold">
-                                                                Remove
-                                                            </button>
+                                                            <RemoveRowButton onClick={() => removeDegree('degreesBefore', row.id)} size="sm" />
                                                         )}
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1341,7 +1239,7 @@ export default function AddOfficerPage() {
                                             ))}
                                         </div>
                                         {form.degreesBefore.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowBtn onClick={() => addDegree('degreesBefore')} label="Add Qualification" /></div>
+                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesBefore')}>Add Qualification</AddRowButton></div>
                                         )}
                                     </div>
 
@@ -1357,10 +1255,7 @@ export default function AddOfficerPage() {
                                                     <div className="flex items-center justify-between gap-2 mb-1">
                                                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
                                                         {form.degreesAfter.length > 1 && (
-                                                            <button type="button" onClick={() => removeDegree('degreesAfter', row.id)}
-                                                                className="h-7 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-2.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold">
-                                                                Remove
-                                                            </button>
+                                                            <RemoveRowButton onClick={() => removeDegree('degreesAfter', row.id)} size="sm" />
                                                         )}
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1387,7 +1282,7 @@ export default function AddOfficerPage() {
                                             ))}
                                         </div>
                                         {form.degreesAfter.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowBtn onClick={() => addDegree('degreesAfter')} label="Add Qualification" /></div>
+                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesAfter')}>Add Qualification</AddRowButton></div>
                                         )}
                                     </div>
                                 </div>
@@ -1435,14 +1330,7 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { institute: v })} /></td>
                                                             <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
                                                                 {form.localBeforeCourses.length > 1 ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeBeforeCourse('localBeforeCourses', row.id)}
-                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                        aria-label="Remove local course row (before SOCO)"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
+                                                                    <RemoveRowButton onClick={() => removeBeforeCourse('localBeforeCourses', row.id)} />
                                                                 ) : null}
                                                             </td>
                                                         </tr>
@@ -1452,7 +1340,7 @@ export default function AddOfficerPage() {
                                         </div>
                                         {form.localBeforeCourses.length < 4 && (
                                             <div className="px-4 pb-3">
-                                                <AddRowBtn onClick={() => addBeforeCourse('localBeforeCourses')} label="Add row" />
+                                                <AddRowButton onClick={() => addBeforeCourse('localBeforeCourses')}>Add row</AddRowButton>
                                             </div>
                                         )}
                                         {form.localBeforeCourses.length >= 4 && (
@@ -1491,14 +1379,7 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { institute: v })} /></td>
                                                             <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
                                                                 {form.foreignBeforeCourses.length > 1 ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeBeforeCourse('foreignBeforeCourses', row.id)}
-                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                        aria-label="Remove foreign course row (before SOCO)"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
+                                                                    <RemoveRowButton onClick={() => removeBeforeCourse('foreignBeforeCourses', row.id)} />
                                                                 ) : null}
                                                             </td>
                                                         </tr>
@@ -1508,7 +1389,7 @@ export default function AddOfficerPage() {
                                         </div>
                                         {form.foreignBeforeCourses.length < 4 && (
                                             <div className="px-4 pb-3">
-                                                <AddRowBtn onClick={() => addBeforeCourse('foreignBeforeCourses')} label="Add row" />
+                                                <AddRowButton onClick={() => addBeforeCourse('foreignBeforeCourses')}>Add row</AddRowButton>
                                             </div>
                                         )}
                                         {form.foreignBeforeCourses.length >= 4 && (
@@ -1558,14 +1439,7 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { institute: v })} /></td>
                                                             <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
                                                                 {form.localAfterCourses.length > 1 ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeAfterCourse('localAfterCourses', row.id)}
-                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                        aria-label="Remove local course row (after SOCO)"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
+                                                                    <RemoveRowButton onClick={() => removeAfterCourse('localAfterCourses', row.id)} />
                                                                 ) : null}
                                                             </td>
                                                         </tr>
@@ -1575,7 +1449,7 @@ export default function AddOfficerPage() {
                                         </div>
                                         {form.localAfterCourses.length < 4 && (
                                             <div className="px-4 pb-3">
-                                                <AddRowBtn onClick={() => addAfterCourse('localAfterCourses')} label="Add row" />
+                                                <AddRowButton onClick={() => addAfterCourse('localAfterCourses')}>Add row</AddRowButton>
                                             </div>
                                         )}
                                         {form.localAfterCourses.length >= 4 && (
@@ -1612,14 +1486,7 @@ export default function AddOfficerPage() {
                                                             <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { institute: v })} /></td>
                                                             <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
                                                                 {form.foreignAfterCourses.length > 1 ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeAfterCourse('foreignAfterCourses', row.id)}
-                                                                        className="h-10 inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
-                                                                        aria-label="Remove foreign course row (after SOCO)"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
+                                                                    <RemoveRowButton onClick={() => removeAfterCourse('foreignAfterCourses', row.id)} />
                                                                 ) : null}
                                                             </td>
                                                         </tr>
@@ -1629,7 +1496,7 @@ export default function AddOfficerPage() {
                                         </div>
                                         {form.foreignAfterCourses.length < 4 && (
                                             <div className="px-4 pb-3">
-                                                <AddRowBtn onClick={() => addAfterCourse('foreignAfterCourses')} label="Add row" />
+                                                <AddRowButton onClick={() => addAfterCourse('foreignAfterCourses')}>Add row</AddRowButton>
                                             </div>
                                         )}
                                         {form.foreignAfterCourses.length >= 4 && (
@@ -1791,18 +1658,7 @@ export default function AddOfficerPage() {
                                         </div>
 
                                         <div className="lg:col-span-3 flex items-end">
-                                            <button
-                                                type="button"
-                                                onClick={() => addAssignmentRecord('transfer')}
-                                                disabled={!canConfirmTransfer}
-                                                className={`min-h-10 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                                                    canConfirmTransfer
-                                                        ? 'border-fuchsia-300 bg-fuchsia-200 text-fuchsia-800 hover:bg-fuchsia-300'
-                                                        : 'cursor-not-allowed border-fuchsia-100 bg-fuchsia-50 text-fuchsia-300'
-                                                }`}
-                                            >
-                                                Confirm
-                                            </button>
+                                            <AddRowButton onClick={() => addAssignmentRecord('transfer')}>Add transfer record</AddRowButton>
                                         </div>
                                     </div>
                                 </div>
@@ -1835,14 +1691,10 @@ export default function AddOfficerPage() {
                                                                 : row.reason}
                                                         </td>
                                                         <td className="px-4 py-3 text-right">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeAssignmentRecord('transfer', row.id)}
-                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-100"
-                                                            >
+                                                            <RemoveRowButton onClick={() => removeAssignmentRecord('transfer', row.id)}>
                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                                 Delete
-                                                            </button>
+                                                            </RemoveRowButton>
                                                         </td>
                                                     </tr>
                                                 ))
@@ -1934,18 +1786,7 @@ export default function AddOfficerPage() {
                                         </div>
 
                                         <div className="lg:col-span-3 flex items-end">
-                                            <button
-                                                type="button"
-                                                onClick={() => addAssignmentRecord('specialDuty')}
-                                                disabled={!canConfirmSpecialDuty}
-                                                className={`min-h-10 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                                                    canConfirmSpecialDuty
-                                                        ? 'border-amber-300 bg-amber-200 text-amber-800 hover:bg-amber-300'
-                                                        : 'cursor-not-allowed border-amber-100 bg-amber-50 text-amber-300'
-                                                }`}
-                                            >
-                                                Confirm
-                                            </button>
+                                            <AddRowButton onClick={() => addAssignmentRecord('specialDuty')}>Add special duty record</AddRowButton>
                                         </div>
                                     </div>
                                 </div>
@@ -1978,14 +1819,10 @@ export default function AddOfficerPage() {
                                                                 : row.reason}
                                                         </td>
                                                         <td className="px-4 py-3 text-right">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeAssignmentRecord('specialDuty', row.id)}
-                                                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-100"
-                                                            >
+                                                            <RemoveRowButton onClick={() => removeAssignmentRecord('specialDuty', row.id)}>
                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                                 Delete
-                                                            </button>
+                                                            </RemoveRowButton>
                                                         </td>
                                                     </tr>
                                                 ))
@@ -2123,10 +1960,6 @@ export default function AddOfficerPage() {
                             </div>
 
                         </form>
-                    </div>
-                    <Footer />
-                </main>
-            </div>
-        </div>
+        </PageLayout>
     );
 }

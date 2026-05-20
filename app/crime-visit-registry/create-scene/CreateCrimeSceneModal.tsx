@@ -6,7 +6,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import FormInput from '@/components/forms/FormInput';
-import Button from '@/components/buttons/Button';
+import { AddRowButton, RemoveRowButton, Button, IconButton } from '@/components/ui';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import {
@@ -438,9 +438,9 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
             <h2 className="text-lg font-semibold text-gray-900">Create Crime Scene</h2>
             <p className="text-xs text-gray-600 mt-0.5">Attach scenes to morning visits and save each scene with a CVR.</p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-1 rounded transition-colors" aria-label="Close modal">
+          <IconButton onClick={onClose} aria-label="Close modal">
             <X className="w-5 h-5" />
-          </button>
+          </IconButton>
         </div>
 
         <div className="overflow-y-auto flex-1 p-6 space-y-6">
@@ -809,25 +809,22 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                         placeholder="Rank"
                       />
                     </div>
-                    <button
-                      type="button"
+                    <IconButton
+                      variant="danger"
                       onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
-                      className="h-10 w-full flex items-center justify-center text-red-500 hover:text-red-700 disabled:opacity-40"
                       disabled={form.socoOfficers.length <= 1}
+                      className="h-10 w-full"
                       aria-label="Remove officer"
                     >
                       ×
-                    </button>
+                    </IconButton>
                   </div>
                 </div>
               )})}
             </div>
-            <Button
-              variant="secondary"
-              onClick={() => setForm((prev) => ({ ...prev, socoOfficers: [...prev.socoOfficers, emptyOfficer()] }))}
-            >
+            <AddRowButton onClick={() => setForm((prev) => ({ ...prev, socoOfficers: [...prev.socoOfficers, emptyOfficer()] }))}>
               Add SOCO Officer
-            </Button>
+            </AddRowButton>
           </div>
 
           <div className="bg-orange-50/65 rounded-xl border border-orange-200 p-4 sm:p-5 space-y-4">
@@ -837,14 +834,10 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                 <div key={`specialist-${index}`} className="p-4 bg-orange-50/50 border border-orange-200 rounded-xl space-y-3">
                   <div className="flex justify-between items-start">
                     <h4 className="text-sm font-medium text-gray-700">Team {index + 1}</h4>
-                    <button
-                      type="button"
+                    <RemoveRowButton
                       onClick={() => setForm((prev) => ({ ...prev, specialistTeams: prev.specialistTeams.filter((_, i) => i !== index) }))}
-                      className="text-red-500 hover:text-red-700 disabled:opacity-40"
                       disabled={form.specialistTeams.length <= 1}
-                    >
-                      Remove Team
-                    </button>
+                    />
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -885,34 +878,29 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                             onChange={(e) => updateSpecialistMember(index, mIndex, { name: e.target.value })}
                             placeholder="Member name"
                           />
-                          <button
-                            type="button"
+                          <IconButton
+                            variant="danger"
                             onClick={() => removeSpecialistMember(index, mIndex)}
-                            className="h-10 text-red-500 hover:text-red-700 disabled:opacity-40"
                             disabled={(team.members || []).length <= 1}
+                            className="h-10"
                           >
                             ×
-                          </button>
+                          </IconButton>
                         </div>
                       ))}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => addSpecialistMember(index)}
-                      className="mt-2 text-xs text-blue-600 font-medium hover:text-blue-800"
-                    >
-                      + Add Member
-                    </button>
+                    <AddRowButton onClick={() => addSpecialistMember(index)} className="mt-2">
+                      Add Member
+                    </AddRowButton>
                   </div>
                 </div>
               ))}
             </div>
-            <Button
-              variant="secondary"
+            <AddRowButton
               onClick={() => setForm((prev) => ({ ...prev, specialistTeams: [...prev.specialistTeams, emptySpecialist()] }))}
             >
               Add Specialist Team
-            </Button>
+            </AddRowButton>
           </div>
 
           <div className="bg-fuchsia-50/65 rounded-xl border border-fuchsia-200 p-4 sm:p-5 space-y-4">
@@ -942,25 +930,20 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                       placeholder="Officer name"
                     />
                   </div>
-                  <button
-                    type="button"
+                  <RemoveRowButton
                     onClick={() =>
                       setForm((prev) => ({
                         ...prev,
                         investigationOfficers: (prev.investigationOfficers ?? []).filter((_, i) => i !== index),
                       }))
                     }
-                    className="h-10 text-red-500 hover:text-red-700 disabled:opacity-40"
                     disabled={(form.investigationOfficers ?? []).length <= 1}
                     aria-label="Remove investigation officer"
-                  >
-                    ×
-                  </button>
+                  />
                 </div>
               ))}
             </div>
-            <Button
-              variant="secondary"
+            <AddRowButton
               onClick={() =>
                 setForm((prev) => ({
                   ...prev,
@@ -969,7 +952,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
               }
             >
               Add Investigation Officer
-            </Button>
+            </AddRowButton>
           </div>
 
           <div className="bg-yellow-50/70 rounded-xl border border-yellow-200 p-4 sm:p-5 space-y-4">
@@ -999,24 +982,19 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                       placeholder="Guard name"
                     />
                   </div>
-                  <button
-                    type="button"
+                  <RemoveRowButton
                     onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
-                    className="h-10 text-red-500 hover:text-red-700 disabled:opacity-40"
                     disabled={(form.sceneGuards ?? []).length <= 1}
                     aria-label="Remove guard"
-                  >
-                    ×
-                  </button>
+                  />
                 </div>
               ))}
             </div>
-            <Button
-              variant="secondary"
+            <AddRowButton
               onClick={() => setForm((prev) => ({ ...prev, sceneGuards: [...(prev.sceneGuards ?? []), emptyOfficer()] }))}
             >
               Add Scene Guard
-            </Button>
+            </AddRowButton>
           </div>
 
           <div className="bg-orange-50/70 rounded-xl border border-orange-200 p-4 sm:p-5 space-y-4">
@@ -1204,8 +1182,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                       <p className="text-sm font-semibold text-sky-900">
                         Production {String(index + 1).padStart(2, '0')}
                       </p>
-                      <button
-                        type="button"
+                      <RemoveRowButton
                         onClick={() =>
                           setForm((prev) => ({
                             ...prev,
@@ -1218,11 +1195,9 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                             },
                           }))
                         }
-                        className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 text-xs font-semibold hover:bg-red-100"
+                        className="h-9 shrink-0 px-3 text-xs"
                         aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
-                      >
-                        Remove
-                      </button>
+                      />
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
                       <div className="min-w-0">
@@ -1413,8 +1388,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                 ))}
               </div>
               <Button
-                variant="secondary"
-                type="button"
+                variant="teal-outline"
                 disabled={!(form.courtDetails?.productionPRTypes ?? []).length}
                 onClick={() =>
                   setForm((prev) => ({
@@ -1430,7 +1404,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                   }))
                 }
               >
-                + Add analysis institute row
+                Add analysis institute row
               </Button>
             </div>
           </div>
@@ -1450,8 +1424,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                       <p className="text-sm font-semibold text-teal-900">
                         Production {String(index + 1).padStart(2, '0')}
                       </p>
-                      <button
-                        type="button"
+                      <RemoveRowButton
                         onClick={() =>
                           setForm((prev) => ({
                             ...prev,
@@ -1464,11 +1437,9 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                             },
                           }))
                         }
-                        className="h-9 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 text-xs font-semibold hover:bg-red-100"
+                        className="h-9 shrink-0 px-3 text-xs"
                         aria-label={`Remove Production ${String(index + 1).padStart(2, '0')}`}
-                      >
-                        Remove
-                      </button>
+                      />
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_auto] md:items-end">
                       <div className="min-w-0">
@@ -1621,8 +1592,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                 ))}
               </div>
               <Button
-                variant="secondary"
-                type="button"
+                variant="teal-outline"
                 disabled={!(form.courtDetails?.productionPRTypes ?? []).length}
                 onClick={() =>
                   setForm((prev) => ({
@@ -1638,7 +1608,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                   }))
                 }
               >
-                + Add production sent to court
+                Add production sent to court
               </Button>
             </div>
 

@@ -1,10 +1,9 @@
 'use client';
+import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, ActionChipButton } from '@/components/ui';
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import Button from '@/components/buttons/Button';
@@ -24,8 +23,6 @@ import {
   normalizeCourtVisitUpdate,
   normalizeCourtRewardsUpdate,
 } from '@/types/crimeScene';
-import { registryBackLinkClass } from '@/app/crime-visit-registry/uiStyles';
-import { ArrowLeft } from 'lucide-react';
 import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
 
 type FlowMode = 'production_sent' | 'court_visit' | 'rewards';
@@ -394,33 +391,23 @@ export default function UpdateCourtDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex flex-1 relative z-10 w-full pt-14">
-        <main className="flex flex-1 overflow-x-hidden min-w-0 flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-            <div className="flex items-center gap-3 mb-6">
-              <Link href="/crime-visit-registry" className={registryBackLinkClass} aria-label="Back">
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </Link>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Update Court Details</h2>
-                <p className="text-sm text-gray-600 mt-0.5">
-                  Choose a crime scene below, then pick <strong>Production sent to court</strong> (use <strong>Edit</strong>{' '}
-                  to change rows), <strong>Court visit</strong>, or <strong>Rewards</strong> and save. Saving applies to{' '}
-                  <strong>every visit record for the same CVR</strong> (new visit, revisit, court visit), like a shared
-                  case file. Updates appear under{' '}
-                  <Link
-                    href="/crime-visit-registry/submitted-crime-scenes"
-                    className="text-blue-600 font-medium hover:underline"
-                  >
-                    Submitted crime scenes
-                  </Link>
-                  .
-                </p>
-              </div>
-            </div>
+    <>
+      <PageLayout>
+        <PageHeader
+          backHref="/crime-visit-registry"
+          title="Update Court Details"
+          description="Choose a crime scene below, then pick Production sent to court (use Edit to change rows), Court visit, or Rewards and save. Saving applies to every visit record for the same CVR (new visit, revisit, court visit), like a shared case file."
+        />
+        <p className="text-sm text-gray-600 mb-6 -mt-2">
+          Updates appear under{' '}
+          <Link
+            href="/crime-visit-registry/submitted-crime-scenes"
+            className="text-blue-600 font-medium hover:underline"
+          >
+            Submitted crime scenes
+          </Link>
+          .
+        </p>
 
             {scenes.length === 0 ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -682,18 +669,7 @@ export default function UpdateCourtDetailsPage() {
                                           <p className="text-sm font-semibold text-fuchsia-950">
                                             Court visit {String(index + 1).padStart(2, '0')}
                                           </p>
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              setCourtVisitDraft((d) => ({
-                                                rows: d.rows.filter((_, i) => i !== index),
-                                              }))
-                                            }
-                                            className="h-9 rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 text-xs font-semibold hover:bg-red-100"
-                                            aria-label={`Remove court visit row ${String(index + 1).padStart(2, '0')}`}
-                                          >
-                                            Remove
-                                          </button>
+                                          <RemoveRowButton size="md" onClick={() => setCourtVisitDraft((d) => ({ rows: d.rows.filter((_, i) => i !== index) }))} aria-label={`Remove court visit row ${String(index + 1).padStart(2, '0')}`} />
                                         </div>
                                         <FieldGroup label="Testified officer">
                                           <input
@@ -760,18 +736,7 @@ export default function UpdateCourtDetailsPage() {
                                               {row.attachmentFileName ? (
                                                 <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
                                                   <span className="font-medium">{row.attachmentFileName}</span>
-                                                  <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                      patchCourtVisitRow(index, {
-                                                        attachmentFileName: '',
-                                                        attachmentDataUrl: '',
-                                                      })
-                                                    }
-                                                    className="text-red-600 font-semibold hover:underline"
-                                                  >
-                                                    Remove file
-                                                  </button>
+                                                  <ActionChipButton variant="red" className="!border-transparent !bg-transparent !px-0 !py-0 hover:!underline" onClick={() => patchCourtVisitRow(index, { attachmentFileName: '', attachmentDataUrl: '' })}>Remove file</ActionChipButton>
                                                 </div>
                                               ) : null}
                                             </div>
@@ -780,17 +745,7 @@ export default function UpdateCourtDetailsPage() {
                                       </div>
                                     ))}
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setCourtVisitDraft((d) => ({
-                                        rows: [...d.rows, emptyCourtVisitOfficerDetailRow()],
-                                      }))
-                                    }
-                                    className="text-sm text-fuchsia-800 hover:text-fuchsia-950 font-medium flex items-center gap-1"
-                                  >
-                                    <span className="text-base leading-none">+</span> Add court visit detail
-                                  </button>
+                                  <AddRowButton variant="fuchsia" onClick={() => setCourtVisitDraft((d) => ({ rows: [...d.rows, emptyCourtVisitOfficerDetailRow()] }))}>Add court visit detail</AddRowButton>
                                 </>
                               )}
 
@@ -871,12 +826,9 @@ export default function UpdateCourtDetailsPage() {
                 </div>
               </>
             )}
-          </div>
-          <Footer />
-        </main>
-      </div>
+      </PageLayout>
 
       <ResultPopup {...popup} onClose={closePopup} />
-    </div>
+    </>
   );
 }
