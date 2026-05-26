@@ -489,7 +489,6 @@ export default function AddOfficerPage() {
 
     // Promotions
     const addPromotion = () => {
-        if (form.promotions.length >= 4) return;
         set('promotions', [...form.promotions, { id: newId(), rank: '', date: '' }]);
     };
     const updatePromotion = (id: number, patch: Partial<PromotionRow>) =>
@@ -506,18 +505,13 @@ export default function AddOfficerPage() {
     };
 
     const addBeforeCourse = (section: 'localBeforeCourses' | 'foreignBeforeCourses') => {
-        if (form[section].length >= 4) return;
-        setForm((f) =>
-            f[section].length >= 4
-                ? f
-                : {
-                      ...f,
-                      [section]: [
-                          ...f[section],
-                          { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
-                      ],
-                  },
-        );
+        setForm((f) => ({
+            ...f,
+            [section]: [
+                ...f[section],
+                { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+            ],
+        }));
     };
 
     const removeBeforeCourse = (section: 'localBeforeCourses' | 'foreignBeforeCourses', id: number) => {
@@ -534,18 +528,13 @@ export default function AddOfficerPage() {
     };
 
     const addAfterCourse = (section: 'localAfterCourses' | 'foreignAfterCourses') => {
-        if (form[section].length >= 4) return;
-        setForm((f) =>
-            f[section].length >= 4
-                ? f
-                : {
-                      ...f,
-                      [section]: [
-                          ...f[section],
-                          { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
-                      ],
-                  },
-        );
+        setForm((f) => ({
+            ...f,
+            [section]: [
+                ...f[section],
+                { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+            ],
+        }));
     };
 
     const removeAfterCourse = (section: 'localAfterCourses' | 'foreignAfterCourses', id: number) => {
@@ -624,7 +613,7 @@ export default function AddOfficerPage() {
     };
 
     const removeALSubject = (id: number) => {
-        if (form.alSubjects.length <= 1) return;
+        if (form.alSubjects.length <= 3) return;
         set('alSubjects', form.alSubjects.filter((s) => s.id !== id));
     };
 
@@ -644,6 +633,10 @@ export default function AddOfficerPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (form.alSubjects.length < 3) {
+            alert('Please keep at least 3 A/L subject rows.');
+            return;
+        }
         setSubmitted(true);
         // Future: POST to API
         alert('Officer details saved successfully!');
@@ -1017,12 +1010,7 @@ export default function AddOfficerPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                    {form.promotions.length < 4 && (
-                                        <AddRowButton onClick={addPromotion}>Add Promotion</AddRowButton>
-                                    )}
-                                    {form.promotions.length >= 4 && (
-                                        <p className="text-xs text-gray-400 mt-1">Maximum 4 promotions reached.</p>
-                                    )}
+                                    <AddRowButton onClick={addPromotion}>Add Promotion</AddRowButton>
                                 </div>
                             </div>
 
@@ -1149,7 +1137,7 @@ export default function AddOfficerPage() {
                                                                     />
                                                                 </td>
                                                                 <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
-                                                                    {form.alSubjects.length > 1 && (
+                                                                    {form.alSubjects.length > 3 && (
                                                                         <RemoveRowButton onClick={() => removeALSubject(row.id)} />
                                                                     )}
                                                                 </td>
@@ -1338,14 +1326,9 @@ export default function AddOfficerPage() {
                                                 </tbody>
                                             </table>
                                         </div>
-                                        {form.localBeforeCourses.length < 4 && (
-                                            <div className="px-4 pb-3">
-                                                <AddRowButton onClick={() => addBeforeCourse('localBeforeCourses')}>Add row</AddRowButton>
-                                            </div>
-                                        )}
-                                        {form.localBeforeCourses.length >= 4 && (
-                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
-                                        )}
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addBeforeCourse('localBeforeCourses')}>Add row</AddRowButton>
+                                        </div>
                                     </div>
 
                                     <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
@@ -1387,14 +1370,9 @@ export default function AddOfficerPage() {
                                                 </tbody>
                                             </table>
                                         </div>
-                                        {form.foreignBeforeCourses.length < 4 && (
-                                            <div className="px-4 pb-3">
-                                                <AddRowButton onClick={() => addBeforeCourse('foreignBeforeCourses')}>Add row</AddRowButton>
-                                            </div>
-                                        )}
-                                        {form.foreignBeforeCourses.length >= 4 && (
-                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
-                                        )}
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addBeforeCourse('foreignBeforeCourses')}>Add row</AddRowButton>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1447,14 +1425,9 @@ export default function AddOfficerPage() {
                                                 </tbody>
                                             </table>
                                         </div>
-                                        {form.localAfterCourses.length < 4 && (
-                                            <div className="px-4 pb-3">
-                                                <AddRowButton onClick={() => addAfterCourse('localAfterCourses')}>Add row</AddRowButton>
-                                            </div>
-                                        )}
-                                        {form.localAfterCourses.length >= 4 && (
-                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
-                                        )}
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addAfterCourse('localAfterCourses')}>Add row</AddRowButton>
+                                        </div>
                                     </div>
 
                                     <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
@@ -1494,14 +1467,9 @@ export default function AddOfficerPage() {
                                                 </tbody>
                                             </table>
                                         </div>
-                                        {form.foreignAfterCourses.length < 4 && (
-                                            <div className="px-4 pb-3">
-                                                <AddRowButton onClick={() => addAfterCourse('foreignAfterCourses')}>Add row</AddRowButton>
-                                            </div>
-                                        )}
-                                        {form.foreignAfterCourses.length >= 4 && (
-                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 4 rows reached.</p>
-                                        )}
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addAfterCourse('foreignAfterCourses')}>Add row</AddRowButton>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
