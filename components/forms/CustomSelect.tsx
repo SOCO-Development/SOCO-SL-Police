@@ -9,7 +9,7 @@ interface CustomSelectProps {
   label?: string;
   value?: string;
   onChange?: (value: string) => void;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; description?: string }[];
   className?: string;
   error?: string;
   placeholder?: string;
@@ -262,17 +262,26 @@ export default function CustomSelect({
           aria-controls={listboxId}
           aria-labelledby={label ? `${buttonId}-label` : undefined}
           aria-activedescendant={isOpen && highlightedIndex >= 0 ? `${listboxId}-option-${highlightedIndex}` : undefined}
-          className={`group w-full min-h-10 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between
+          className={`group w-full min-h-10 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200 text-left text-gray-900 flex items-center justify-between gap-3
             ${
               disabled
                 ? 'border-gray-200 bg-gray-50 text-gray-800 cursor-not-allowed shadow-none'
-                : 'bg-white border-gray-300 hover:border-gray-400 hover:bg-gray-50/50 active:bg-gray-50'
+                : 'bg-white border-gray-300 hover:border-gray-400 hover:bg-slate-50 active:bg-slate-100 shadow-sm'
             }
-            ${isOpen && !disabled ? 'border-blue-400 ring-1 ring-blue-500/20' : ''}
+            ${isOpen && !disabled ? 'border-blue-500 ring-2 ring-blue-500/15' : ''}
             ${error ? 'border-red-300 focus:ring-red-500/30' : ''}`}
         >
-          <span className={selectedValue ? 'text-gray-900' : 'text-gray-400'}>
-            {selectedOption ? selectedOption.label : placeholder}
+          <span className="min-w-0 flex-1 text-left">
+            {selectedOption ? (
+              <span className="flex flex-col items-start gap-0.5">
+                <span className="truncate font-medium text-gray-900">{selectedOption.label}</span>
+                {selectedOption.description ? (
+                  <span className="truncate text-xs text-gray-500">{selectedOption.description}</span>
+                ) : null}
+              </span>
+            ) : (
+              <span className="text-gray-400">{placeholder}</span>
+            )}
           </span>
           <FaChevronDown
             className={`w-4 h-4 text-gray-400 transition-all duration-200 ${
@@ -293,10 +302,10 @@ export default function CustomSelect({
               width: dropdownStyle.width,
               minWidth: 120,
             }}
-            className="dropdown-blur mt-1 border border-white/50 rounded-xl z-[99999] overflow-hidden shadow-lg bg-white"
+            className="dropdown-blur mt-1 rounded-xl z-[99999] overflow-hidden border border-slate-200 shadow-xl bg-white"
           >
             {searchable ? (
-              <div className="p-2 border-b border-gray-100 bg-gray-50/90">
+              <div className="p-2 border-b border-slate-200 bg-slate-50/95">
                 <input
                   ref={searchInputRef}
                   type="search"
@@ -304,7 +313,7 @@ export default function CustomSelect({
                   onChange={(e) => setFilterQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   placeholder={searchPlaceholder}
-                  className="w-full min-h-9 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                  className="w-full min-h-9 px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
                   aria-autocomplete="list"
                   aria-controls={listboxId}
                   autoComplete="off"
@@ -330,18 +339,25 @@ export default function CustomSelect({
                       id={`${listboxId}-option-${index}`}
                       role="option"
                       aria-selected={isSelected}
-                      className={`cursor-pointer min-h-9 px-4 py-2 rounded-md text-left text-sm transition-all duration-150 flex items-center justify-between gap-2 ${
+                      className={`cursor-pointer min-h-9 px-4 py-2 rounded-lg text-left text-sm transition-all duration-150 flex items-center justify-between gap-3 border ${
                         isSelected
-                          ? 'bg-blue-200 text-blue-900 font-semibold ring-2 ring-blue-400'
+                          ? 'bg-blue-600 text-white font-semibold border-blue-500 shadow-sm'
                           : isHighlighted
-                            ? 'bg-blue-100 text-gray-700'
-                            : 'text-gray-700 hover:bg-blue-100'
+                            ? 'bg-sky-50 text-gray-900 border-sky-200'
+                            : 'text-gray-700 hover:bg-slate-50 border-transparent hover:border-slate-200'
                       }`}
                       onMouseEnter={() => setHighlightedIndex(index)}
                       onClick={() => handleSelect(option.value)}
                     >
-                      <span>{option.label}</span>
-                      {isSelected && <FaCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" aria-hidden />}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{option.label}</span>
+                        {option.description ? (
+                          <span className={`block truncate text-xs ${isSelected ? 'text-blue-100' : isHighlighted ? 'text-gray-600' : 'text-gray-500'}`}>
+                            {option.description}
+                          </span>
+                        ) : null}
+                      </span>
+                      {isSelected && <FaCheck className="w-3.5 h-3.5 text-white shrink-0" aria-hidden />}
                     </li>
                   );
                 })

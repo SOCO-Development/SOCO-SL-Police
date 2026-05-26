@@ -67,7 +67,8 @@ export default function ProductionAnalysisPage() {
         const placeShort = place.length > 48 ? `${place.slice(0, 48)}…` : place;
         return {
           value: s.id,
-          label: `${(s.cvrNo ?? '').trim() || s.id} · ${visitTypeLabel(s)}${placeShort ? ` · ${placeShort}` : ''} · ${formatDateTimeDDMMYYYY(s.updatedAt)}`,
+          label: (s.cvrNo ?? '').trim() || s.id,
+          description: `${visitTypeLabel(s)}${placeShort ? ` · ${placeShort}` : ''} · ${formatDateTimeDDMMYYYY(s.updatedAt)}`,
         };
       }),
     [sortedScenes],
@@ -175,12 +176,16 @@ export default function ProductionAnalysisPage() {
               </div>
             ) : (
               <>
-                <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50/90 p-4 sm:p-5 space-y-4">
-                  <p className="text-sm font-medium text-gray-800">
+                <div className="mb-6 rounded-xl border border-sky-200 bg-sky-50/80 p-4 sm:p-5 space-y-4 shadow-sm">
+                  <p className="text-sm font-semibold text-sky-950 flex items-center gap-2">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-500" />
                     Crime scenes
-                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                    <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-200 text-sky-900 border border-sky-300">
                       {sortedScenes.length}
                     </span>
+                  </p>
+                  <p className="text-xs text-sky-900/75 -mt-1">
+                    Pick a CVR number, then review the visit type and location before editing.
                   </p>
                   <FieldGroup label="Select crime scene">
                     <CustomSelect
