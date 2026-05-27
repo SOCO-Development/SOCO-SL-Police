@@ -15,23 +15,23 @@ export default function CrimeSceneRevisionDiff({ before, after }: CrimeSceneRevi
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-lg border border-gray-300">
+      <table className="data-grid-table data-grid-table--compact w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200 text-left">
-            <th className="px-3 py-2 font-semibold text-gray-700">Field</th>
-            <th className="px-3 py-2 font-semibold text-gray-700">Previous</th>
-            <th className="px-3 py-2 font-semibold text-gray-700">Proposed</th>
+          <tr>
+            <th>Field</th>
+            <th>Previous</th>
+            <th>Proposed</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.path} className="border-b border-gray-100 last:border-0 align-top">
-              <td className="px-3 py-2 font-mono text-[11px] text-gray-600 whitespace-nowrap max-w-[200px] truncate">
+            <tr key={row.path} className="align-top">
+              <td className="font-mono text-[11px] text-gray-600 whitespace-nowrap max-w-[200px] truncate">
                 {row.path}
               </td>
-              <td className="px-3 py-2 text-gray-700 break-all max-w-md">{row.before || '—'}</td>
-              <td className="px-3 py-2 bg-emerald-50 text-emerald-950 font-medium break-all max-w-md border-l border-emerald-100">
+              <td className="text-gray-700 break-all max-w-md">{row.before || '—'}</td>
+              <td className="bg-emerald-50 text-emerald-950 font-medium break-all max-w-md">
                 {row.after || '—'}
               </td>
             </tr>

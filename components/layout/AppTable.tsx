@@ -3,6 +3,7 @@
 import { type ReactNode } from 'react';
 import { FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { FileText } from 'lucide-react';
+import { appTableClasses } from '@/lib/ui/styles';
 
 export interface AppTableColumn<T> {
   key: keyof T | string;
@@ -32,17 +33,6 @@ export interface AppTableProps<T> {
   };
 }
 
-const tableClasses = {
-  wrapper: 'overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white',
-  wrapperPlain: 'overflow-x-auto',
-  thead: 'bg-gray-50 border-b border-gray-200',
-  th: 'text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wide',
-  thRight: 'text-right px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wide',
-  tr: 'border-b border-gray-100 last:border-0 hover:bg-blue-50/30 transition-colors',
-  td: 'px-4 py-3 text-sm',
-  empty: 'text-center py-20 text-gray-500',
-};
-
 export default function AppTable<T extends object>({
   columns,
   data,
@@ -71,8 +61,8 @@ export default function AppTable<T extends object>({
 
   if (data.length === 0) {
     return (
-      <div className={variant === 'card' ? tableClasses.wrapper : tableClasses.wrapperPlain}>
-        <div className={tableClasses.empty}>
+      <div className={variant === 'card' ? appTableClasses.wrapper : appTableClasses.wrapperPlain}>
+        <div className={appTableClasses.empty}>
           <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="text-sm">{emptyMessage}</p>
         </div>
@@ -81,9 +71,9 @@ export default function AppTable<T extends object>({
   }
 
   const tableContent = (
-    <table className="w-full text-sm text-gray-900">
+    <table className={appTableClasses.table}>
       <thead>
-        <tr className={tableClasses.thead}>
+        <tr className={appTableClasses.thead}>
           {columns.map((col) => {
             const key = String(col.key);
             const isSortable = col.sortable && onSort;
@@ -93,7 +83,7 @@ export default function AppTable<T extends object>({
               <th
                 key={key}
                 scope="col"
-                className={alignRight ? tableClasses.thRight : tableClasses.th}
+                className={alignRight ? appTableClasses.thRight : appTableClasses.th}
                 aria-sort={
                   isSortable
                     ? isActive
@@ -136,7 +126,7 @@ export default function AppTable<T extends object>({
         {displayData.map((row, index) => {
           const rowKey = String((row as Record<string, unknown>)[String(keyField)] ?? index);
           return (
-            <tr key={rowKey} className={tableClasses.tr}>
+            <tr key={rowKey} className={appTableClasses.tr}>
               {columns.map((col) => {
                 const key = String(col.key);
                 const value = getCellValue(row, key);
@@ -147,7 +137,7 @@ export default function AppTable<T extends object>({
                 return (
                   <td
                     key={key}
-                    className={`${tableClasses.td} ${alignRight ? 'text-right' : ''} ${col.className ?? ''}`}
+                    className={`${appTableClasses.td} ${alignRight ? 'text-right' : ''} ${col.className ?? ''}`}
                   >
                     {content}
                   </td>
@@ -162,7 +152,7 @@ export default function AppTable<T extends object>({
 
   return (
     <>
-      <div className={variant === 'card' ? tableClasses.wrapper : tableClasses.wrapperPlain}>
+      <div className={variant === 'card' ? appTableClasses.wrapper : appTableClasses.wrapperPlain}>
         {tableContent}
       </div>
 

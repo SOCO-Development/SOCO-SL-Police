@@ -907,7 +907,7 @@ export default function AddOfficerPage() {
                                 <div className="mt-6">
                                     <FieldLabel label="Details of Children / දරුවන්ගේ තොරතුරු" />
                                     <div className="overflow-x-auto rounded-xl border border-gray-200 mt-2">
-                                        <table className="w-full text-sm">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Name of the Child / දරුවාගේ නම</th>
@@ -978,7 +978,7 @@ export default function AddOfficerPage() {
                                 <div className="mt-6">
                                     <FieldLabel label="Promotion Dates / උසස් කිරීමේ දිනය" />
                                     <div className="overflow-x-auto rounded-xl border border-gray-200 mt-2">
-                                        <table className="w-full text-sm">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48">
@@ -1027,7 +1027,7 @@ export default function AddOfficerPage() {
                                     {/* Mandatory subjects */}
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Mandatory Subjects</p>
                                     <div className="overflow-x-auto rounded-xl border border-violet-100 mb-4">
-                                        <table className="w-full text-sm">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
                                                 <tr className="bg-violet-50 border-b border-violet-100">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
@@ -1054,7 +1054,7 @@ export default function AddOfficerPage() {
                                     {/* Optional subjects */}
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Optional Subjects</p>
                                     <div className="overflow-x-auto rounded-xl border border-violet-100">
-                                        <table className="w-full text-sm">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
                                                 <tr className="bg-violet-50 border-b border-violet-100">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-8">#</th>
@@ -1108,7 +1108,7 @@ export default function AddOfficerPage() {
                                                 <span className="text-xs font-bold text-violet-800 uppercase tracking-wide">{form.alStream} Stream — Subjects</span>
                                             </div>
                                             <div className="overflow-x-auto">
-                                                <table className="w-full text-sm">
+                                                <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                                     <thead>
                                                         <tr className="bg-gray-50 border-b border-gray-200">
                                                             <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
@@ -1293,7 +1293,7 @@ export default function AddOfficerPage() {
                                             <p className="text-xs text-amber-700">Department & Others</p>
                                         </div>
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-[760px] w-full text-sm">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
                                                 <thead>
                                                     <tr className="bg-gray-50 border-b border-gray-200">
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
@@ -1337,7 +1337,7 @@ export default function AddOfficerPage() {
                                             <p className="text-xs text-amber-700">Department & Others</p>
                                         </div>
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-[760px] w-full text-sm">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
                                                 <thead>
                                                     <tr className="bg-gray-50 border-b border-gray-200">
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
@@ -1394,7 +1394,7 @@ export default function AddOfficerPage() {
                                             <p className="text-xs text-cyan-700">Department & Others</p>
                                         </div>
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-[760px] w-full text-sm">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
                                                 <thead>
                                                     <tr className="bg-gray-50 border-b border-gray-200">
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
@@ -1436,7 +1436,7 @@ export default function AddOfficerPage() {
                                             <p className="text-xs text-cyan-700">Department & Others</p>
                                         </div>
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-[760px] w-full text-sm">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
                                                 <thead>
                                                     <tr className="bg-gray-50 border-b border-gray-200">
                                                         <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
@@ -1632,7 +1632,7 @@ export default function AddOfficerPage() {
                                 </div>
 
                                 <div className="mt-5 overflow-x-auto rounded-2xl border border-fuchsia-200 bg-white shadow-sm">
-                                    <table className="w-full text-sm">
+                                    <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                         <thead>
                                             <tr className="border-b border-fuchsia-100 bg-fuchsia-50/80">
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">SOCO LAB</th>
@@ -1760,7 +1760,7 @@ export default function AddOfficerPage() {
                                 </div>
 
                                 <div className="mt-5 overflow-x-auto rounded-2xl border border-amber-200 bg-white shadow-sm">
-                                    <table className="w-full text-sm">
+                                    <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                         <thead>
                                             <tr className="border-b border-amber-100 bg-amber-50/80">
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">SOCO LAB</th>

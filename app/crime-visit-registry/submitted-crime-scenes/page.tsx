@@ -19,6 +19,7 @@ import {
   registryWorkflowBadgeClasses,
 } from '@/lib/registryWorkflowDisplay';
 import { CheckCircle, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
+import { appTableClasses } from '@/lib/ui/styles';
 
 type FilterTab = 'ALL' | 'TODAY';
 
@@ -169,15 +170,6 @@ function visitTypeVisitBadgeClasses(scene: CrimeScene) {
   }
   return 'bg-blue-200 text-blue-950 border-blue-400';
 }
-
-const tableClasses = {
-  wrapper: 'overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white',
-  thead: 'bg-gray-50 border-b border-gray-200',
-  th: 'text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wide',
-  thRight: 'text-right px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wide',
-  tr: 'border-b border-gray-100 last:border-0 hover:bg-blue-50/30 transition-colors',
-  td: 'px-4 py-3 text-sm',
-};
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -378,30 +370,30 @@ export default function SubmittedCrimeScenesPage() {
             {sortedGroups.length === 0 ? (
               <div className="text-center py-16 text-gray-400 text-sm">No submitted crime scenes found.</div>
             ) : (
-              <div className={tableClasses.wrapper}>
-                <table className="w-full text-sm text-gray-900">
+              <div className={appTableClasses.wrapper}>
+                <table className={appTableClasses.table}>
                   <thead>
-                    <tr className={tableClasses.thead}>
-                      <th className={`${tableClasses.th} w-10`} aria-label="Expand" />
-                      <th className={tableClasses.th}>
+                    <tr className={appTableClasses.thead}>
+                      <th className={`${appTableClasses.th} w-10`} aria-label="Expand" />
+                      <th className={appTableClasses.th}>
                         <TableSortButton onClick={() => handleSort('cvrNo')}>CVR No.</TableSortButton>
                       </th>
-                      <th className={tableClasses.th}>
+                      <th className={appTableClasses.th}>
                         <TableSortButton onClick={() => handleSort('visitType')}>Visit Type</TableSortButton>
                       </th>
-                      <th className={tableClasses.th}>
+                      <th className={appTableClasses.th}>
                         <TableSortButton onClick={() => handleSort('policeStation')}>Police Station</TableSortButton>
                       </th>
-                      <th className={tableClasses.th}>
+                      <th className={appTableClasses.th}>
                         <TableSortButton onClick={() => handleSort('division')}>Division</TableSortButton>
                       </th>
-                      <th className={tableClasses.th}>
+                      <th className={appTableClasses.th}>
                         <TableSortButton onClick={() => handleSort('placeOfCrimeScene')}>Crime Scene</TableSortButton>
                       </th>
-                      <th className={tableClasses.th}>
+                      <th className={appTableClasses.th}>
                         <TableSortButton onClick={() => handleSort('updatedAt')}>Submitted</TableSortButton>
                       </th>
-                      <th className={tableClasses.thRight}>Actions</th>
+                      <th className={appTableClasses.thRight}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -416,12 +408,12 @@ export default function SubmittedCrimeScenesPage() {
                       return (
                         <Fragment key={groupKey}>
                           <tr
-                            className={`${tableClasses.tr} ${hasChildren ? 'cursor-pointer' : ''}`}
+                            className={`${appTableClasses.tr} ${hasChildren ? 'cursor-pointer' : ''}`}
                             onClick={() => {
                               if (hasChildren) toggleExpanded(groupKey);
                             }}
                           >
-                            <td className={tableClasses.td}>
+                            <td className={appTableClasses.td}>
                               {hasChildren ? (
                                 <span className="inline-flex text-gray-500" aria-hidden>
                                   {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -430,12 +422,12 @@ export default function SubmittedCrimeScenesPage() {
                                 <span className="inline-block w-4" />
                               )}
                             </td>
-                            <td className={tableClasses.td}>
+                            <td className={appTableClasses.td}>
                               <span className="font-mono text-xs text-blue-700 font-semibold">
                                 {group.displayCvr}
                               </span>
                             </td>
-                            <td className={tableClasses.td}>
+                            <td className={appTableClasses.td}>
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {hasChildren ? (
                                   <span
@@ -454,21 +446,21 @@ export default function SubmittedCrimeScenesPage() {
                                 ) : null}
                               </div>
                             </td>
-                            <td className={tableClasses.td}>
+                            <td className={appTableClasses.td}>
                               {primary.policeStation || <span className="text-gray-500">—</span>}
                             </td>
-                            <td className={tableClasses.td}>
+                            <td className={appTableClasses.td}>
                               {primary.division || <span className="text-gray-500">—</span>}
                             </td>
-                            <td className={tableClasses.td}>
+                            <td className={appTableClasses.td}>
                               {primary.placeOfCrimeScene || <span className="text-gray-500">—</span>}
                             </td>
-                            <td className={tableClasses.td}>
+                            <td className={appTableClasses.td}>
                               <span className="text-gray-700 text-xs">
                                 {formatDateTimeDDMMYYYY(primary.updatedAt)}
                               </span>
                             </td>
-                            <td className={`${tableClasses.td} text-right`} onClick={(e) => e.stopPropagation()}>
+                            <td className={`${appTableClasses.td} text-right`} onClick={(e) => e.stopPropagation()}>
                               <Link
                                 href={viewHrefForGroup(group)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"

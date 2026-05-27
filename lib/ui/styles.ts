@@ -51,3 +51,19 @@ export const underlineTabInactiveClass =
 export function fieldClasses(...extra: Parameters<typeof cn>) {
   return cn(inputClass, ...extra);
 }
+
+/** Grid-lined table (row + column borders) — pairs with `.data-grid-table` in globals.css */
+export const dataGridTableClass = 'data-grid-table w-full text-sm text-gray-900';
+export const dataGridTableCompactClass = 'data-grid-table data-grid-table--compact w-full text-sm text-gray-900';
+
+export const appTableClasses = {
+  wrapper: 'overflow-x-auto rounded-xl border border-gray-300 shadow-sm bg-white',
+  wrapperPlain: 'overflow-x-auto rounded-lg border border-gray-300 bg-white',
+  table: dataGridTableClass,
+  thead: '',
+  th: 'text-left font-semibold uppercase tracking-wide',
+  thRight: 'text-right font-semibold uppercase tracking-wide',
+  tr: 'transition-colors',
+  td: 'text-sm text-gray-900',
+  empty: 'text-center py-20 text-gray-500',
+} as const;

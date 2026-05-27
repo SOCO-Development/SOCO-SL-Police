@@ -67,6 +67,11 @@ export { default as ContentCard } from '@/components/layout/ContentCard';
 export { default as FilterSection } from '@/components/layout/FilterSection';
 export { default as AppTable } from '@/components/layout/AppTable';
 export type { AppTableColumn } from '@/components/layout/AppTable';
+export {
+  appTableClasses,
+  dataGridTableClass,
+  dataGridTableCompactClass,
+} from '@/lib/ui/styles';
 export { default as TableToolbar } from '@/components/layout/TableToolbar';
 export { default as PageLayout } from '@/components/layout/PageLayout';
 export type { PageLayoutProps } from '@/components/layout/PageLayout';
