@@ -516,9 +516,6 @@ export default function SubmittedCrimeScenesPage() {
                             <tr className="bg-slate-50/95 border-b border-slate-200">
                               <td colSpan={8} className="px-4 py-4">
                                 <div className="space-y-3">
-                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                                    Other visits and updates (same CVR) — color matches visit type or update kind
-                                  </p>
                                   <ul className="space-y-2.5">
                                     {chron.slice(1).map((child) => {
                                       const visitNo = chron.findIndex((c) => c.id === child.id) + 1;
