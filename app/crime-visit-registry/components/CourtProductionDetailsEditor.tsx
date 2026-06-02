@@ -1,6 +1,6 @@
 'use client';
 
-import { AddRowButton, RemoveRowButton, FileUploadButton } from '@/components/ui';
+import { AddRowButton, RemoveRowButton, FileUploadButton, FileAttachmentSlot } from '@/components/ui';
 import { useRef } from 'react';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
@@ -118,6 +118,17 @@ function AnalysisAttachment({ index, row, readOnly, onUpdate }: AnalysisAttachme
       )}
     </div>
   );
+}
+
+// ─── File helper ─────────────────────────────────────────────────────────────
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
 }
 
 export type CourtProductionDetailsEditorMode = 'full' | 'productionSentToCourt' | 'sentToAnalysis';
@@ -653,45 +664,87 @@ export default function CourtProductionDetailsEditor({
                 </FieldGroup>
               </div>
               {row.sentToCourt === 'Yes' ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
-                  <FieldGroup label="Date (DD/MM/YY)">
-                    <DatePicker
-                      value={row.date ?? ''}
-                      onChange={(value) => {
-                        const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], date: value };
-                        patch({ productionSentToCourtRows: rows });
-                      }}
-                      disabled={readOnly}
-                    />
-                  </FieldGroup>
-                  <FieldGroup label="Court name (optional)" className="min-w-0">
-                    <CustomSelect
-                      value={row.courtName ?? ''}
-                      onChange={(value) => {
-                        const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], courtName: value };
-                        patch({ productionSentToCourtRows: rows });
-                      }}
-                      options={COURT_NAME_OPTIONAL_SELECT_OPTIONS}
-                      placeholder="Select court (optional)"
-                      searchable
-                      searchPlaceholder="Search…"
-                      disabled={readOnly}
-                    />
-                  </FieldGroup>
-                  <FieldGroup label="Case no. (optional)">
-                    <TextInput
-                      value={row.courtCaseNo ?? ''}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
+                    <FieldGroup label="Date (DD/MM/YY)">
+                      <DatePicker
+                        value={row.date ?? ''}
+                        onChange={(value) => {
+                          const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                          rows[index] = { ...rows[index], date: value };
+                          patch({ productionSentToCourtRows: rows });
+                        }}
+                        disabled={readOnly}
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Court name (optional)" className="min-w-0">
+                      <CustomSelect
+                        value={row.courtName ?? ''}
+                        onChange={(value) => {
+                          const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                          rows[index] = { ...rows[index], courtName: value };
+                          patch({ productionSentToCourtRows: rows });
+                        }}
+                        options={COURT_NAME_OPTIONAL_SELECT_OPTIONS}
+                        placeholder="Select court (optional)"
+                        searchable
+                        searchPlaceholder="Search…"
+                        disabled={readOnly}
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Case no. (optional)">
+                      <TextInput
+                        value={row.courtCaseNo ?? ''}
+                        readOnly={readOnly}
+                        onChange={(e) => {
+                          const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                          rows[index] = { ...rows[index], courtCaseNo: e.target.value };
+                          patch({ productionSentToCourtRows: rows });
+                        }}
+                        placeholder="Case number"
+                      />
+                    </FieldGroup>
+                  </div>
+
+                  {/* Attachments */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <FileAttachmentSlot
+                      label="Sworn Statement"
+                      labelSi="දිවුරුම් ප්‍රකාශය"
+                      fileName={row.divurumaFileName}
+                      dataUrl={row.divurumaDataUrl}
                       readOnly={readOnly}
-                      onChange={(e) => {
+                      onFile={async (file) => {
+                        const url = await readFileAsDataUrl(file);
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], courtCaseNo: e.target.value };
+                        rows[index] = { ...rows[index], divurumaFileName: file.name, divurumaDataUrl: url };
                         patch({ productionSentToCourtRows: rows });
                       }}
-                      placeholder="Case number"
+                      onRemove={() => {
+                        const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                        rows[index] = { ...rows[index], divurumaFileName: '', divurumaDataUrl: '' };
+                        patch({ productionSentToCourtRows: rows });
+                      }}
                     />
-                  </FieldGroup>
+                    <FileAttachmentSlot
+                      label="Questionnaire"
+                      labelSi="ප්‍රශ්ණාවලිය"
+                      fileName={row.prashnavalyaFileName}
+                      dataUrl={row.prashnavalyaDataUrl}
+                      readOnly={readOnly}
+                      onFile={async (file) => {
+                        const url = await readFileAsDataUrl(file);
+                        const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                        rows[index] = { ...rows[index], prashnavalyaFileName: file.name, prashnavalyaDataUrl: url };
+                        patch({ productionSentToCourtRows: rows });
+                      }}
+                      onRemove={() => {
+                        const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                        rows[index] = { ...rows[index], prashnavalyaFileName: '', prashnavalyaDataUrl: '' };
+                        patch({ productionSentToCourtRows: rows });
+                      }}
+                    />
+                  </div>
                 </div>
               ) : null}
             </div>

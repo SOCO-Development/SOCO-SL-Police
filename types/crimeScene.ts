@@ -274,6 +274,12 @@ export interface ProductionSentToCourtRow {
   courtName?: string;
   /** Optional case reference when sent to court is Yes. */
   courtCaseNo?: string;
+  /** Attachment: දිවුරුම් ප්‍රකාශය (Sworn Statement) */
+  divurumaFileName?: string;
+  divurumaDataUrl?: string;
+  /** Attachment: ප්‍රශ්ණාවලිය (Questionnaire) */
+  prashnavalyaFileName?: string;
+  prashnavalyaDataUrl?: string;
 }
 
 /** One production sent to an analysis institute (repeatable). */
@@ -299,7 +305,17 @@ export interface SentToAnalysisRow {
 }
 
 export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
-  return { productionRef: '', sentToCourt: '', date: '', courtName: '', courtCaseNo: '' };
+  return {
+    productionRef: '',
+    sentToCourt: '',
+    date: '',
+    courtName: '',
+    courtCaseNo: '',
+    divurumaFileName: '',
+    divurumaDataUrl: '',
+    prashnavalyaFileName: '',
+    prashnavalyaDataUrl: '',
+  };
 }
 
 export function emptySentToAnalysisRow(): SentToAnalysisRow {

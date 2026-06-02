@@ -42,6 +42,9 @@ export type { TableIconButtonProps, TableIconButtonVariant } from './TableIconBu
 export { default as FileUploadButton } from './FileUploadButton';
 export type { FileUploadButtonProps, FileUploadButtonVariant } from './FileUploadButton';
 
+export { default as FileAttachmentSlot } from './FileAttachmentSlot';
+export type { FileAttachmentSlotProps } from './FileAttachmentSlot';
+
 export { default as ToggleChip } from './ToggleChip';
 export type { ToggleChipProps } from './ToggleChip';
 
