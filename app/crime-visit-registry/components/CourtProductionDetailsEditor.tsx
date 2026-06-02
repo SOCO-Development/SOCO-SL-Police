@@ -709,7 +709,7 @@ export default function CourtProductionDetailsEditor({
                   {/* Attachments */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FileAttachmentSlot
-                      label="Sworn Statement"
+                      label="Affidavit"
                       labelSi="දිවුරුම් ප්‍රකාශය"
                       fileName={row.divurumaFileName}
                       dataUrl={row.divurumaDataUrl}
