@@ -6,6 +6,7 @@ import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
+import { normalizeCourtVisitUpdate } from '@/types/crimeScene';
 import { PageHeader, PageLayout, TabBar, SearchInput, TableSortButton } from '@/components/ui';
 import {
   flattenGroupChronological,
@@ -169,6 +170,44 @@ function visitTypeVisitBadgeClasses(scene: CrimeScene) {
     return 'bg-violet-200 text-violet-950 border-violet-400';
   }
   return 'bg-blue-200 text-blue-950 border-blue-400';
+}
+
+// ── Court visit synthetic rows ────────────────────────────────────────────────
+
+interface CourtVisitEntry {
+  /** Source scene (the one that has courtVisitUpdate). */
+  scene: CrimeScene;
+  /** Human-readable summary line. */
+  summary: string;
+  /** Saved timestamp for display. */
+  savedAt: string;
+}
+
+/**
+ * Builds synthetic court-visit display entries for all scenes in a group
+ * that have courtVisitUpdate rows with actual data.
+ */
+function courtVisitEntriesForGroup(group: CrimeSceneCvrGroup): CourtVisitEntry[] {
+  const allScenes = [group.primary, ...group.children];
+  const entries: CourtVisitEntry[] = [];
+  for (const scene of allScenes) {
+    const { rows } = normalizeCourtVisitUpdate(scene.courtVisitUpdate);
+    if (!rows.length) continue;
+    const filled = rows.filter(
+      (r) => r.testifiedOfficer?.trim() || r.visitDate?.trim() || r.visitDescription?.trim(),
+    );
+    if (!filled.length) continue;
+    const first = filled[0];
+    const officer = first.testifiedOfficer?.trim() || first.officerName?.trim() || '';
+    const date = first.visitDate?.trim() || '';
+    const parts = [officer && `Officer: ${officer}`, date && `Date: ${date}`].filter(Boolean);
+    entries.push({
+      scene,
+      summary: parts.length ? parts.join(' · ') : `${filled.length} court visit row${filled.length > 1 ? 's' : ''}`,
+      savedAt: scene.updatedAt,
+    });
+  }
+  return entries;
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -405,16 +444,19 @@ export default function SubmittedCrimeScenesPage() {
                       const primaryVisitNo = chron.length
                         ? chron.findIndex((c) => c.id === primary.id) + 1
                         : 1;
+                      const courtVisitEntries = courtVisitEntriesForGroup(group);
+                      const totalExtra = children.length + courtVisitEntries.length;
+                      const hasExpanded = hasChildren || courtVisitEntries.length > 0;
                       return (
                         <Fragment key={groupKey}>
                           <tr
-                            className={`${appTableClasses.tr} ${hasChildren ? 'cursor-pointer' : ''}`}
+                            className={`${appTableClasses.tr} ${hasExpanded ? 'cursor-pointer' : ''}`}
                             onClick={() => {
-                              if (hasChildren) toggleExpanded(groupKey);
+                              if (hasExpanded) toggleExpanded(groupKey);
                             }}
                           >
                             <td className={appTableClasses.td}>
-                              {hasChildren ? (
+                              {hasExpanded ? (
                                 <span className="inline-flex text-gray-500" aria-hidden>
                                   {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 </span>
@@ -439,9 +481,9 @@ export default function SubmittedCrimeScenesPage() {
                                 ) : null}
                                 {visitTypePill(primary)}
                                 {registryWorkflowPill(primary)}
-                                {hasChildren ? (
+                                {hasExpanded ? (
                                   <span className="text-[10px] font-medium text-gray-500">
-                                    +{children.length} more
+                                    +{totalExtra} more
                                   </span>
                                 ) : null}
                               </div>
@@ -470,7 +512,7 @@ export default function SubmittedCrimeScenesPage() {
                               </Link>
                             </td>
                           </tr>
-                          {open && hasChildren ? (
+                          {open && hasExpanded ? (
                             <tr className="bg-slate-50/95 border-b border-slate-200">
                               <td colSpan={8} className="px-4 py-4">
                                 <div className="space-y-3">
@@ -507,6 +549,38 @@ export default function SubmittedCrimeScenesPage() {
                                         </li>
                                       );
                                     })}
+
+                                    {/* Court visit synthetic rows */}
+                                    {courtVisitEntries.map((entry, idx) => (
+                                      <li
+                                        key={`court-visit-${entry.scene.id}-${idx}`}
+                                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm shadow-sm border-violet-200 bg-violet-50/80 ring-1 ring-violet-200/70 border-l-[5px] border-l-violet-500"
+                                      >
+                                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                          <span
+                                            className="inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border text-[11px] font-bold tabular-nums shrink-0 bg-violet-200 text-violet-950 border-violet-400"
+                                            title="Court visit record"
+                                          >
+                                            CV
+                                          </span>
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-violet-100 text-violet-900 border-violet-300">
+                                            Court Visit
+                                          </span>
+                                          <span className="text-xs text-gray-700 font-medium">
+                                            {entry.summary}
+                                          </span>
+                                          <span className="text-xs text-gray-500">
+                                            · Saved {formatDateTimeDDMMYYYY(entry.savedAt)}
+                                          </span>
+                                        </div>
+                                        <Link
+                                          href={viewHrefForGroup(group)}
+                                          className="text-xs font-semibold text-violet-700 hover:text-violet-900 hover:underline shrink-0"
+                                        >
+                                          Open with all visits
+                                        </Link>
+                                      </li>
+                                    ))}
                                   </ul>
                                 </div>
                               </td>
