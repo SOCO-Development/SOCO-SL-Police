@@ -224,7 +224,7 @@ export default function PendingCvrApprovalsPage() {
       <PageHeader
         backHref="/crime-visit-registry"
         title="Pending CVR Approvals"
-        description="Approve or reject permission requests first, then review amended records with field-level diffs."
+        //description="Approve or reject permission requests first, then review amended records with field-level diffs."
       />
 
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
