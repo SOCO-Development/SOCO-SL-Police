@@ -218,7 +218,7 @@ export default function CvrUpdateRequestPage() {
       <PageHeader
         backHref="/crime-visit-registry"
         title="CVR Update Request"
-        description="Ask permission to amend a submitted CVR, then edit and submit for re-approval."
+        //description="Ask permission to amend a submitted CVR, then edit and submit for re-approval."
       />
 
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">

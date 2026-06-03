@@ -376,7 +376,7 @@ export default function SubmittedCrimeScenesPage() {
       <PageHeader
         backHref="/crime-visit-registry"
         title="Submitted Crime Scenes"
-        description="One row per CVR — expand for other visits. View shows every visit for that CVR. Reported today lists a CVR if any visit was submitted today or has today's date in reported to police."
+        //description="One row per CVR — expand for other visits. View shows every visit for that CVR. Reported today lists a CVR if any visit was submitted today or has today's date in reported to police."
         actions={
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
             <CheckCircle className="w-3.5 h-3.5" />

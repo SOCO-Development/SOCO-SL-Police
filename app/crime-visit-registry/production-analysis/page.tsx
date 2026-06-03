@@ -153,9 +153,9 @@ export default function ProductionAnalysisPage() {
         <PageHeader
           backHref="/crime-visit-registry"
           title="Update Production Analysis"
-          description="Choose a crime scene below, then click Edit to change Productions sent to analysis institutes and save. Saving applies to every visit record for the same CVR."
+          //description="Choose a crime scene below, then click Edit to change Productions sent to analysis institutes and save. Saving applies to every visit record for the same CVR."
         />
-        <p className="text-sm text-gray-600 mb-6 -mt-2">
+        {/* <p className="text-sm text-gray-600 mb-6 -mt-2">
           Saved data appears under{' '}
           <Link
             href="/crime-visit-registry/submitted-crime-scenes"
@@ -164,7 +164,7 @@ export default function ProductionAnalysisPage() {
             Submitted crime scenes
           </Link>
           .
-        </p>
+        </p> */}
 
             {scenes.length === 0 ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">

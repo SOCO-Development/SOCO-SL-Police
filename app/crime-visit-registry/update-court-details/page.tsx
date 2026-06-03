@@ -397,9 +397,9 @@ export default function UpdateCourtDetailsPage() {
         <PageHeader
           backHref="/crime-visit-registry"
           title="Update Court Details"
-          description="Choose a crime scene below, then pick Production sent to court (use Edit to change rows), Court visit, or Rewards and save. Saving applies to every visit record for the same CVR (new visit, revisit, court visit), like a shared case file."
+          //description="Choose a crime scene below, then pick Production sent to court (use Edit to change rows), Court visit, or Rewards and save. Saving applies to every visit record for the same CVR (new visit, revisit, court visit), like a shared case file."
         />
-        <p className="text-sm text-gray-600 mb-6 -mt-2">
+        {/* <p className="text-sm text-gray-600 mb-6 -mt-2">
           Updates appear under{' '}
           <Link
             href="/crime-visit-registry/submitted-crime-scenes"
@@ -408,7 +408,7 @@ export default function UpdateCourtDetailsPage() {
             Submitted crime scenes
           </Link>
           .
-        </p>
+        </p> */}
 
             {scenes.length === 0 ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
