@@ -1010,7 +1010,7 @@ export default function AddOfficerPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                    <AddRowButton onClick={addPromotion}>Add Promotionn</AddRowButton>
+                                    <AddRowButton onClick={addPromotion}>Add Promotion</AddRowButton>
                                 </div>
                             </div>
 
