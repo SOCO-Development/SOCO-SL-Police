@@ -26,7 +26,7 @@ export default function CreateCrimeScenePage() {
       <PageHeader
         backHref="/crime-visit-registry"
         title="Create Crime Scene"
-        description="Attach scenes to morning visits and save each scene with a CVR."
+        //description="Attach scenes to morning visits and save each scene with a CVR."
       />
 
       <CreateCrimeSceneForm onSaved={handleSaved} onCancel={handleCancel} />

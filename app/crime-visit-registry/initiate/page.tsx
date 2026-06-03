@@ -26,7 +26,7 @@ export default function InitiateCrimeVisitPage() {
       <PageHeader
         backHref="/crime-visit-registry"
         title="Initiate Visit"
-        description="Fill in the required details and submit. After returning from the scene, create a Crime Scene record linked to this visit."
+        //description="Fill in the required details and submit. After returning from the scene, create a Crime Scene record linked to this visit."
       />
 
       <CrimeVisitForm
