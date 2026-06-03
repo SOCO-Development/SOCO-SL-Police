@@ -742,15 +742,15 @@ export default function AddOfficerPage() {
                                             {/* Telephone */}
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
                                                 <div>
-                                                    <FieldLabel label="Office Tel. / කාර්යාල දුරකථනය" />
+                                                    <FieldLabel label="Office Tel. / කාර්යාල දුරකථන අංකය" />
                                                     <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
                                                 </div>
                                                 <div>
-                                                    <FieldLabel label="Residence Tel. / නිවාස දුරකථනය" />
+                                                    <FieldLabel label="Residence Tel. / නිවාස දුරකථනය අංකය" />
                                                     <GInput value={form.telResidence} onChange={(v) => set('telResidence', v)} placeholder="0XX-XXXXXXX" type="tel" />
                                                 </div>
                                                 <div>
-                                                    <FieldLabel label="Mobile / ජංගම දුරකථනය" />
+                                                    <FieldLabel label="Mobile / ජංගම දුරකථනය අංකය" />
                                                     <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
                                                 </div>
                                             </div>
