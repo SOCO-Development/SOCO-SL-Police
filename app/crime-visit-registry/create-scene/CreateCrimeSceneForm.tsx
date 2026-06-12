@@ -23,6 +23,7 @@ import {
   crimeSceneToFormData,
   validateIncidentTimingSection,
 } from '@/lib/crimeSceneFormMapping';
+import { getLocationRegistry } from '@/lib/api/locationService';
 import {
   ANALYSIS_INSTITUTION_OPTIONS,
   analysisInstitutionIsOthers,
@@ -83,23 +84,23 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const POLICE_STATIONS = [
-  'Colombo Fort Police Station',
-  'Borella Police Station',
-  'Kandy Police Station',
-  'Galle Police Station',
-  'Kurunegala Police Station',
-  'Jaffna Police Station',
-].map((v) => ({ value: v, label: v }));
+const FALLBACK_STATIONS = [
+  { value: 'Colombo Fort Police Station', label: 'Colombo Fort Police Station', division: 'Colombo Division' },
+  { value: 'Borella Police Station', label: 'Borella Police Station', division: 'Colombo Division' },
+  { value: 'Kandy Police Station', label: 'Kandy Police Station', division: 'Kandy Division' },
+  { value: 'Galle Police Station', label: 'Galle Police Station', division: 'Galle Division' },
+  { value: 'Kurunegala Police Station', label: 'Kurunegala Police Station', division: 'Kurunegala Division' },
+  { value: 'Jaffna Police Station', label: 'Jaffna Police Station', division: 'Jaffna Division' },
+];
 
-const DIVISIONS = [
-  'Colombo Division',
-  'Kandy Division',
-  'Gampaha Division',
-  'Kalutara Division',
-  'Galle Division',
-  'Kurunegala Division',
-].map((v) => ({ value: v, label: v }));
+const FALLBACK_DIVISIONS = [
+  { value: 'Colombo Division', label: 'Colombo Division' },
+  { value: 'Kandy Division', label: 'Kandy Division' },
+  { value: 'Gampaha Division', label: 'Gampaha Division' },
+  { value: 'Kalutara Division', label: 'Kalutara Division' },
+  { value: 'Galle Division', label: 'Galle Division' },
+  { value: 'Kurunegala Division', label: 'Kurunegala Division' },
+];
 
 const OFFENCE_OPTIONS = [
   'මනුෂ්‍ය ඝාතනය',
@@ -249,6 +250,41 @@ export default function CreateCrimeSceneForm({
   focusSection,
 }: CreateCrimeSceneFormProps) {
   const [form, setForm] = useState<CrimeSceneFormData>(defaultForm());
+  const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
+  const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
+
+  useEffect(() => {
+    getLocationRegistry().then(({ locations }) => {
+      if (!locations || locations.length === 0) return;
+      const uniqueDivisionsMap = new Map<string, string>();
+      locations.forEach(loc => {
+        if (loc.division) {
+          uniqueDivisionsMap.set(loc.division, loc.division);
+        }
+      });
+      const divisionOpts = Array.from(uniqueDivisionsMap.keys()).map(name => ({
+        value: name,
+        label: name,
+      })).sort((a, b) => a.label.localeCompare(b.label));
+
+      const stationOpts = locations.map(loc => ({
+        value: loc.name,
+        label: loc.name,
+        division: loc.division,
+      })).sort((a, b) => a.label.localeCompare(b.label));
+
+      setDivisions(divisionOpts);
+      setStations(stationOpts);
+    }).catch(err => {
+      console.error("Failed to load locations for form dropdowns", err);
+    });
+  }, []);
+
+  const filteredStationOptions = useMemo(() => {
+    if (!form.division) return stations;
+    return stations.filter(s => s.division === form.division);
+  }, [stations, form.division]);
+
   const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
   const [existingCvrs, setExistingCvrs] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -741,16 +777,34 @@ export default function CreateCrimeSceneForm({
               <FieldGroup label="Police Division">
                 <CustomSelect
                   value={form.division}
-                  onChange={(value) => setForm((prev) => ({ ...prev, division: value }))}
-                  options={DIVISIONS}
+                  onChange={(value) => setForm((prev) => {
+                    const currentStation = prev.policeStation;
+                    const matches = stations.find(s => s.value === currentStation && s.division === value);
+                    return {
+                      ...prev,
+                      division: value,
+                      policeStation: matches ? currentStation : '',
+                    };
+                  })}
+                  options={divisions}
                   placeholder="Select police division"
                 />
               </FieldGroup>
               <FieldGroup label="Police Station">
                 <CustomSelect
                   value={form.policeStation}
-                  onChange={(value) => setForm((prev) => ({ ...prev, policeStation: value }))}
-                  options={POLICE_STATIONS}
+                  onChange={(value) => setForm((prev) => {
+                    const matchingStation = stations.find(s => s.value === value);
+                    const newDivision = matchingStation && matchingStation.division
+                      ? matchingStation.division
+                      : prev.division;
+                    return {
+                      ...prev,
+                      policeStation: value,
+                      division: newDivision,
+                    };
+                  })}
+                  options={filteredStationOptions}
                   placeholder="Select police station"
                 />
               </FieldGroup>
