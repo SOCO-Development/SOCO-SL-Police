@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type {
   SectionA,
   SectionB,
@@ -17,6 +17,7 @@ import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
+import { getLocationRegistry } from "@/lib/api/locationService";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -54,19 +55,16 @@ const SUPPORT_ROLE_OPTIONS: { value: SupportRole; label: string }[] = [
 ];
 */
 
-const REQUEST_STATION_OPTIONS = [
-  {
-    value: "Colombo Fort Police Station",
-    label: "Colombo Fort Police Station",
-  },
-  { value: "Borella Police Station", label: "Borella Police Station" },
-  { value: "Kandy Police Station", label: "Kandy Police Station" },
-  { value: "Galle Police Station", label: "Galle Police Station" },
-  { value: "Kurunegala Police Station", label: "Kurunegala Police Station" },
-  { value: "Jaffna Police Station", label: "Jaffna Police Station" },
+const FALLBACK_STATIONS = [
+  { value: "Colombo Fort Police Station", label: "Colombo Fort Police Station", division: "Colombo Division" },
+  { value: "Borella Police Station", label: "Borella Police Station", division: "Colombo Division" },
+  { value: "Kandy Police Station", label: "Kandy Police Station", division: "Kandy Division" },
+  { value: "Galle Police Station", label: "Galle Police Station", division: "Galle Division" },
+  { value: "Kurunegala Police Station", label: "Kurunegala Police Station", division: "Kurunegala Division" },
+  { value: "Jaffna Police Station", label: "Jaffna Police Station", division: "Jaffna Division" },
 ];
 
-const REQUEST_DIVISION_OPTIONS = [
+const FALLBACK_DIVISIONS = [
   { value: "Colombo Division", label: "Colombo Division" },
   { value: "Kandy Division", label: "Kandy Division" },
   { value: "Gampaha Division", label: "Gampaha Division" },
@@ -565,6 +563,42 @@ export default function CrimeVisitForm({
   const [formData, setFormData] = useState<CrimeVisitFormData>(
     initialData ?? defaultFormData(),
   );
+  const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
+  const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
+
+  useEffect(() => {
+    getLocationRegistry().then(({ locations }) => {
+      if (!locations || locations.length === 0) return;
+      const uniqueDivisionsMap = new Map<string, string>();
+      locations.forEach(loc => {
+        if (loc.division) {
+          uniqueDivisionsMap.set(loc.division, loc.division);
+        }
+      });
+      const divisionOpts = Array.from(uniqueDivisionsMap.keys()).map(name => ({
+        value: name,
+        label: name,
+      })).sort((a, b) => a.label.localeCompare(b.label));
+
+      const stationOpts = locations.map(loc => ({
+        value: loc.name,
+        label: loc.name,
+        division: loc.division,
+      })).sort((a, b) => a.label.localeCompare(b.label));
+
+      setDivisions(divisionOpts);
+      setStations(stationOpts);
+    }).catch(err => {
+      console.error("Failed to load locations for form dropdowns", err);
+    });
+  }, []);
+
+  const filteredStationOptions = useMemo(() => {
+    const selectedDiv = formData.sectionA?.requestDivision;
+    if (!selectedDiv) return stations;
+    return stations.filter(s => s.division === selectedDiv);
+  }, [stations, formData.sectionA?.requestDivision]);
+
   const [offenceTypeOther, setOffenceTypeOther] = useState<string>(() => {
     const defaults = initialData ?? defaultFormData();
     const value = defaults.sectionA?.offenceType ?? "";
@@ -659,12 +693,20 @@ export default function CrimeVisitForm({
                   <CustomSelect
                     value={sA.requestDivision ?? ""}
                     onChange={(val) =>
-                      setFormData((f) => ({
-                        ...f,
-                        sectionA: { ...f.sectionA, requestDivision: val },
-                      }))
+                      setFormData((f) => {
+                        const currentStation = f.sectionA?.requestFromStation;
+                        const matches = stations.find(s => s.value === currentStation && s.division === val);
+                        return {
+                          ...f,
+                          sectionA: {
+                            ...f.sectionA,
+                            requestDivision: val,
+                            requestFromStation: matches ? currentStation : "",
+                          },
+                        };
+                      })
                     }
-                    options={REQUEST_DIVISION_OPTIONS}
+                    options={divisions}
                     placeholder="Select division"
                   />
                 )}
@@ -679,12 +721,22 @@ export default function CrimeVisitForm({
                   <CustomSelect
                     value={sA.requestFromStation ?? ""}
                     onChange={(val) =>
-                      setFormData((f) => ({
-                        ...f,
-                        sectionA: { ...f.sectionA, requestFromStation: val },
-                      }))
+                      setFormData((f) => {
+                        const matchingStation = stations.find(s => s.value === val);
+                        const newDivision = matchingStation && matchingStation.division
+                          ? matchingStation.division
+                          : f.sectionA?.requestDivision;
+                        return {
+                          ...f,
+                          sectionA: {
+                            ...f.sectionA,
+                            requestFromStation: val,
+                            requestDivision: newDivision,
+                          },
+                        };
+                      })
                     }
-                    options={REQUEST_STATION_OPTIONS}
+                    options={filteredStationOptions}
                     placeholder="Select police station"
                   />
                 )}
