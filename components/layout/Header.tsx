@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { publicAssetSrc } from '@/lib/publicAsset';
 import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { usePathname, useRouter } from 'next/navigation';
+import { authService } from '@/lib/api';
+import { getUsername } from '@/lib/api/authStorage';
+import { getErrorMessage, showErrorAlert } from '@/lib/alerts';
 import {
   Home,
   FileText,
@@ -36,9 +39,11 @@ const NAV_LINKS = [
   { href: '/system-config', label: 'Configuration', icon: Settings, isActive: (p: string) => p === '/system-config' || p.startsWith('/system-config/') },
 ] as const;
 
-export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeTheme }: HeaderProps) {
+export default function Header({ userName: userNameProp, homeTheme, onToggleHomeTheme }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [storedUserName, setStoredUserName] = useState(userNameProp ?? 'User');
+  const userName = userNameProp ?? storedUserName;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -87,18 +92,24 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  function handleLogoutConfirm() {
+  useEffect(() => {
+    const username = getUsername();
+    if (username) setStoredUserName(username);
+  }, []);
+
+  async function handleLogoutConfirm() {
     setIsLoggingOut(true);
-    // Brief "Logging out..." state then redirect for smooth transition
-    setTimeout(() => {
+    const username = getUsername() ?? '';
+    try {
+      if (username) await authService.logout(username);
+    } catch (err) {
+      showErrorAlert('Logout Failed', getErrorMessage(err, 'Could not reach the server.'));
+    } finally {
       setShowLogoutConfirm(false);
       setUserMenuOpen(false);
       setIsLoggingOut(false);
-      localStorage.removeItem('isAuthenticated');
-      localStorage.removeItem('username');
-      localStorage.removeItem('authTimestamp');
       router.replace('/login');
-    }, 500);
+    }
   }
 
   function toggleMenu() {
