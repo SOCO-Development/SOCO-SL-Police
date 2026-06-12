@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthGuard from "@/components/auth/AuthGuard";
+import GlobalAlertHost from "@/components/alerts/GlobalAlertHost";
 import PageBackground from "@/components/layout/PageBackground";
 import { publicAssetSrc } from "@/lib/publicAsset";
 
@@ -52,6 +53,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthGuard>
           <PageBackground>{children}</PageBackground>
+          <GlobalAlertHost />
         </AuthGuard>
       </body>
     </html>

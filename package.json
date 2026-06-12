@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "dev": "node scripts/dev-with-ip.mjs",
+    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && node scripts/dev-with-ip.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
