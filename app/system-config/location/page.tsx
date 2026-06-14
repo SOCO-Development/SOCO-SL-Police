@@ -81,7 +81,7 @@ export default function LocationConfigPage() {
         id: d.DIVISION_ID,
         name: d.DIVISION_NAME
       })));
-    } catch (err) {
+    } catch {
       showErrorAlert("Error", "Failed to load divisions for this province.");
     } finally {
       setIsSocoDivisionsLoading(false);
