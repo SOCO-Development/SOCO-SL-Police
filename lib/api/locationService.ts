@@ -2,17 +2,30 @@ import { apiRequest } from './client';
 import type {
   ApiDivision,
   ApiLocation,
+  ApiProvince,
   InsertDivisionRequest,
   UpdateDivisionRequest,
+  InsertNewSocoLabRequest,
+  InsertNewSocoLabResponse,
 } from './types';
 
 export async function getAllLocations(): Promise<ApiLocation[]> {
   return apiRequest<ApiLocation[]>('Location/GetAllLocations');
 }
 
+export async function getAllProvinces(): Promise<ApiProvince[]> {
+  return apiRequest<ApiProvince[]>('Location/GetAllProvinces');
+}
+
 export async function getAllDivisionsByProvince(provinceId: number): Promise<ApiDivision[]> {
   return apiRequest<ApiDivision[]>('Location/GetAllDivisionsByProvince', {
     params: { ProvinceId: provinceId },
+  });
+}
+
+export async function getDivisionById(divisionId: number): Promise<ApiDivision[]> {
+  return apiRequest<ApiDivision[]>('Location/GetDivisionById', {
+    params: { divisionId },
   });
 }
 
@@ -29,6 +42,16 @@ export async function updateDivision(payload: UpdateDivisionRequest): Promise<nu
     body: payload,
   });
 }
+
+export async function insertNewSocoLab(
+  payload: InsertNewSocoLabRequest,
+): Promise<InsertNewSocoLabResponse> {
+  return apiRequest<InsertNewSocoLabResponse>('Location/InsertNewSocoLab', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
 
 export interface ProvinceOption {
   id: number;
@@ -57,15 +80,32 @@ const MAX_PROVINCE_ID = 9;
 let registryPromise: Promise<LocationRegistry> | null = null;
 
 async function fetchLocationRegistry(): Promise<LocationRegistry> {
+  let apiProvinces: ApiProvince[] = [];
+  try {
+    apiProvinces = await getAllProvinces();
+  } catch (err) {
+    console.error('Failed to load provinces from API', err);
+  }
+
+  const provinceList = apiProvinces.length > 0
+    ? apiProvinces.map((p, idx) => ({
+        id: p.PROVINCE_ID ? Number(p.PROVINCE_ID) : (idx + 1),
+        name: p.PROVINCE_NAME,
+      }))
+    : Array.from({ length: MAX_PROVINCE_ID }, (_, i) => ({
+        id: i + 1,
+        name: `Province ${i + 1}`,
+      }));
+
   const [apiLocations, divisionGroups] = await Promise.all([
     getAllLocations(),
     Promise.all(
-      Array.from({ length: MAX_PROVINCE_ID }, (_, i) => i + 1).map(async (provinceId) => {
+      provinceList.map(async (prov) => {
         try {
-          const divisions = await getAllDivisionsByProvince(provinceId);
-          return { provinceId, divisions };
+          const divisions = await getAllDivisionsByProvince(prov.id);
+          return { provinceId: prov.id, provinceName: prov.name, divisions };
         } catch {
-          return { provinceId, divisions: [] as ApiDivision[] };
+          return { provinceId: prov.id, provinceName: prov.name, divisions: [] as ApiDivision[] };
         }
       }),
     ),
@@ -74,10 +114,7 @@ async function fetchLocationRegistry(): Promise<LocationRegistry> {
   const provinces: ProvinceOption[] = [];
   const divisionById = new Map<string, { name: string; province: string; provinceId: string }>();
 
-  for (const { provinceId, divisions } of divisionGroups) {
-    if (divisions.length === 0) continue;
-
-    const provinceName = divisions[0].PROVINCE_NAME ?? `Province ${provinceId}`;
+  for (const { provinceId, provinceName, divisions } of divisionGroups) {
     provinces.push({ id: provinceId, name: provinceName });
 
     for (const division of divisions) {
@@ -105,6 +142,7 @@ async function fetchLocationRegistry(): Promise<LocationRegistry> {
 
   return { locations, provinces };
 }
+
 
 /** Load locations + provinces + divisions in one batched call (deduped). */
 export async function getLocationRegistry(force = false): Promise<LocationRegistry> {

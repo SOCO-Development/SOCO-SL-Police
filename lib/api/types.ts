@@ -45,7 +45,7 @@ export interface ApiLocation {
 }
 
 export interface ApiProvince {
-  PROVINCE_ID?: string;
+  PROVINCE_ID?: string | number;
   PROVINCE_NAME: string;
 }
 
@@ -72,3 +72,18 @@ export interface UpdateDivisionRequest {
   provinceId: number;
   divisionName: string;
 }
+
+export interface InsertNewSocoLabRequest {
+  provinceId: number;
+  divisionId: number;
+  locationName: string;
+  policeStations: { stationName: string }[];
+}
+
+export interface InsertNewSocoLabResponse {
+  locationId: string;
+  locationName: string;
+  policeStations: unknown[];
+  message: string;
+}
+
