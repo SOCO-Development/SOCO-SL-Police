@@ -138,7 +138,8 @@ interface FormData {
     civilStatus: string;
     spouseDesignation: string;
     spouseDesignationOther: string;
-    spouseNameAddress: string;
+    spouseName: string;
+    spouseAddressOfInstitute: string;
     children: ChildRow[];
     // Section 3
     dateJoinedPolice: string;
@@ -255,7 +256,7 @@ function defaultForm(): FormData {
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
-        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseNameAddress: '',
+        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '',
         children: [{ id: newId(), name: '', birthday: '', status: '' }],
         dateJoinedPolice: '', appointedRank: '', presentRank: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
@@ -680,7 +681,7 @@ export default function AddOfficerPage() {
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
                                 <SectionHeader
                                     sectionNo={1}
-                                    title="PERSONNEL DETAILS OF SCENE OF CRIME OFFICER"
+                                    title="PERSONAL DETAILS OF SCENE OF CRIME OFFICER"
                                     titleSi="අපරාධ ස්ථාන නිලධාරිගේ පුද්ගලික තොරතුරු"
                                 />
 
@@ -889,14 +890,23 @@ export default function AddOfficerPage() {
                                                     </>
                                                 ) : null}
                                             </div>
-
-                                            <div className="md:col-span-3 min-w-0">
-                                                <FieldLabel label="Spouse Name & Address of Institute / කලත්‍රයාගේ නම හා ආයතනයේ ලිපිනය" />
-                                                <GInput
-                                                    value={form.spouseNameAddress}
-                                                    onChange={(v) => set('spouseNameAddress', v)}
-                                                    placeholder="Name and institute address"
-                                                />
+                                            <div className="md:col-span-3 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <FieldLabel label="Spouse Name / කලත්‍රයාගේ නම" />
+                                                    <GInput
+                                                        value={form.spouseName}
+                                                        onChange={(v) => set('spouseName', v)}
+                                                        placeholder="Full name of spouse"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Address of Institute / ආයතනයේ ලිපිනය" />
+                                                    <GInput
+                                                        value={form.spouseAddressOfInstitute}
+                                                        onChange={(v) => set('spouseAddressOfInstitute', v)}
+                                                        placeholder="Spouse's workplace address"
+                                                    />
+                                                </div>
                                             </div>
                                         </>
                                     ) : null}
