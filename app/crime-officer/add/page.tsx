@@ -681,7 +681,7 @@ export default function AddOfficerPage() {
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
                                 <SectionHeader
                                     sectionNo={1}
-                                    title="PERSONNEL DETAILS OF SCENE OF CRIME OFFICER"
+                                    title="PERSONAL DETAILS OF SCENE OF CRIME OFFICER"
                                     titleSi="අපරාධ ස්ථාන නිලධාරිගේ පුද්ගලික තොරතුරු"
                                 />
 
