@@ -1,7 +1,27 @@
 import type { NextConfig } from "next";
+import { networkInterfaces } from "os";
 import { getNextBasePath } from "./lib/publicAsset";
 
 const basePath = getNextBasePath();
+
+function getLocalNetworkIPs(): string[] {
+  const ips = new Set<string>();
+  for (const nets of Object.values(networkInterfaces())) {
+    for (const net of nets ?? []) {
+      const family = net.family as string | number;
+      const isIPv4 = family === "IPv4" || family === 4;
+      if (isIPv4 && !net.internal) {
+        ips.add(net.address);
+      }
+    }
+  }
+  return [...ips];
+}
+
+const extraDevOrigins =
+  process.env.ALLOWED_DEV_ORIGINS?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? [];
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -11,13 +31,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Allow cross-origin requests from network IPs during development
-  // This is useful when accessing the dev server from other devices on your network
-  allowedDevOrigins: [
-    '192.168.8.100', // Your current network IP
-    'localhost',
-    '127.0.0.1',
-  ],
+  // Allow HMR when opening the dev server via this machine's LAN IP (see npm run dev banner).
+  allowedDevOrigins: ["localhost", "127.0.0.1", ...getLocalNetworkIPs(), ...extraDevOrigins],
 };
 
 export default nextConfig;
