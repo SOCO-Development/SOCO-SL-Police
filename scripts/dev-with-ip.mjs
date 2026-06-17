@@ -403,6 +403,14 @@ function shutdown(code = 0) {
 async function startDevServer() {
   await prepareDevEnvironment();
 
+  const envLocalPath = path.join(process.cwd(), ".env.local");
+  if (!fs.existsSync(envLocalPath)) {
+    console.log(
+      `${yellow}Warning: .env.local not found. Copy .env.example to .env.local before first run.${reset}`,
+    );
+    console.log(`${dim}  cp .env.example .env.local${reset}\n`);
+  }
+
   const ip = getNetworkIP();
   const startedAt = Date.now();
 

@@ -9,14 +9,22 @@ import { getNextBasePath } from '@/lib/publicAsset';
  */
 const raw = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
+const DEV_DEFAULT = '/soco-api';
+
 if (!raw) {
-  throw new Error(
-    'NEXT_PUBLIC_API_BASE_URL is not set. Copy .env.example to .env.local and configure the API base URL.',
-  );
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      `[SOCO] NEXT_PUBLIC_API_BASE_URL is not set — using ${DEV_DEFAULT}. Copy .env.example to .env.local.`,
+    );
+  } else {
+    throw new Error(
+      'NEXT_PUBLIC_API_BASE_URL is not set. Copy .env.example to .env.local and configure the API base URL.',
+    );
+  }
 }
 
 const basePath = getNextBasePath() ?? '';
-const normalized = raw.replace(/\/+$/, '');
+const normalized = (raw || DEV_DEFAULT).replace(/\/+$/, '');
 
 /** SOCO API path used by the browser (no trailing slash). */
 export const API_BASE_URL =
