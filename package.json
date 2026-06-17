@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "node scripts/dev-with-ip.mjs",
     "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && node scripts/dev-with-ip.mjs",
-    "build": "next build",
+    "build": "next build && node -e \"require('fs').copyFileSync('web.config','out/web.config')\"",
     "start": "next start",
     "lint": "eslint"
   },
