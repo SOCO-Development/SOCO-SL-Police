@@ -1152,7 +1152,7 @@ export default function AddOfficerPage() {
                             <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
                                 <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
                                         <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
                                         <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
@@ -1183,7 +1183,7 @@ export default function AddOfficerPage() {
                                              <p className="text-xs text-red-600 mt-1">{ranksError}</p>
                                          )}
                                      </div>
-                                </div>
+                                </div> */}
 
                                 {/* Promotions */}
                                 <div className="mt-6">
@@ -1894,54 +1894,6 @@ export default function AddOfficerPage() {
                             </div>  */}
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
-                            {/* 
-                              * SECTION 9: SPECIAL DUTY
-                              * Records officer's special duty assignments and temporary postings.
-                              * Nearly identical structure to Section 8 (Transfer) but for special duty placements.
-                              * 
-                              * Purpose:
-                              * - Track special assignments outside regular SOCO work
-                              * - Record temporary duties to other departments/projects
-                              * - Maintain audit trail of special postings
-                              * 
-                              * Draft Entry Form (Input):
-                              * - SOCO LAB: Dropdown (dynamic from API) - may be liaison or home location
-                              * - From Date: Date picker
-                              * - To Date: Date picker
-                              * - Duration: Auto-calculated (read-only)
-                              *   Uses same formatAssignmentDuration() logic as Section 8
-                              * - OIC, A/OIC: Text field (Supervising officer)
-                              * - Reason: Dropdown with same options as Section 8:
-                              *   • Administrative Requirement
-                              *   • Operational Requirement
-                              *   • Temporary Attachment
-                              *   • Training / Course
-                              *   • Relief Duty
-                              *   • Other
-                              * - Specify Reason: Text field (appears only if reason === 'Other')
-                              * - Add special duty record: Button to confirm and move to history
-                              * 
-                              * History Table (Display):
-                              * - Shows all confirmed special duty assignments
-                              * - Columns: SOCO LAB, From, To, Duration, OIC, Reason, Action (delete)
-                              * - Empty state message if no records
-                              * 
-                              * Key Differences from Section 8:
-                              * ✓ Labeled as "Special Duty" (විශේෂ රාජකාරි) vs "Transfer" (මාරු)
-                              * ✓ Amber theme (not fuchsia)
-                              * ✓ Same validation and auto-calculation logic
-                              * ✓ Same draft → confirm → history flow
-                              * 
-                              * State Management:
-                              * - specialDutyDraft: Current entry being composed (AssignmentRow)
-                              * - specialDutyHistory: Confirmed special duty records (AssignmentRow[])
-                              * 
-                              * Event Handlers:
-                              * - updateAssignmentDraft('specialDuty', patch): Update draft fields
-                              * - addAssignmentRecord('specialDuty'): Move draft to history if valid
-                              * - removeAssignmentRecord('specialDuty', id): Delete from history
-                              * - canConfirmSpecialDuty: Validation check
-                            */}
                             {/* <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
 
