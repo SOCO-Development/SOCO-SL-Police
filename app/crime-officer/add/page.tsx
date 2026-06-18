@@ -1335,7 +1335,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
-                                <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
+                                <SectionHeader sectionNo={2} title="Promotions  " titleSi="උසස්වීම්" />
 
                                 {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
@@ -1418,7 +1418,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 4: Education ────────────────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
-                                <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
+                                <SectionHeader sectionNo={3} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
                                 {/* ── O/L Results ─────────────────────────────────────────── */}
                                 <div className="mb-6">
@@ -1687,7 +1687,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
-                                    sectionNo={5}
+                                    sectionNo={4}
                                     title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
                                 />
                                 <p className="text-sm text-amber-900/80 mb-4">
@@ -1794,7 +1794,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
                                 <SectionHeader
-                                    sectionNo={6}
+                                    sectionNo={5}
                                     title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
                                 />
                                 <p className="text-sm text-cyan-900/80 mb-4">
@@ -1896,7 +1896,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
-                                <SectionHeader sectionNo={7} title="Driving License Details" />
+                                <SectionHeader sectionNo={6} title="Driving License Details" />
 
                                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
                                     <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4 xl:col-span-2">
@@ -1978,7 +1978,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
-                                <SectionHeader sectionNo={8} title="Transfer" titleSi="මාරු" />
+                                <SectionHeader sectionNo={7} title="Transfer" titleSi="මාරු" />
 
                                 <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50/80 p-4 sm:p-5 shadow-sm">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2112,7 +2112,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
-                                <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
+                                <SectionHeader sectionNo={8} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
 
                                 <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-sm">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2246,7 +2246,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
-                                <SectionHeader sectionNo={10} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                                <SectionHeader sectionNo={9} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
                                 <p className="text-sm text-emerald-900/80 mb-4">
                                     Record current inquiry status and any relevant findings for each disciplinary category.
                                 </p>
@@ -2311,7 +2311,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
                                 <SectionHeader
-                                    sectionNo={11}
+                                    sectionNo={10}
                                     title="Special Illnesses & Special Notes"
                                     titleSi="විශේෂ රෝග හා විශේෂ සටහන්"
                                 />
