@@ -1350,7 +1350,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
+                            {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
                                 <SectionHeader sectionNo={2} title="Promotions  " titleSi="උසස්වීම්" />
 
                                 {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -1430,7 +1430,7 @@ export default function AddOfficerPage() {
                                     onSave={savePromotionsSection}
                                     saving={sectionSaving === 'promotions'}
                                 />
-                            </div>
+                            </div> }
 
                             {/* ─── SECTION 4: Education ────────────────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
