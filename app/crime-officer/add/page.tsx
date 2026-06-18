@@ -102,12 +102,18 @@ interface ALSubjectRow {
     grade: string;
 }
 
+type DegreeTiming = 'before' | 'after';
+type QualificationType = 'Diploma' | 'HND' | 'Degree' | 'Certificate' | 'Masters' | 'Doctorate' | 'Professional Qualification' | 'Other' | '';
+
 interface DegreeRow {
     id: number;
+    qualificationType: QualificationType;
+    qualificationTypeOther: string;
     degree: string;
     university: string;
     yearFrom: string;
     yearTo: string;
+    timing: DegreeTiming;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -161,8 +167,7 @@ interface FormData {
     alSubjects: ALSubjectRow[];
     alGeneralEnglish: string;
     alGeneralKnowledge: string;
-    degreesBefore: DegreeRow[];
-    degreesAfter: DegreeRow[];
+    degrees: DegreeRow[];
     // Section 5
     localBeforeCourses: CourseBeforeRow[];
     foreignBeforeCourses: CourseBeforeRow[];
@@ -290,8 +295,7 @@ function defaultForm(): FormData {
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degreesBefore: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
-        degreesAfter: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
+        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -344,6 +348,17 @@ const ASSIGNMENT_REASON_OPTIONS = [
     'Other',
 ].map((label) => ({ value: label, label }));
 
+const QUALIFICATION_TYPE_OPTIONS = [
+    'Diploma',
+    'HND',
+    'Degree',
+    'Certificate',
+    'Masters',
+    'Doctorate',
+    'Professional Qualification',
+    'Other',
+].map((label) => ({ value: label, label }));
+
 // ─── Shared UI Components ─────────────────────────────────────────────────────
 
 function SectionHeader({ sectionNo, title, titleSi }: { sectionNo: number; title: string; titleSi?: string }) {
@@ -360,6 +375,46 @@ function SectionHeader({ sectionNo, title, titleSi }: { sectionNo: number; title
     );
 }
 
+function SubSectionTitle({ title, titleSi }: { title: string; titleSi?: string }) {
+    return (
+        <div className="mb-4 mt-6 first:mt-0 pb-2 border-b border-slate-200/70">
+            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{title}</h4>
+            {titleSi && <p className="text-xs text-gray-500 mt-0.5 font-noto-sinhala">{titleSi}</p>}
+        </div>
+    );
+}
+
+function SectionActions({
+    showEdit = false,
+    isEditingSection,
+    onEdit,
+    onSave,
+    saving = false,
+    saveLabel = 'Save',
+}: {
+    showEdit?: boolean;
+    isEditingSection: boolean;
+    onEdit?: () => void;
+    onSave: () => void;
+    saving?: boolean;
+    saveLabel?: string;
+}) {
+    return (
+        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-200/80">
+            {showEdit && !isEditingSection && onEdit && (
+                <Button variant="secondary" type="button" onClick={onEdit}>
+                    Edit
+                </Button>
+            )}
+            {(!showEdit || isEditingSection) && (
+                <Button variant="success" type="button" onClick={onSave} disabled={saving}>
+                    {saving ? 'Saving...' : saveLabel}
+                </Button>
+            )}
+        </div>
+    );
+}
+
 function FieldLabel({ label, si }: { label: string; si?: string }) {
     return (
         <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide leading-tight">
@@ -369,13 +424,14 @@ function FieldLabel({ label, si }: { label: string; si?: string }) {
 }
 
 function GInput({
-    value, onChange, placeholder, maxLength, readOnly, type = 'text', min, max
+    value, onChange, placeholder, maxLength, readOnly, disabled, type = 'text', min, max
 }: {
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
     maxLength?: number;
     readOnly?: boolean;
+    disabled?: boolean;
     type?: string;
     min?: number;
     max?: number;
@@ -390,9 +446,11 @@ function GInput({
             min={min}
             max={max}
             readOnly={readOnly}
+            disabled={disabled}
             className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800
         focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500
         hover:border-gray-400 transition-colors
+        disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 disabled:hover:border-gray-300
         ${readOnly ? 'cursor-default bg-gray-100 text-gray-500' : ''}`}
         />
     );
@@ -469,7 +527,8 @@ export default function AddOfficerPage() {
     const [error, setError] = useState<string | null>(null);
     const [courseTiming, setCourseTiming] = useState<'before' | 'after'>('before');
     const [courseLocation, setCourseLocation] = useState<'local' | 'foreign'>('local');
-    const [degreeTiming, setDegreeTiming] = useState<'before' | 'after'>('before');
+    const [personalFamilyEditing, setPersonalFamilyEditing] = useState(!isEditing);
+    const [sectionSaving, setSectionSaving] = useState<string | null>(null);
     const civilStatusRadioName = useId();
     const showSpouseAndChildren = form.civilStatus === 'Married';
 
@@ -707,18 +766,129 @@ export default function AddOfficerPage() {
         set('alSubjects', form.alSubjects.filter((s) => s.id !== id));
     };
 
-    const updateDegree = (section: 'degreesBefore' | 'degreesAfter', id: number, patch: Partial<DegreeRow>) => {
-        set(section, form[section].map((d) => d.id === id ? { ...d, ...patch } : d));
+    const updateDegree = (id: number, patch: Partial<DegreeRow>) => {
+        set('degrees', form.degrees.map((d) => d.id === id ? { ...d, ...patch } : d));
     };
 
-    const addDegree = (section: 'degreesBefore' | 'degreesAfter') => {
-        if (form[section].length >= 6) return;
-        set(section, [...form[section], { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }]);
+    const addDegree = () => {
+        if (form.degrees.length >= 12) return;
+        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }]);
     };
 
-    const removeDegree = (section: 'degreesBefore' | 'degreesAfter', id: number) => {
-        if (form[section].length <= 1) return;
-        set(section, form[section].filter((d) => d.id !== id));
+    const removeDegree = (id: number) => {
+        if (form.degrees.length <= 1) return;
+        set('degrees', form.degrees.filter((d) => d.id !== id));
+    };
+
+    const buildChildrenData = (): ChildData[] =>
+        form.children
+            .filter((c) => c.name.trim())
+            .map((c) => ({
+                childName: c.name,
+                childDob: c.birthday,
+                childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                childStatusId: 2,
+            }));
+
+    const buildPersonalFamilyPayload = (): InsertNewOfficerRequest => {
+        const childrenData = buildChildrenData();
+        return {
+            username: form.regNo,
+            userFullName: form.fullName,
+            userCallingName: form.fullName.split(' ')[0],
+            locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
+            userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1,
+            userDob: form.dob,
+            phoneMobile: form.telMobile,
+            phoneOffice: form.telOffice,
+            phoneHome: form.telResidence,
+            userImageUrl: form.photoUrl,
+            civilStatus: form.civilStatus,
+            userRegiNo: form.regNo,
+            currentRank: form.presentRank,
+            appointRank: form.appointedRank,
+            courseNo: form.socoCourseNo,
+            socoJoinedDate: form.dateJoinedSoco,
+            ...(form.civilStatus === 'Married' && {
+                spouse: {
+                    spouseName: form.spouseName,
+                    spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
+                    spouseWorkAddress: form.spouseAddressOfInstitute,
+                },
+            }),
+            ...(childrenData.length > 0 && { children: childrenData }),
+        };
+    };
+
+    const savePersonalFamilySection = async () => {
+        if (!form.regNo.trim() || !form.fullName.trim()) {
+            setError('Registration number and full name are required.');
+            return;
+        }
+
+        setError(null);
+        setSectionSaving('personal-family');
+
+        try {
+            if (!isEditing) {
+                const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
+                if (!regiNoCheck.isAvailable) {
+                    setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
+                    return;
+                }
+
+                const result = await officerService.insertNewOfficer(buildPersonalFamilyPayload());
+                setSubmitted(true);
+                alert(`Officer ${result.message} (ID: ${result.systemUserId})`);
+            } else {
+                alert('Personal and family details saved.');
+            }
+
+            setPersonalFamilyEditing(false);
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save personal and family details');
+            setError(apiError.message || 'An error occurred while saving.');
+            console.error('Save personal/family error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const savePromotionsSection = async () => {
+        setError(null);
+        setSectionSaving('promotions');
+
+        try {
+            if (isEditing && editId) {
+                const promotions = form.promotions
+                    .filter((p) => p.rank.trim() && p.date.trim())
+                    .map((p) => ({
+                        promotedDate: p.date,
+                        promotedRankId: rankNameToId.get(p.rank) ? parseInt(rankNameToId.get(p.rank)!, 10) : 1,
+                    }));
+
+                if (promotions.length > 0) {
+                    await officerService.insertPromotions({
+                        systemUserId: parseInt(editId, 10),
+                        promotions,
+                    });
+                }
+            }
+
+            alert('Promotions saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save promotions');
+            setError(apiError.message || 'An error occurred while saving promotions.');
+            console.error('Save promotions error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveGenericSection = (sectionLabel: string) => {
+        setSectionSaving(sectionLabel);
+        alert(`${sectionLabel} saved.`);
+        setSectionSaving(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -844,7 +1014,7 @@ export default function AddOfficerPage() {
                                 <span className="text-xs text-blue-500">(Registration number used as login username)</span>
                             </div>
 
-                            {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
+                            {/* ─── SECTION 1: Personal & Family Details ───────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
                                 <SectionHeader
                                     sectionNo={1}
@@ -852,7 +1022,13 @@ export default function AddOfficerPage() {
                                     titleSi="අපරාධ ස්ථාන නිලධාරිගේ පුද්ගලික තොරතුරු"
                                 />
 
-                                <div className="flex flex-col xl:flex-row xl:items-start gap-4">
+                                <fieldset disabled={!personalFamilyEditing} className="min-w-0 border-0 p-0 m-0 disabled:opacity-90">
+                                    <SubSectionTitle
+                                        title="Personal Details"
+                                        titleSi="පුද්ගලික තොරතුරු"
+                                    />
+
+                                    <div className="flex flex-col xl:flex-row xl:items-start gap-4">
                                     <div className="flex-1 min-w-0">
                                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                             {/* SOCO Lab */}
@@ -863,7 +1039,7 @@ export default function AddOfficerPage() {
                                                      onChange={handleSocoLabChange}
                                                      options={SOCO_LABS_OPTIONS} 
                                                      placeholder={locationsLoading ? "Loading..." : "Select SOCO Lab"}
-                                                     disabled={locationsLoading}
+                                                     disabled={locationsLoading || !personalFamilyEditing}
                                                  />
                                                  {locationsError && (
                                                      <p className="text-xs text-red-600 mt-1">{locationsError}</p>
@@ -879,7 +1055,7 @@ export default function AddOfficerPage() {
                                                          onChange={(v) => handleRankChange(v, 'rankDesignationId')}
                                                          options={RANK_OPTIONS} 
                                                          placeholder={ranksLoading ? "Loading..." : "Rank"}
-                                                         disabled={ranksLoading}
+                                                         disabled={ranksLoading || !personalFamilyEditing}
                                                      />
                                                      {ranksError && (
                                                          <p className="text-xs text-red-600 mt-1">{ranksError}</p>
@@ -978,7 +1154,9 @@ export default function AddOfficerPage() {
                                                         height: 'auto',
                                                         boxSizing: 'border-box',
                                                     }}
-                                                    onClick={() => fileRef.current?.click()}
+                                                    onClick={() => {
+                                                        if (personalFamilyEditing) fileRef.current?.click();
+                                                    }}
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' || e.key === ' ') {
                                                             e.preventDefault();
@@ -999,17 +1177,17 @@ export default function AddOfficerPage() {
                                                             </div>
                                                         )}
                                                 </div>
-                                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-                                                <FileUploadButton variant="sky-block" type="button" onClick={() => fileRef.current?.click()}>Upload Photo</FileUploadButton>
+                                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={!personalFamilyEditing} />
+                                                <FileUploadButton variant="sky-block" type="button" onClick={() => fileRef.current?.click()} disabled={!personalFamilyEditing}>Upload Photo</FileUploadButton>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* ─── SECTION 2: Family Details ───────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-emerald-200 bg-emerald-50/70">
-                                <SectionHeader sectionNo={2} title="Family Details" titleSi="පවුල් තොරතුරු" />
+                                    <SubSectionTitle
+                                        title="Family Details"
+                                        titleSi="පවුල් තොරතුරු"
+                                    />
 
                                 <div
                                     className={`grid grid-cols-1 gap-4 ${
@@ -1160,6 +1338,16 @@ export default function AddOfficerPage() {
                                     <AddRowButton onClick={addChild}>Add Child</AddRowButton>
                                 </div>
                                 ) : null}
+                                </fieldset>
+
+                                <SectionActions
+                                    showEdit
+                                    isEditingSection={personalFamilyEditing}
+                                    onEdit={() => setPersonalFamilyEditing(true)}
+                                    onSave={savePersonalFamilySection}
+                                    saving={sectionSaving === 'personal-family'}
+                                    saveLabel="Save"
+                                />
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
@@ -1237,6 +1425,12 @@ export default function AddOfficerPage() {
                                     </div>
                                     <AddRowButton onClick={addPromotion}>Add Promotion</AddRowButton>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={savePromotionsSection}
+                                    saving={sectionSaving === 'promotions'}
+                                />
                             </div>
 
                             {/* ─── SECTION 4: Education ────────────────────────────────────── */}
@@ -1413,80 +1607,108 @@ export default function AddOfficerPage() {
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
                                 <div className="mb-5">
-                                    <div className="flex flex-wrap gap-6 mb-4">
-                                        <div>
-                                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
-                                            <div className="flex gap-3">
-                                                {(['before', 'after'] as const).map((val) => {
-                                                    const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
-                                                    const isSelected = degreeTiming === val;
-                                                    return (
-                                                        <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
-                                                            isSelected
-                                                                ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
-                                                                : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
-                                                        }`}>
-                                                            <input
-                                                                type="radio"
-                                                                name="degree-timing"
-                                                                value={val}
-                                                                checked={isSelected}
-                                                                onChange={() => setDegreeTiming(val)}
-                                                                className="accent-violet-600"
-                                                            />
-                                                            {label}
-                                                        </label>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
                                     <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">
-                                                Degrees / Qualifications {degreeTiming === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)'}
+                                                Degrees / Qualifications
                                             </h4>
                                             <p className="text-xs text-violet-700 mt-0.5">
-                                                {degreeTiming === 'before' ? 'Obtained prior to joining the Police Department' : 'Sponsored degrees obtained after joining the Police Department'}
+                                                Record qualifications obtained before or after joining the Police Department
                                             </p>
                                         </div>
                                         <div className="p-4 space-y-3">
-                                            {form[degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter'].map((row, idx) => (
-                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
-                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                            {form.degrees.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-3">
+                                                    <div className="flex items-center justify-between gap-2">
                                                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {(degreeTiming === 'before' ? form.degreesBefore.length : form.degreesAfter.length) > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id)} size="sm" />
+                                                        {form.degrees.length > 1 && (
+                                                            <RemoveRowButton onClick={() => removeDegree(row.id)} size="sm" />
                                                         )}
+                                                    </div>
+                                                    <div>
+                                                        <FieldLabel label="University / Institute" />
+                                                        <GInput value={row.university} onChange={(v) => updateDegree(row.id, { university: v })} placeholder="University or Institute name" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(['before', 'after'] as const).map((val) => {
+                                                                const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                                const isSelected = row.timing === val;
+                                                                return (
+                                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                                        isSelected
+                                                                            ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
+                                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                                    }`}>
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={`degree-timing-${row.id}`}
+                                                                            value={val}
+                                                                            checked={isSelected}
+                                                                            onChange={() => updateDegree(row.id, { timing: val })}
+                                                                            className="accent-violet-600"
+                                                                        />
+                                                                        {label}
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         <div>
-                                                            <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
+                                                            <FieldLabel label="Qualification Type" />
+                                                            <CustomSelect
+                                                                value={row.qualificationType}
+                                                                onChange={(v) => {
+                                                                    updateDegree(row.id, {
+                                                                        qualificationType: v as QualificationType,
+                                                                        qualificationTypeOther: v === 'Other' ? row.qualificationTypeOther : '',
+                                                                    });
+                                                                }}
+                                                                options={QUALIFICATION_TYPE_OPTIONS}
+                                                                placeholder="Select type"
+                                                            />
                                                         </div>
                                                         <div>
-                                                            <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
+                                                            <FieldLabel label="Degree / Qualification Name" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree(row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
                                                         </div>
                                                     </div>
+                                                    {row.qualificationType === 'Other' && (
+                                                        <div>
+                                                            <FieldLabel label="Specify Qualification Type" />
+                                                            <GInput
+                                                                value={row.qualificationTypeOther}
+                                                                onChange={(v) => updateDegree(row.id, { qualificationTypeOther: v })}
+                                                                placeholder="Enter qualification type"
+                                                            />
+                                                        </div>
+                                                    )}
                                                     <div className="flex gap-2">
                                                         <div className="w-32">
                                                             <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                         <div className="w-32">
                                                             <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
-                                        {(degreeTiming === 'before' ? form.degreesBefore.length : form.degreesAfter.length) < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter')}>Add Qualification</AddRowButton></div>
+                                        {form.degrees.length < 12 && (
+                                            <div className="px-4 pb-4"><AddRowButton onClick={addDegree}>Add Qualification</AddRowButton></div>
                                         )}
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Education')}
+                                    saving={sectionSaving === 'Education'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 5: Course Details ──────────────────────────── */}
@@ -1646,6 +1868,12 @@ export default function AddOfficerPage() {
                                         </div>
                                     );
                                 })()}
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Course Details')}
+                                    saving={sectionSaving === 'Course Details'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
@@ -1722,6 +1950,12 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Driving License')}
+                                    saving={sectionSaving === 'Driving License'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
@@ -1850,6 +2084,12 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Transfer')}
+                                    saving={sectionSaving === 'Transfer'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
@@ -1978,6 +2218,12 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Special Duty')}
+                                    saving={sectionSaving === 'Special Duty'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
@@ -2036,6 +2282,12 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Disciplinary Inquiries')}
+                                    saving={sectionSaving === 'Disciplinary Inquiries'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
@@ -2076,6 +2328,12 @@ export default function AddOfficerPage() {
                                         />
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Special Illnesses & Notes')}
+                                    saving={sectionSaving === 'Special Illnesses & Notes'}
+                                />
                             </div>}
 
                             </div>
