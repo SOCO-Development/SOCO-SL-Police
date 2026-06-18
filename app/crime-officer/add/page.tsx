@@ -2093,14 +2093,14 @@ export default function AddOfficerPage() {
                                     >
                                         Cancel
                                     </Button>
-                                    <Button 
+                                    {/* <Button 
                                         variant="amber" 
                                         type="button" 
                                         onClick={() => alert('Draft saved!')}
                                         disabled={loading}
                                     >
                                         Save as Draft
-                                    </Button>
+                                    </Button> */}
                                     <Button 
                                         variant="primary" 
                                         type="submit"
