@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useRef, useCallback, useId } from 'react';
+import { useState, useRef, useCallback, useId, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
+import { officerService, ApiError } from '@/lib/api';
+import { useLocationData } from '@/lib/hooks/useLocationData';
+import { useUserData } from '@/lib/hooks/useUserData';
+import type { InsertNewOfficerRequest, ChildData } from '@/lib/api/types';
 import {
     ANNEX_01_SOCO_LABS,
     ANNEX_06_CIVIL_STATUS,
@@ -13,7 +17,7 @@ import {
     ANNEX_12_RANK,
 } from '@/lib/annexData';
 
-const SOCO_LABS_OPTIONS = ANNEX_01_SOCO_LABS.map((s) => ({ value: s, label: s }));
+// Constants that don't depend on API data
 const RANK_OPTIONS = ANNEX_12_RANK.map((s) => ({ value: s, label: s }));
 const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
 const CHILD_STATUS_OPTIONS = [
@@ -122,7 +126,9 @@ interface AssignmentRow {
 interface FormData {
     // Section 1
     socoLab: string;
+    socoLabId: string; // Store the ID for API submission
     rankDropdown: string;
+    rankDesignationId: string; // Store the designation ID for API submission (NEW)
     regNo: string;
     fullName: string;
     reportedDate: string;
@@ -144,7 +150,9 @@ interface FormData {
     // Section 3
     dateJoinedPolice: string;
     appointedRank: string;
+    appointedRankId: string; // Store the ID (NEW)
     presentRank: string;
+    presentRankId: string; // Store the ID (NEW)
     promotions: PromotionRow[];
     // Section 4 – Education
     olMandatorySubjects: OLSubjectResult[];
@@ -251,14 +259,14 @@ function formatAssignmentDuration(from: string, to: string): string {
 
 function defaultForm(): FormData {
     return {
-        socoLab: '', rankDropdown: '', regNo: '', fullName: '',
+        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '',
         reportedDate: '', dob: '', dateJoinedSoco: '',
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
         civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '',
         children: [{ id: newId(), name: '', birthday: '', status: '' }],
-        dateJoinedPolice: '', appointedRank: '', presentRank: '',
+        dateJoinedPolice: '', appointedRank: '', appointedRankId: '', presentRank: '', presentRankId: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
         // Education
         olMandatorySubjects: [
@@ -448,16 +456,91 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
 
 export default function AddOfficerPage() {
     const router = useRouter();
+    const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
+    const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const civilStatusRadioName = useId();
     const showSpouseAndChildren = form.civilStatus === 'Married';
+
+    // Create dynamic SOCO Lab options from API data
+    const SOCO_LABS_OPTIONS = locations.length > 0
+        ? locations.map((loc) => ({ value: loc.name, label: loc.name }))
+        : ANNEX_01_SOCO_LABS.map((s) => ({ value: s, label: s })); // Fallback to hardcoded data
+    
+    // Create dynamic Rank options from API data
+    const RANK_OPTIONS = ranks.length > 0
+        ? ranks.map((rank) => ({ value: rank.name, label: rank.name }))
+        : ANNEX_12_RANK.map((s) => ({ value: s, label: s })); // Fallback to hardcoded data
+    
+    const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
+    const CHILD_STATUS_OPTIONS = [
+        'Toddler',
+        'Student',
+        'Unmarried Employed',
+        'Unmarried Unemployed',
+        'Married',
+    ].map((s) => ({ value: s, label: s }));
+    const ANNEX_13_CATEGORY_OPTIONS = [
+        'A1',
+        'A',
+        'B1',
+        'B2',
+        'B',
+        'C1',
+        'C',
+        'CE',
+        'D1',
+        'D',
+        'DE',
+        'G1',
+        'G',
+        'J',
+        'H',
+    ].map((s) => ({ value: s, label: s }));
 
     const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
         setForm((f) => ({ ...f, [key]: val }));
     }, []);
+
+    // Handler for SOCO Lab selection - maps name to ID
+    const handleSocoLabChange = useCallback((labName: string) => {
+        const labId = locationNameToId.get(labName) || '';
+        setForm((f) => ({
+            ...f,
+            socoLab: labName,
+            socoLabId: labId,
+        }));
+    }, [locationNameToId]);
+
+    // Handler for Rank selection - maps name to ID
+    const handleRankChange = useCallback((rankName: string, rankIdField: 'rankDesignationId' | 'appointedRankId' | 'presentRankId') => {
+        const rankId = rankNameToId.get(rankName) || '';
+        
+        if (rankIdField === 'rankDesignationId') {
+            setForm((f) => ({
+                ...f,
+                rankDropdown: rankName,
+                rankDesignationId: rankId,
+            }));
+        } else if (rankIdField === 'appointedRankId') {
+            setForm((f) => ({
+                ...f,
+                appointedRank: rankName,
+                appointedRankId: rankId,
+            }));
+        } else if (rankIdField === 'presentRankId') {
+            setForm((f) => ({
+                ...f,
+                presentRank: rankName,
+                presentRankId: rankId,
+            }));
+        }
+    }, [rankNameToId]);
 
     const toggleVehicleCategory = useCallback((value: string) => {
         setForm((f) => {
@@ -632,15 +715,80 @@ export default function AddOfficerPage() {
         set(section, form[section].filter((d) => d.id !== id));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (form.alSubjects.length < 3) {
             alert('Please keep at least 3 A/L subject rows.');
             return;
         }
-        setSubmitted(true);
-        // Future: POST to API
-        alert('Officer details saved successfully!');
+
+        setError(null);
+        setLoading(true);
+
+        try {
+            // Check if regNo is already in use
+            const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
+            if (!regiNoCheck.isAvailable) {
+                setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
+                setLoading(false);
+                return;
+            }
+
+            // Build children data
+            const childrenData: ChildData[] = form.children
+                .filter((c) => c.name.trim()) // Only include non-empty children
+                .map((c) => ({
+                    childName: c.name,
+                    childDob: c.birthday,
+                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                    childStatusId: 2, // Default status ID
+                }));
+
+            // Build the API request
+            const payload: InsertNewOfficerRequest = {
+                username: form.regNo, // Using regNo as username
+                userFullName: form.fullName,
+                userCallingName: form.fullName.split(' ')[0], // Use first name as calling name
+                locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
+                userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1, // Use mapped rank ID
+                userDob: form.dob,
+                phoneMobile: form.telMobile,
+                phoneOffice: form.telOffice,
+                phoneHome: form.telResidence,
+                userImageUrl: form.photoUrl,
+                civilStatus: form.civilStatus,
+                userRegiNo: form.regNo,
+                currentRank: form.presentRank,
+                appointRank: form.appointedRank,
+                courseNo: form.socoCourseNo,
+                socoJoinedDate: form.dateJoinedSoco,
+                ...(form.civilStatus === 'Married' && {
+                    spouse: {
+                        spouseName: form.spouseName,
+                        spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
+                        spouseWorkAddress: form.spouseAddressOfInstitute,
+                    },
+                }),
+                ...(childrenData.length > 0 && { children: childrenData }),
+            };
+
+            // Submit to API
+            const result = await officerService.insertNewOfficer(payload);
+
+            setSubmitted(true);
+            alert(`Officer ${result.message} (ID: ${result.systemUserId})`);
+
+            // Redirect after success
+            setTimeout(() => {
+                router.push('/crime-officer');
+            }, 1000);
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save officer');
+            setError(apiError.message || 'An error occurred while saving the officer.');
+            console.error('Submit error:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const canConfirmTransfer = Boolean(
@@ -668,6 +816,11 @@ export default function AddOfficerPage() {
                 title="Add SOCO Officer"
                 description="Complete all required details to register a new officer profile."
             />
+            {error && (
+                <p className="mb-6 -mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 inline-block">
+                    {error}
+                </p>
+            )}
             {submitted && (
                 <p className="mb-6 -mt-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 inline-block">
                     Officer details saved successfully.
@@ -689,19 +842,35 @@ export default function AddOfficerPage() {
                                     <div className="flex-1 min-w-0">
                                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                             {/* SOCO Lab */}
-                                            <div>
-                                                <FieldLabel label="SOCO Lab" si="SOCO රසායනාගාරය" />
-                                                <CustomSelect value={form.socoLab} onChange={(v) => set('socoLab', v)}
-                                                    options={SOCO_LABS_OPTIONS} placeholder="Select SOCO Lab" />
-                                            </div>
+                                             <div>
+                                                 <FieldLabel label="SOCO Lab" si="SOCO රසායනාගාරය" />
+                                                 <CustomSelect 
+                                                     value={form.socoLab} 
+                                                     onChange={handleSocoLabChange}
+                                                     options={SOCO_LABS_OPTIONS} 
+                                                     placeholder={locationsLoading ? "Loading..." : "Select SOCO Lab"}
+                                                     disabled={locationsLoading}
+                                                 />
+                                                 {locationsError && (
+                                                     <p className="text-xs text-red-600 mt-1">{locationsError}</p>
+                                                 )}
+                                             </div>
 
                                             {/* Rank & Reg No */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:col-span-2">
-                                                <div>
-                                                    <FieldLabel label="Rank" si="තනතුර" />
-                                                    <CustomSelect value={form.rankDropdown} onChange={(v) => set('rankDropdown', v)}
-                                                        options={RANK_OPTIONS} placeholder="Rank" />
-                                                </div>
+                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:col-span-2">
+                                                 <div>
+                                                     <FieldLabel label="Rank" si="තනතුර" />
+                                                     <CustomSelect 
+                                                         value={form.rankDropdown} 
+                                                         onChange={(v) => handleRankChange(v, 'rankDesignationId')}
+                                                         options={RANK_OPTIONS} 
+                                                         placeholder={ranksLoading ? "Loading..." : "Rank"}
+                                                         disabled={ranksLoading}
+                                                     />
+                                                     {ranksError && (
+                                                         <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                                     )}
+                                                 </div>
                                                 <div>
                                                     <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
                                                     <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
@@ -973,15 +1142,31 @@ export default function AddOfficerPage() {
                                         <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
                                     </div>
                                     <div>
-                                        <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
-                                        <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
-                                            options={RANK_OPTIONS} placeholder="Select" />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Present Rank / වත්මන් තනතුර" />
-                                        <CustomSelect value={form.presentRank} onChange={(v) => set('presentRank', v)}
-                                            options={RANK_OPTIONS} placeholder="Select" />
-                                    </div>
+                                         <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
+                                         <CustomSelect 
+                                             value={form.appointedRank} 
+                                             onChange={(v) => handleRankChange(v, 'appointedRankId')}
+                                             options={RANK_OPTIONS} 
+                                             placeholder={ranksLoading ? "Loading..." : "Select"}
+                                             disabled={ranksLoading}
+                                         />
+                                         {ranksError && (
+                                             <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                         )}
+                                     </div>
+                                     <div>
+                                         <FieldLabel label="Present Rank / වත්මන් තනතුර" />
+                                         <CustomSelect 
+                                             value={form.presentRank} 
+                                             onChange={(v) => handleRankChange(v, 'presentRankId')}
+                                             options={RANK_OPTIONS} 
+                                             placeholder={ranksLoading ? "Loading..." : "Select"}
+                                             disabled={ranksLoading}
+                                         />
+                                         {ranksError && (
+                                             <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                         )}
+                                     </div>
                                 </div>
 
                                 {/* Promotions */}
@@ -1924,14 +2109,24 @@ export default function AddOfficerPage() {
                                         type="button"
                                         onClick={() => router.push('/crime-officer')}
                                         className="min-h-[42px] px-4 py-2.5 text-sm font-medium"
+                                        disabled={loading}
                                     >
                                         Cancel
                                     </Button>
-                                    <Button variant="amber" type="button" onClick={() => alert('Draft saved!')}>
+                                    <Button 
+                                        variant="amber" 
+                                        type="button" 
+                                        onClick={() => alert('Draft saved!')}
+                                        disabled={loading}
+                                    >
                                         Save as Draft
                                     </Button>
-                                    <Button variant="primary" type="submit">
-                                        Save Officer
+                                    <Button 
+                                        variant="primary" 
+                                        type="submit"
+                                        disabled={loading}
+                                    >
+                                        {loading ? 'Saving...' : 'Save Officer'}
                                     </Button>
                                 </div>
                                 <div />
