@@ -335,7 +335,7 @@ export default function CustomSelect({
                   const isHighlighted = index === highlightedIndex;
                   return (
                     <li
-                      key={option.value}
+                      key={`${option.value}-${index}`}
                       id={`${listboxId}-option-${index}`}
                       role="option"
                       aria-selected={isSelected}
