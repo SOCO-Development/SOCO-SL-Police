@@ -1628,7 +1628,7 @@ export default function AddOfficerPage() {
                                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
                                                     <div className="flex flex-wrap gap-2">
                                                         {(['before', 'after'] as const).map((val) => {
-                                                            const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                            const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police';
                                                             const isSelected = row.timing === val;
                                                             return (
                                                                 <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
