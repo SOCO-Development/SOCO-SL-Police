@@ -87,3 +87,55 @@ export interface InsertNewSocoLabResponse {
   message: string;
 }
 
+// ─── Officer API Types ────────────────────────────────────────────────
+
+export interface SpouseData {
+  spouseName: string;
+  spouseDesignation: string;
+  spouseWorkAddress: string;
+}
+
+export interface ChildData {
+  childName: string;
+  childDob: string;
+  childAge: number;
+  childStatusId: number;
+}
+
+export interface InsertNewOfficerRequest {
+  username: string;
+  userFullName: string;
+  userCallingName: string;
+  locationId: number;
+  userDesignationId: number;
+  userDob: string;
+  phoneMobile: string;
+  phoneOffice: string;
+  phoneHome: string;
+  userImageUrl: string;
+  civilStatus: string;
+  userRegiNo: string;
+  currentRank: string;
+  appointRank: string;
+  courseNo: string;
+  socoJoinedDate: string;
+  spouse?: SpouseData;
+  children?: ChildData[];
+}
+
+export interface InsertNewOfficerResponse {
+  systemUserId: string;
+  message: string;
+}
+
+export interface CheckRegiNoAvailableResponse {
+  isAvailable: boolean;
+}
+
+// ─── User Rank Types ──────────────────────────────────────────────────
+
+export interface UserRank {
+  RANK_ID: string;
+  RANK_NAME: string;
+}
+

@@ -3,4 +3,6 @@ export { ApiError, apiRequest } from './client';
 export * from './authStorage';
 export * as authService from './authService';
 export * as locationService from './locationService';
+export * as officerService from './officerService';
+export * as userService from './userService';
 export type * from './types';
