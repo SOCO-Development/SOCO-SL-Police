@@ -114,6 +114,7 @@ interface DegreeRow {
     yearFrom: string;
     yearTo: string;
     timing: DegreeTiming;
+    sponsored: boolean;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -295,7 +296,7 @@ function defaultForm(): FormData {
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }],
+        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before', sponsored: false }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -770,7 +771,7 @@ export default function AddOfficerPage() {
 
     const addDegree = () => {
         if (form.degrees.length >= 12) return;
-        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }]);
+        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before', sponsored: false }]);
     };
 
     const removeDegree = (id: number) => {
@@ -1680,7 +1681,7 @@ export default function AddOfficerPage() {
                                                         />
                                                     </div>
                                                 )}
-                                                <div className="flex gap-2">
+                                                <div className="flex flex-wrap items-end gap-3">
                                                     <div className="w-32">
                                                         <FieldLabel label="From" />
                                                         <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
@@ -1688,6 +1689,17 @@ export default function AddOfficerPage() {
                                                     <div className="w-32">
                                                         <FieldLabel label="To" />
                                                         <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                    </div>
+                                                    <div className="flex items-center h-10">
+                                                        <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={row.sponsored || false}
+                                                                onChange={(e) => updateDegree(row.id, { sponsored: e.target.checked })}
+                                                                className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                                                            />
+                                                            Sponsored
+                                                        </label>
                                                     </div>
                                                 </div>
                                             </div>
