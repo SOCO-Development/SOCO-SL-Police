@@ -1209,18 +1209,19 @@ export default function AddOfficerPage() {
                                 </div>
                             </div>
 
-                            {/* ─── SECTION 4: Education ────────────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
+                            {/* ─── SECTION 4: Education ──────────────────────────────────────
+                            
+                            {/* <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
                                 <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
                                 {/* ── O/L Results ─────────────────────────────────────────── */}
-                                <div className="mb-6">
+                                {/* <div className="mb-6">
                                     <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide mb-3">
                                         Ordinary Level (O/L) Results
-                                    </h4>
+                                    </h4> */}
 
                                     {/* Mandatory subjects */}
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Mandatory Subjects</p>
+                                    {/* <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Mandatory Subjects</p>
                                     <div className="overflow-x-auto rounded-xl border border-violet-100 mb-4">
                                         <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
@@ -1244,10 +1245,10 @@ export default function AddOfficerPage() {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
+                                    </div> */}
 
                                     {/* Optional subjects */}
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Optional Subjects</p>
+                                    {/* <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Optional Subjects</p>
                                     <div className="overflow-x-auto rounded-xl border border-violet-100">
                                         <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
@@ -1280,10 +1281,10 @@ export default function AddOfficerPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                </div>
+                                </div> */} 
 
                                 {/* ── A/L Results ─────────────────────────────────────────── */}
-                                <div className="mb-6">
+                                {/* <div className="mb-6">
                                     <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide mb-3">
                                         Advanced Level (A/L) Results
                                     </h4>
@@ -1339,7 +1340,7 @@ export default function AddOfficerPage() {
                                                             </tr>
                                                         ))}
                                                         {/* General English */}
-                                                        <tr className="border-b border-gray-100 bg-violet-50/30">
+                                                        {/* <tr className="border-b border-gray-100 bg-violet-50/30">
                                                             <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GE</td>
                                                             <td className="px-3 py-2 text-sm font-medium text-gray-700">General English</td>
                                                             <td className="px-2 py-1.5">
@@ -1351,9 +1352,9 @@ export default function AddOfficerPage() {
                                                                 />
                                                             </td>
                                                             <td />
-                                                        </tr>
+                                                        </tr> */}
                                                         {/* General Knowledge */}
-                                                        <tr className="bg-violet-50/30">
+                                                        {/* <tr className="bg-violet-50/30">
                                                             <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GK</td>
                                                             <td className="px-3 py-2 text-sm font-medium text-gray-700">General Knowledge</td>
                                                             <td className="px-2 py-1.5">
@@ -1379,11 +1380,10 @@ export default function AddOfficerPage() {
                                             )}
                                         </div>
                                     )}
-                                </div>
+                                </div>  */}
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
-                                <div className="grid grid-cols-1 gap-5">
-                                    {/* Before joining police */}
+                                {/* <div className="grid grid-cols-1 gap-5">
                                     <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications Before Joining Police</h4>
@@ -1427,7 +1427,7 @@ export default function AddOfficerPage() {
                                     </div>
 
                                     {/* After joining police (sponsored) */}
-                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
+                                    {/* <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications After Joining Police (Sponsored)</h4>
                                             <p className="text-xs text-violet-700 mt-0.5">Sponsored degrees obtained after joining the Police Department</p>
@@ -1469,10 +1469,11 @@ export default function AddOfficerPage() {
                                         )}
                                     </div>
                                 </div>
-                            </div>
+                            </div>  */}
 
                             {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
+                            
+                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
                                     sectionNo={5}
                                     title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
@@ -1570,10 +1571,11 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
+                        
+                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
                                 <SectionHeader
                                     sectionNo={6}
                                     title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
@@ -1667,10 +1669,11 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
+                        
+                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
                                 <SectionHeader sectionNo={7} title="Driving License Details" />
 
                                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -1743,10 +1746,11 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
+                        
+                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
                                 <SectionHeader sectionNo={8} title="Transfer" titleSi="මාරු" />
 
                                 <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50/80 p-4 sm:p-5 shadow-sm">
@@ -1794,7 +1798,7 @@ export default function AddOfficerPage() {
                                         </div>
 
                                         {/* ── Reason + Other text box ── */}
-                                        <div className="lg:col-span-6 space-y-2">
+                                        {/* <div className="lg:col-span-6 space-y-2">
                                             <div>
                                                 <FieldLabel label="Reason" si="හේතුව" />
                                                 <CustomSelect
@@ -1871,10 +1875,58 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            </div>  */}
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
-                            <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
+                            {/* 
+                              * SECTION 9: SPECIAL DUTY
+                              * Records officer's special duty assignments and temporary postings.
+                              * Nearly identical structure to Section 8 (Transfer) but for special duty placements.
+                              * 
+                              * Purpose:
+                              * - Track special assignments outside regular SOCO work
+                              * - Record temporary duties to other departments/projects
+                              * - Maintain audit trail of special postings
+                              * 
+                              * Draft Entry Form (Input):
+                              * - SOCO LAB: Dropdown (dynamic from API) - may be liaison or home location
+                              * - From Date: Date picker
+                              * - To Date: Date picker
+                              * - Duration: Auto-calculated (read-only)
+                              *   Uses same formatAssignmentDuration() logic as Section 8
+                              * - OIC, A/OIC: Text field (Supervising officer)
+                              * - Reason: Dropdown with same options as Section 8:
+                              *   • Administrative Requirement
+                              *   • Operational Requirement
+                              *   • Temporary Attachment
+                              *   • Training / Course
+                              *   • Relief Duty
+                              *   • Other
+                              * - Specify Reason: Text field (appears only if reason === 'Other')
+                              * - Add special duty record: Button to confirm and move to history
+                              * 
+                              * History Table (Display):
+                              * - Shows all confirmed special duty assignments
+                              * - Columns: SOCO LAB, From, To, Duration, OIC, Reason, Action (delete)
+                              * - Empty state message if no records
+                              * 
+                              * Key Differences from Section 8:
+                              * ✓ Labeled as "Special Duty" (විශේෂ රාජකාරි) vs "Transfer" (මාරු)
+                              * ✓ Amber theme (not fuchsia)
+                              * ✓ Same validation and auto-calculation logic
+                              * ✓ Same draft → confirm → history flow
+                              * 
+                              * State Management:
+                              * - specialDutyDraft: Current entry being composed (AssignmentRow)
+                              * - specialDutyHistory: Confirmed special duty records (AssignmentRow[])
+                              * 
+                              * Event Handlers:
+                              * - updateAssignmentDraft('specialDuty', patch): Update draft fields
+                              * - addAssignmentRecord('specialDuty'): Move draft to history if valid
+                              * - removeAssignmentRecord('specialDuty', id): Delete from history
+                              * - canConfirmSpecialDuty: Validation check
+                            */}
+                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
 
                                 <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-sm">
@@ -1919,9 +1971,9 @@ export default function AddOfficerPage() {
                                                 onChange={(v) => updateAssignmentDraft('specialDuty', { oic: v })}
                                                 placeholder="Officer in charge"
                                             />
-                                        </div>
+                                        </div> */}
 
-                                        {/* ── Reason + Other text box ── */}
+                                        {/* ── Reason + Other text box ──
                                         <div className="lg:col-span-6 space-y-2">
                                             <div>
                                                 <FieldLabel label="Reason" si="හේතුව" />
@@ -1999,9 +2051,12 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
+                            {/* 
+        
+                            
                             <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
                                 <SectionHeader sectionNo={10} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
                                 <p className="text-sm text-emerald-900/80 mb-4">
@@ -2057,9 +2112,10 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div> /*}
 
-                            {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
+                            {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── 
+                            
                             <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
                                 <SectionHeader
                                     sectionNo={11}
@@ -2098,9 +2154,11 @@ export default function AddOfficerPage() {
                                     </div>
                                 </div>
                             </div>
+                            </div> */}
+
+                            {/* ─── Action Bar (Form Footer) ──────────────────────────────── */}
                             </div>
 
-                            {/* ─── Action Bar ──────────────────────────────────────────────── */}
                             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
                                 <div />
                                 <div className="flex items-center gap-2">
