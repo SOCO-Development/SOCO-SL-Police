@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useId, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
@@ -456,6 +456,9 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
 
 export default function AddOfficerPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const editId = searchParams.get('edit');
+    const isEditing = !!editId;
     const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
     const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
     const [form, setForm] = useState<FormData>(defaultForm);
@@ -830,6 +833,16 @@ export default function AddOfficerPage() {
             <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
+                            {isEditing && (
+                                <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/80 flex items-center gap-3">
+                                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Username:</span>
+                                    <span className="text-sm font-mono text-blue-900 font-bold select-all bg-white px-2 py-1 rounded border border-blue-100">
+                                        {form.regNo || '—'}
+                                    </span>
+                                    <span className="text-xs text-blue-500">(Registration number used as login username)</span>
+                                </div>
+                            )}
+
                             {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
                                 <SectionHeader
@@ -871,10 +884,10 @@ export default function AddOfficerPage() {
                                                          <p className="text-xs text-red-600 mt-1">{ranksError}</p>
                                                      )}
                                                  </div>
-                                                <div>
-                                                    <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
-                                                    <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
-                                                </div>
+                                                 <div>
+                                                     <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
+                                                     <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
+                                                 </div>
                                             </div>
 
                                             {/* Full Name */}
@@ -1152,7 +1165,7 @@ export default function AddOfficerPage() {
                             <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
                                 <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
 
-                                {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
                                         <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
                                         <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
@@ -1183,7 +1196,7 @@ export default function AddOfficerPage() {
                                              <p className="text-xs text-red-600 mt-1">{ranksError}</p>
                                          )}
                                      </div>
-                                </div> */}
+                                </div>
 
                                 {/* Promotions */}
                                 <div className="mt-6">
@@ -1225,19 +1238,18 @@ export default function AddOfficerPage() {
                                 </div>
                             </div>
 
-                            {/* ─── SECTION 4: Education ──────────────────────────────────────
-                            
-                            {/* <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
+                            {/* ─── SECTION 4: Education ────────────────────────────────────── */}
+                            {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
                                 <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
                                 {/* ── O/L Results ─────────────────────────────────────────── */}
-                                {/* <div className="mb-6">
+                                <div className="mb-6">
                                     <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide mb-3">
                                         Ordinary Level (O/L) Results
-                                    </h4> */}
+                                    </h4>
 
                                     {/* Mandatory subjects */}
-                                    {/* <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Mandatory Subjects</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Mandatory Subjects</p>
                                     <div className="overflow-x-auto rounded-xl border border-violet-100 mb-4">
                                         <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
@@ -1261,10 +1273,10 @@ export default function AddOfficerPage() {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div> */}
+                                    </div>
 
                                     {/* Optional subjects */}
-                                    {/* <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Optional Subjects</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Optional Subjects</p>
                                     <div className="overflow-x-auto rounded-xl border border-violet-100">
                                         <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
@@ -1297,10 +1309,10 @@ export default function AddOfficerPage() {
                                             </tbody>
                                         </table>
                                     </div>
-                                </div> */} 
+                                </div>
 
                                 {/* ── A/L Results ─────────────────────────────────────────── */}
-                                {/* <div className="mb-6">
+                                <div className="mb-6">
                                     <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide mb-3">
                                         Advanced Level (A/L) Results
                                     </h4>
@@ -1356,7 +1368,7 @@ export default function AddOfficerPage() {
                                                             </tr>
                                                         ))}
                                                         {/* General English */}
-                                                        {/* <tr className="border-b border-gray-100 bg-violet-50/30">
+                                                        <tr className="border-b border-gray-100 bg-violet-50/30">
                                                             <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GE</td>
                                                             <td className="px-3 py-2 text-sm font-medium text-gray-700">General English</td>
                                                             <td className="px-2 py-1.5">
@@ -1368,9 +1380,9 @@ export default function AddOfficerPage() {
                                                                 />
                                                             </td>
                                                             <td />
-                                                        </tr> */}
+                                                        </tr>
                                                         {/* General Knowledge */}
-                                                        {/* <tr className="bg-violet-50/30">
+                                                        <tr className="bg-violet-50/30">
                                                             <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GK</td>
                                                             <td className="px-3 py-2 text-sm font-medium text-gray-700">General Knowledge</td>
                                                             <td className="px-2 py-1.5">
@@ -1396,10 +1408,11 @@ export default function AddOfficerPage() {
                                             )}
                                         </div>
                                     )}
-                                </div>  */}
+                                </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
-                                {/* <div className="grid grid-cols-1 gap-5">
+                                <div className="grid grid-cols-1 gap-5">
+                                    {/* Before joining police */}
                                     <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications Before Joining Police</h4>
@@ -1443,7 +1456,7 @@ export default function AddOfficerPage() {
                                     </div>
 
                                     {/* After joining police (sponsored) */}
-                                    {/* <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
+                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications After Joining Police (Sponsored)</h4>
                                             <p className="text-xs text-violet-700 mt-0.5">Sponsored degrees obtained after joining the Police Department</p>
@@ -1485,11 +1498,10 @@ export default function AddOfficerPage() {
                                         )}
                                     </div>
                                 </div>
-                            </div>  */}
+                            </div>}
 
                             {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
-                            
-                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
                                     sectionNo={5}
                                     title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
@@ -1587,11 +1599,10 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div> */}
+                            </div>}
 
                             {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
-                        
-                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
                                 <SectionHeader
                                     sectionNo={6}
                                     title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
@@ -1685,11 +1696,10 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div> */}
+                            </div>}
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
-                        
-                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
                                 <SectionHeader sectionNo={7} title="Driving License Details" />
 
                                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -1762,11 +1772,10 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div> */}
+                            </div>}
 
                             {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
-                        
-                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
                                 <SectionHeader sectionNo={8} title="Transfer" titleSi="මාරු" />
 
                                 <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50/80 p-4 sm:p-5 shadow-sm">
@@ -1814,7 +1823,7 @@ export default function AddOfficerPage() {
                                         </div>
 
                                         {/* ── Reason + Other text box ── */}
-                                        {/* <div className="lg:col-span-6 space-y-2">
+                                        <div className="lg:col-span-6 space-y-2">
                                             <div>
                                                 <FieldLabel label="Reason" si="හේතුව" />
                                                 <CustomSelect
@@ -1891,10 +1900,10 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>  */}
+                            </div>}
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
-                            {/* <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
 
                                 <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-sm">
@@ -1939,9 +1948,9 @@ export default function AddOfficerPage() {
                                                 onChange={(v) => updateAssignmentDraft('specialDuty', { oic: v })}
                                                 placeholder="Officer in charge"
                                             />
-                                        </div> */}
+                                        </div>
 
-                                        {/* ── Reason + Other text box ──
+                                        {/* ── Reason + Other text box ── */}
                                         <div className="lg:col-span-6 space-y-2">
                                             <div>
                                                 <FieldLabel label="Reason" si="හේතුව" />
@@ -2019,13 +2028,10 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div> */}
+                            </div>}
 
                             {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
-                            {/* 
-        
-                            
-                            <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
                                 <SectionHeader sectionNo={10} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
                                 <p className="text-sm text-emerald-900/80 mb-4">
                                     Record current inquiry status and any relevant findings for each disciplinary category.
@@ -2080,11 +2086,10 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div> /*}
+                            </div>}
 
-                            {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── 
-                            
-                            <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
+                            {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
                                 <SectionHeader
                                     sectionNo={11}
                                     title="Special Illnesses & Special Notes"
@@ -2121,12 +2126,11 @@ export default function AddOfficerPage() {
                                         />
                                     </div>
                                 </div>
-                            </div>
-                            </div> */}
+                            </div>}
 
-                            {/* ─── Action Bar (Form Footer) ──────────────────────────────── */}
                             </div>
 
+                            {/* ─── Action Bar ──────────────────────────────────────────────── */}
                             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
                                 <div />
                                 <div className="flex items-center gap-2">
