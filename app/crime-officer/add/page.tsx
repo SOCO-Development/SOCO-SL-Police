@@ -924,6 +924,22 @@ export default function AddOfficerPage() {
                                                     <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
                                                 </div>
                                             </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
+                                                <div>
+                                                    <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
+                                                    <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
+                                                    <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
+                                                        options={RANK_OPTIONS} placeholder="Select" />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Present Rank / වත්මන් තනතුර" />
+                                                    <CustomSelect value={form.presentRank} onChange={(v) => set('presentRank', v)}
+                                                        options={RANK_OPTIONS} placeholder="Select" />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1134,7 +1150,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
-                                <SectionHeader sectionNo={3} title="Official Information" titleSi="නිල තොරතුරු" />
+                                <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
