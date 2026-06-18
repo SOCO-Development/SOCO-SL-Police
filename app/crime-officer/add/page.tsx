@@ -467,6 +467,9 @@ export default function AddOfficerPage() {
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [courseTiming, setCourseTiming] = useState<'before' | 'after'>('before');
+    const [courseLocation, setCourseLocation] = useState<'local' | 'foreign'>('local');
+    const [degreeTiming, setDegreeTiming] = useState<'before' | 'after'>('before');
     const civilStatusRadioName = useId();
     const showSpouseAndChildren = form.civilStatus === 'Married';
 
@@ -833,15 +836,13 @@ export default function AddOfficerPage() {
             <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-                            {isEditing && (
-                                <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/80 flex items-center gap-3">
-                                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Username:</span>
-                                    <span className="text-sm font-mono text-blue-900 font-bold select-all bg-white px-2 py-1 rounded border border-blue-100">
-                                        {form.regNo || '—'}
-                                    </span>
-                                    <span className="text-xs text-blue-500">(Registration number used as login username)</span>
-                                </div>
-                            )}
+                            <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/80 flex items-center gap-3">
+                                <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Username:</span>
+                                <span className="text-sm font-mono text-blue-900 font-bold select-all bg-white px-2 py-1 rounded border border-blue-100">
+                                    {form.regNo || '—'}
+                                </span>
+                                <span className="text-xs text-blue-500">(Registration number used as login username)</span>
+                            </div>
 
                             {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
@@ -1165,7 +1166,7 @@ export default function AddOfficerPage() {
                             <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
                                 <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
                                         <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
                                         <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
@@ -1196,7 +1197,7 @@ export default function AddOfficerPage() {
                                              <p className="text-xs text-red-600 mt-1">{ranksError}</p>
                                          )}
                                      </div>
-                                </div>
+                                </div> */}
 
                                 {/* Promotions */}
                                 <div className="mt-6">
@@ -1411,291 +1412,240 @@ export default function AddOfficerPage() {
                                 </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
-                                <div className="grid grid-cols-1 gap-5">
-                                    {/* Before joining police */}
-                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
-                                        <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
-                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications Before Joining Police</h4>
-                                            <p className="text-xs text-violet-700 mt-0.5">Obtained prior to joining the Police Department</p>
+                                <div className="mb-5">
+                                    <div className="flex flex-wrap gap-6 mb-4">
+                                        <div>
+                                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                            <div className="flex gap-3">
+                                                {(['before', 'after'] as const).map((val) => {
+                                                    const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                    const isSelected = degreeTiming === val;
+                                                    return (
+                                                        <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                            isSelected
+                                                                ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
+                                                                : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                        }`}>
+                                                            <input
+                                                                type="radio"
+                                                                name="degree-timing"
+                                                                value={val}
+                                                                checked={isSelected}
+                                                                onChange={() => setDegreeTiming(val)}
+                                                                className="accent-violet-600"
+                                                            />
+                                                            {label}
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                        <div className="p-4 space-y-3">
-                                            {form.degreesBefore.map((row, idx) => (
-                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
-                                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {form.degreesBefore.length > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree('degreesBefore', row.id)} size="sm" />
-                                                        )}
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                        <div>
-                                                            <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesBefore', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
-                                                        </div>
-                                                        <div>
-                                                            <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesBefore', row.id, { university: v })} placeholder="University or Institute name" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <div className="w-32">
-                                                            <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesBefore', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
-                                                        <div className="w-32">
-                                                            <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesBefore', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {form.degreesBefore.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesBefore')}>Add Qualification</AddRowButton></div>
-                                        )}
                                     </div>
-
-                                    {/* After joining police (sponsored) */}
                                     <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
-                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications After Joining Police (Sponsored)</h4>
-                                            <p className="text-xs text-violet-700 mt-0.5">Sponsored degrees obtained after joining the Police Department</p>
+                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">
+                                                Degrees / Qualifications {degreeTiming === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)'}
+                                            </h4>
+                                            <p className="text-xs text-violet-700 mt-0.5">
+                                                {degreeTiming === 'before' ? 'Obtained prior to joining the Police Department' : 'Sponsored degrees obtained after joining the Police Department'}
+                                            </p>
                                         </div>
                                         <div className="p-4 space-y-3">
-                                            {form.degreesAfter.map((row, idx) => (
+                                            {form[degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter'].map((row, idx) => (
                                                 <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
                                                     <div className="flex items-center justify-between gap-2 mb-1">
                                                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {form.degreesAfter.length > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree('degreesAfter', row.id)} size="sm" />
+                                                        {(degreeTiming === 'before' ? form.degreesBefore.length : form.degreesAfter.length) > 1 && (
+                                                            <RemoveRowButton onClick={() => removeDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id)} size="sm" />
                                                         )}
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         <div>
                                                             <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesAfter', row.id, { degree: v })} placeholder="e.g. LLB" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
                                                         </div>
                                                         <div>
                                                             <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
+                                                            <GInput value={row.university} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <div className="w-32">
                                                             <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                         <div className="w-32">
                                                             <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
-                                        {form.degreesAfter.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesAfter')}>Add Qualification</AddRowButton></div>
+                                        {(degreeTiming === 'before' ? form.degreesBefore.length : form.degreesAfter.length) < 6 && (
+                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter')}>Add Qualification</AddRowButton></div>
                                         )}
                                     </div>
                                 </div>
                             </div>}
 
-                            {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
-                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
+                            {/* ─── SECTION 5: Course Details ──────────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-indigo-200 bg-indigo-50/70">
                                 <SectionHeader
                                     sectionNo={5}
-                                    title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
+                                    title="COURSE DETAILS"
                                 />
-                                <p className="text-sm text-amber-900/80 mb-4">
-                                    Capture departmental and external training completed before joining the SOCO project.
+                                <p className="text-sm text-indigo-900/80 mb-4">
+                                    Record departmental and external training completed.
                                 </p>
 
-                                <div className="grid grid-cols-1 gap-5">
-                                    <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
-                                        <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
-                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Local</h4>
-                                            <p className="text-xs text-amber-700">Department & Others</p>
-                                        </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Institute</th>
-                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
-                                                            <span className="sr-only">Actions</span>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {form.localBeforeCourses.map((row) => (
-                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-amber-50/20 last:border-0">
-                                                            <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { conNo: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { policeStation: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { branch: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { from: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { to: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { institute: v })} /></td>
-                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
-                                                                {form.localBeforeCourses.length > 1 ? (
-                                                                    <RemoveRowButton onClick={() => removeBeforeCourse('localBeforeCourses', row.id)} />
-                                                                ) : null}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="px-4 pb-3">
-                                            <AddRowButton onClick={() => addBeforeCourse('localBeforeCourses')}>Add row</AddRowButton>
+                                <div className="flex flex-wrap gap-6 mb-5">
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                        <div className="flex gap-3">
+                                            {(['before', 'after'] as const).map((val) => {
+                                                const label = val === 'before' ? 'Before Joining SOCO' : 'After Joining SOCO';
+                                                const isSelected = courseTiming === val;
+                                                return (
+                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                        isSelected
+                                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-medium'
+                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                    }`}>
+                                                        <input
+                                                            type="radio"
+                                                            name="course-timing"
+                                                            value={val}
+                                                            checked={isSelected}
+                                                            onChange={() => setCourseTiming(val)}
+                                                            className="accent-indigo-600"
+                                                        />
+                                                        {label}
+                                                    </label>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
-                                        <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
-                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Foreign</h4>
-                                            <p className="text-xs text-amber-700">Department & Others</p>
-                                        </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
-                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
-                                                            <span className="sr-only">Actions</span>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {form.foreignBeforeCourses.map((row) => (
-                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-amber-50/20 last:border-0">
-                                                            <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { conNo: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { policeStation: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { branch: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { from: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { to: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { institute: v })} /></td>
-                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
-                                                                {form.foreignBeforeCourses.length > 1 ? (
-                                                                    <RemoveRowButton onClick={() => removeBeforeCourse('foreignBeforeCourses', row.id)} />
-                                                                ) : null}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="px-4 pb-3">
-                                            <AddRowButton onClick={() => addBeforeCourse('foreignBeforeCourses')}>Add row</AddRowButton>
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Location</p>
+                                        <div className="flex gap-3">
+                                            {(['local', 'foreign'] as const).map((val) => {
+                                                const isSelected = courseLocation === val;
+                                                return (
+                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                        isSelected
+                                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-medium'
+                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                    }`}>
+                                                        <input
+                                                            type="radio"
+                                                            name="course-location"
+                                                            value={val}
+                                                            checked={isSelected}
+                                                            onChange={() => setCourseLocation(val)}
+                                                            className="accent-indigo-600"
+                                                        />
+                                                        {val.charAt(0).toUpperCase() + val.slice(1)}
+                                                    </label>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>
-                            </div>}
 
-                            {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
-                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
-                                <SectionHeader
-                                    sectionNo={6}
-                                    title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
-                                />
-                                <p className="text-sm text-cyan-900/80 mb-4">
-                                    Record advanced courses and certifications completed after joining the SOCO project.
-                                </p>
+                                {(() => {
+                                    const isBefore = courseTiming === 'before';
+                                    const isLocal = courseLocation === 'local';
+                                    const dataKey = isBefore
+                                        ? isLocal ? 'localBeforeCourses' : 'foreignBeforeCourses'
+                                        : isLocal ? 'localAfterCourses' : 'foreignAfterCourses';
+                                    const rows = form[dataKey];
+                                    const updateRow: (...args: any[]) => void = isBefore ? updateBeforeCourse : updateAfterCourse;
+                                    const addRow: (...args: any[]) => void = isBefore ? addBeforeCourse : addAfterCourse;
+                                    const removeRow: (...args: any[]) => void = isBefore ? removeBeforeCourse : removeAfterCourse;
 
-                                <div className="grid grid-cols-1 gap-5">
-                                    <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
-                                        <div className="px-4 py-3 border-b border-cyan-100 bg-cyan-50/60">
-                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Local</h4>
-                                            <p className="text-xs text-cyan-700">Department & Others</p>
+                                    return (
+                                        <div className="rounded-xl border border-indigo-100 bg-white shadow-sm overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-indigo-100 bg-indigo-50/60">
+                                                <h4 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">
+                                                    {isLocal ? 'Local' : 'Foreign'}
+                                                </h4>
+                                                <p className="text-xs text-indigo-700">Department & Others</p>
+                                            </div>
+                                            <div className="overflow-x-auto">
+                                                {isBefore ? (
+                                                    <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                        <thead>
+                                                            <tr className="bg-gray-50 border-b border-gray-200">
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{isLocal ? 'Institute' : 'Country & Institute'}</th>
+                                                                <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                                    <span className="sr-only">Actions</span>
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rows.map((row: any) => (
+                                                                <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-indigo-50/20 last:border-0">
+                                                                    <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateRow(dataKey, row.id, { conNo: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateRow(dataKey, row.id, { policeStation: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateRow(dataKey, row.id, { branch: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateRow(dataKey, row.id, { from: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateRow(dataKey, row.id, { to: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateRow(dataKey, row.id, { institute: v })} /></td>
+                                                                    <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                        {rows.length > 1 ? (
+                                                                            <RemoveRowButton onClick={() => removeRow(dataKey, row.id)} />
+                                                                        ) : null}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                ) : (
+                                                    <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                        <thead>
+                                                            <tr className="bg-gray-50 border-b border-gray-200">
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{isLocal ? 'Department or Institute' : 'Country & Institute'}</th>
+                                                                <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                                    <span className="sr-only">Actions</span>
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rows.map((row: any) => (
+                                                                <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-indigo-50/20 last:border-0">
+                                                                    <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateRow(dataKey, row.id, { courseName: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateRow(dataKey, row.id, { from: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateRow(dataKey, row.id, { to: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateRow(dataKey, row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateRow(dataKey, row.id, { institute: v })} /></td>
+                                                                    <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                        {rows.length > 1 ? (
+                                                                            <RemoveRowButton onClick={() => removeRow(dataKey, row.id)} />
+                                                                        ) : null}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+                                            </div>
+                                            <div className="px-4 pb-3">
+                                                <AddRowButton onClick={() => addRow(dataKey)}>Add row</AddRowButton>
+                                            </div>
                                         </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department or Institute</th>
-                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
-                                                            <span className="sr-only">Actions</span>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {form.localAfterCourses.map((row) => (
-                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-cyan-50/20 last:border-0">
-                                                            <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { courseName: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { from: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { to: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { institute: v })} /></td>
-                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
-                                                                {form.localAfterCourses.length > 1 ? (
-                                                                    <RemoveRowButton onClick={() => removeAfterCourse('localAfterCourses', row.id)} />
-                                                                ) : null}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="px-4 pb-3">
-                                            <AddRowButton onClick={() => addAfterCourse('localAfterCourses')}>Add row</AddRowButton>
-                                        </div>
-                                    </div>
-
-                                    <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
-                                        <div className="px-4 py-3 border-b border-cyan-100 bg-cyan-50/60">
-                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Foreign</h4>
-                                            <p className="text-xs text-cyan-700">Department & Others</p>
-                                        </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
-                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
-                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
-                                                            <span className="sr-only">Actions</span>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {form.foreignAfterCourses.map((row) => (
-                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-cyan-50/20 last:border-0">
-                                                            <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { courseName: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { from: v })} /></td>
-                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { to: v })} /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
-                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { institute: v })} /></td>
-                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
-                                                                {form.foreignAfterCourses.length > 1 ? (
-                                                                    <RemoveRowButton onClick={() => removeAfterCourse('foreignAfterCourses', row.id)} />
-                                                                ) : null}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="px-4 pb-3">
-                                            <AddRowButton onClick={() => addAfterCourse('foreignAfterCourses')}>Add row</AddRowButton>
-                                        </div>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
                             </div>}
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
