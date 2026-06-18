@@ -102,12 +102,18 @@ interface ALSubjectRow {
     grade: string;
 }
 
+type DegreeTiming = 'before' | 'after';
+type QualificationType = 'Diploma' | 'HND' | 'Degree' | 'Certificate' | 'Masters' | 'Doctorate' | 'Professional Qualification' | 'Other' | '';
+
 interface DegreeRow {
     id: number;
+    qualificationType: QualificationType;
+    qualificationTypeOther: string;
     degree: string;
     university: string;
     yearFrom: string;
     yearTo: string;
+    timing: DegreeTiming;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -161,8 +167,7 @@ interface FormData {
     alSubjects: ALSubjectRow[];
     alGeneralEnglish: string;
     alGeneralKnowledge: string;
-    degreesBefore: DegreeRow[];
-    degreesAfter: DegreeRow[];
+    degrees: DegreeRow[];
     // Section 5
     localBeforeCourses: CourseBeforeRow[];
     foreignBeforeCourses: CourseBeforeRow[];
@@ -290,8 +295,7 @@ function defaultForm(): FormData {
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degreesBefore: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
-        degreesAfter: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
+        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -341,6 +345,17 @@ const ASSIGNMENT_REASON_OPTIONS = [
     'Temporary Attachment',
     'Training / Course',
     'Relief Duty',
+    'Other',
+].map((label) => ({ value: label, label }));
+
+const QUALIFICATION_TYPE_OPTIONS = [
+    'Diploma',
+    'HND',
+    'Degree',
+    'Certificate',
+    'Masters',
+    'Doctorate',
+    'Professional Qualification',
     'Other',
 ].map((label) => ({ value: label, label }));
 
@@ -749,18 +764,18 @@ export default function AddOfficerPage() {
         set('alSubjects', form.alSubjects.filter((s) => s.id !== id));
     };
 
-    const updateDegree = (section: 'degreesBefore' | 'degreesAfter', id: number, patch: Partial<DegreeRow>) => {
-        set(section, form[section].map((d) => d.id === id ? { ...d, ...patch } : d));
+    const updateDegree = (id: number, patch: Partial<DegreeRow>) => {
+        set('degrees', form.degrees.map((d) => d.id === id ? { ...d, ...patch } : d));
     };
 
-    const addDegree = (section: 'degreesBefore' | 'degreesAfter') => {
-        if (form[section].length >= 6) return;
-        set(section, [...form[section], { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }]);
+    const addDegree = () => {
+        if (form.degrees.length >= 12) return;
+        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }]);
     };
 
-    const removeDegree = (section: 'degreesBefore' | 'degreesAfter', id: number) => {
-        if (form[section].length <= 1) return;
-        set(section, form[section].filter((d) => d.id !== id));
+    const removeDegree = (id: number) => {
+        if (form.degrees.length <= 1) return;
+        set('degrees', form.degrees.filter((d) => d.id !== id));
     };
 
     const buildChildrenData = (): ChildData[] =>
@@ -1335,7 +1350,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
-                                <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
+                                <SectionHeader sectionNo={2} title="Promotions  " titleSi="උසස්වීම්" />
 
                                 {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
@@ -1418,7 +1433,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 4: Education ────────────────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
-                                <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
+                                <SectionHeader sectionNo={3} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
                                 {/* ── O/L Results ─────────────────────────────────────────── */}
                                 <div className="mb-6">
@@ -1589,92 +1604,98 @@ export default function AddOfficerPage() {
                                 </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
-                                <div className="grid grid-cols-1 gap-5">
-                                    {/* Before joining police */}
-                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
-                                        <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
-                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications Before Joining Police</h4>
-                                            <p className="text-xs text-violet-700 mt-0.5">Obtained prior to joining the Police Department</p>
-                                        </div>
-                                        <div className="p-4 space-y-3">
-                                            {form.degreesBefore.map((row, idx) => (
-                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
-                                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {form.degreesBefore.length > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree('degreesBefore', row.id)} size="sm" />
-                                                        )}
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                        <div>
-                                                            <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesBefore', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
-                                                        </div>
-                                                        <div>
-                                                            <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesBefore', row.id, { university: v })} placeholder="University or Institute name" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <div className="w-32">
-                                                            <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesBefore', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
-                                                        <div className="w-32">
-                                                            <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesBefore', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
+                                <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
+                                    <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
+                                        <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications</h4>
+                                        <p className="text-xs text-violet-700 mt-0.5">
+                                            Record qualifications obtained before or after joining the Police Department
+                                        </p>
+                                    </div>
+                                    <div className="p-4 space-y-3">
+                                        {form.degrees.map((row, idx) => (
+                                            <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-3">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
+                                                    {form.degrees.length > 1 && (
+                                                        <RemoveRowButton onClick={() => removeDegree(row.id)} size="sm" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="University / Institute" />
+                                                    <GInput value={row.university} onChange={(v) => updateDegree(row.id, { university: v })} placeholder="University or Institute name" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {(['before', 'after'] as const).map((val) => {
+                                                            const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                            const isSelected = row.timing === val;
+                                                            return (
+                                                                <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                                    isSelected
+                                                                        ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
+                                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                                }`}>
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`degree-timing-${row.id}`}
+                                                                        value={val}
+                                                                        checked={isSelected}
+                                                                        onChange={() => updateDegree(row.id, { timing: val })}
+                                                                        className="accent-violet-600"
+                                                                    />
+                                                                    {label}
+                                                                </label>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                        {form.degreesBefore.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesBefore')}>Add Qualification</AddRowButton></div>
-                                        )}
-                                    </div>
-
-                                    {/* After joining police (sponsored) */}
-                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
-                                        <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
-                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications After Joining Police (Sponsored)</h4>
-                                            <p className="text-xs text-violet-700 mt-0.5">Sponsored degrees obtained after joining the Police Department</p>
-                                        </div>
-                                        <div className="p-4 space-y-3">
-                                            {form.degreesAfter.map((row, idx) => (
-                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
-                                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {form.degreesAfter.length > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree('degreesAfter', row.id)} size="sm" />
-                                                        )}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                    <div>
+                                                        <FieldLabel label="Qualification Type" />
+                                                        <CustomSelect
+                                                            value={row.qualificationType}
+                                                            onChange={(v) => {
+                                                                updateDegree(row.id, {
+                                                                    qualificationType: v as QualificationType,
+                                                                    qualificationTypeOther: v === 'Other' ? row.qualificationTypeOther : '',
+                                                                });
+                                                            }}
+                                                            options={QUALIFICATION_TYPE_OPTIONS}
+                                                            placeholder="Select type"
+                                                        />
                                                     </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                        <div>
-                                                            <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesAfter', row.id, { degree: v })} placeholder="e.g. LLB" />
-                                                        </div>
-                                                        <div>
-                                                            <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <div className="w-32">
-                                                            <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
-                                                        <div className="w-32">
-                                                            <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
+                                                    <div>
+                                                        <FieldLabel label="Degree / Qualification Name" />
+                                                        <GInput value={row.degree} onChange={(v) => updateDegree(row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                        {form.degreesAfter.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesAfter')}>Add Qualification</AddRowButton></div>
-                                        )}
+                                                {row.qualificationType === 'Other' && (
+                                                    <div>
+                                                        <FieldLabel label="Specify Qualification Type" />
+                                                        <GInput
+                                                            value={row.qualificationTypeOther}
+                                                            onChange={(v) => updateDegree(row.id, { qualificationTypeOther: v })}
+                                                            placeholder="Enter qualification type"
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-2">
+                                                    <div className="w-32">
+                                                        <FieldLabel label="From" />
+                                                        <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                    </div>
+                                                    <div className="w-32">
+                                                        <FieldLabel label="To" />
+                                                        <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
+                                    {form.degrees.length < 12 && (
+                                        <div className="px-4 pb-4"><AddRowButton onClick={addDegree}>Add Qualification</AddRowButton></div>
+                                    )}
                                 </div>
 
                                 <SectionActions
@@ -1687,7 +1708,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
-                                    sectionNo={5}
+                                    sectionNo={4}
                                     title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
                                 />
                                 <p className="text-sm text-amber-900/80 mb-4">
@@ -1794,7 +1815,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
                                 <SectionHeader
-                                    sectionNo={6}
+                                    sectionNo={5}
                                     title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
                                 />
                                 <p className="text-sm text-cyan-900/80 mb-4">
@@ -1896,7 +1917,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
-                                <SectionHeader sectionNo={7} title="Driving License Details" />
+                                <SectionHeader sectionNo={6} title="Driving License Details" />
 
                                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
                                     <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4 xl:col-span-2">
@@ -1978,7 +1999,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
-                                <SectionHeader sectionNo={8} title="Transfer" titleSi="මාරු" />
+                                <SectionHeader sectionNo={7} title="Transfer" titleSi="මාරු" />
 
                                 <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50/80 p-4 sm:p-5 shadow-sm">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2112,7 +2133,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
-                                <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
+                                <SectionHeader sectionNo={8} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
 
                                 <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-sm">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2246,7 +2267,7 @@ export default function AddOfficerPage() {
 
                             {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
-                                <SectionHeader sectionNo={10} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                                <SectionHeader sectionNo={9} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
                                 <p className="text-sm text-emerald-900/80 mb-4">
                                     Record current inquiry status and any relevant findings for each disciplinary category.
                                 </p>
@@ -2311,7 +2332,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
                                 <SectionHeader
-                                    sectionNo={11}
+                                    sectionNo={10}
                                     title="Special Illnesses & Special Notes"
                                     titleSi="විශේෂ රෝග හා විශේෂ සටහන්"
                                 />
