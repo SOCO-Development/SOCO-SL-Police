@@ -139,32 +139,6 @@ export interface UserRank {
   RANK_NAME: string;
 }
 
-// ─── Promotion Types (SOCO_U4) ────────────────────────────────────────
-
-export interface PromotionRecord {
-  promotedDate: string;
-  promotedRankId: number;
-}
-
-export interface InsertPromotionsRequest {
-  systemUserId: number;
-  promotions: PromotionRecord[];
-}
-
-export interface InsertPromotionsData {
-  message: string;
-}
-
-// ─── Current User Info Types (SOCO_U3) ────────────────────────────────
-
-export interface CurrentUserInfo {
-  callingName: string;
-  designationName: string;
-  userImageUrl: string;
-}
-
-// ─── Promotion Types ──────────────────────────────────────────────────
-
 export interface PromotionRecord {
   promotedDate: string; // Format: YYYY-MM-DD
   promotedRankId: number;
@@ -175,7 +149,7 @@ export interface InsertPromotionsRequest {
   promotions: PromotionRecord[];
 }
 
-export interface InsertPromotionsResponse {
+export interface InsertPromotionsData {
   message: string; // "Promotions saved successfully"
 }
 
