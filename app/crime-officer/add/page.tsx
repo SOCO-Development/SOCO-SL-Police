@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useRef, useCallback, useId } from 'react';
-import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import { ArrowLeft } from 'lucide-react';
-import Footer from '@/components/layout/Footer';
+import { useState, useRef, useCallback, useId, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
+import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
+import { officerService, ApiError } from '@/lib/api';
+import { useLocationData } from '@/lib/hooks/useLocationData';
+import { useUserData } from '@/lib/hooks/useUserData';
+import type { InsertNewOfficerRequest, ChildData } from '@/lib/api/types';
 import {
     ANNEX_01_SOCO_LABS,
     ANNEX_06_CIVIL_STATUS,
@@ -14,18 +17,41 @@ import {
     ANNEX_12_RANK,
 } from '@/lib/annexData';
 
-const SOCO_LABS_OPTIONS = ANNEX_01_SOCO_LABS.map((s) => ({ value: s, label: s }));
+// Constants that don't depend on API data
 const RANK_OPTIONS = ANNEX_12_RANK.map((s) => ({ value: s, label: s }));
-const CIVIL_STATUS_OPTIONS = ANNEX_06_CIVIL_STATUS.map((s) => ({ value: s, label: s }));
 const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
+const CHILD_STATUS_OPTIONS = [
+    'Toddler',
+    'Student',
+    'Unmarried Employed',
+    'Unmarried Unemployed',
+    'Married',
+].map((s) => ({ value: s, label: s }));
+const ANNEX_13_CATEGORY_OPTIONS = [
+    'A1',
+    'A',
+    'B1',
+    'B2',
+    'B',
+    'C1',
+    'C',
+    'CE',
+    'D1',
+    'D',
+    'DE',
+    'G1',
+    'G',
+    'J',
+    'H',
+].map((s) => ({ value: s, label: s }));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ChildRow {
     id: number;
     name: string;
-    age: string;
-    school: string;
+    birthday: string;
+    status: string;
 }
 
 interface PromotionRow {
@@ -34,18 +60,81 @@ interface PromotionRow {
     date: string;
 }
 
-interface ServedLabRow {
+interface CourseBeforeRow {
     id: number;
-    lab: string;
+    conNo: string;
+    policeStation: string;
+    branch: string;
     from: string;
     to: string;
+    institute: string;
+}
+
+interface CourseAfterRow {
+    id: number;
+    courseName: string;
+    from: string;
+    to: string;
+    time: string;
+    institute: string;
+}
+
+// ─── Education Types ──────────────────────────────────────────────────────────
+
+type OLGrade = 'A' | 'B' | 'C' | 'S' | 'F' | '';
+
+interface OLSubjectResult {
+    subject: string;
+    grade: OLGrade;
+}
+
+interface OLOptionalSubject {
+    id: number;
+    subject: string;
+    grade: OLGrade;
+}
+
+type ALStream = 'Science' | 'Commerce' | 'Arts' | 'Technology' | '';
+
+interface ALSubjectRow {
+    id: number;
+    subject: string;
+    grade: string;
+}
+
+type DegreeTiming = 'before' | 'after';
+type QualificationType = 'Diploma' | 'HND' | 'Degree' | 'Certificate' | 'Masters' | 'Doctorate' | 'Professional Qualification' | 'Other' | '';
+
+interface DegreeRow {
+    id: number;
+    qualificationType: QualificationType;
+    qualificationTypeOther: string;
+    degree: string;
+    university: string;
+    yearFrom: string;
+    yearTo: string;
+    timing: DegreeTiming;
+}
+
+type ToggleChoice = 'Yes' | 'No' | '';
+
+interface AssignmentRow {
+    id: number;
+    socoLab: string;
+    from: string;
+    to: string;
+    duration: string;
     oic: string;
+    reason: string;
+    reasonOther: string;
 }
 
 interface FormData {
     // Section 1
     socoLab: string;
+    socoLabId: string; // Store the ID for API submission
     rankDropdown: string;
+    rankDesignationId: string; // Store the designation ID for API submission (NEW)
     regNo: string;
     fullName: string;
     reportedDate: string;
@@ -60,107 +149,269 @@ interface FormData {
     // Section 2
     civilStatus: string;
     spouseDesignation: string;
-    spouseNameAddress: string;
+    spouseDesignationOther: string;
+    spouseName: string;
+    spouseAddressOfInstitute: string;
     children: ChildRow[];
     // Section 3
     dateJoinedPolice: string;
     appointedRank: string;
+    appointedRankId: string; // Store the ID (NEW)
     presentRank: string;
+    presentRankId: string; // Store the ID (NEW)
     promotions: PromotionRow[];
-    // Section 4
-    servedLabs: ServedLabRow[];
+    // Section 4 – Education
+    olMandatorySubjects: OLSubjectResult[];
+    olOptionalSubjects: OLOptionalSubject[];
+    alStream: ALStream;
+    alSubjects: ALSubjectRow[];
+    alGeneralEnglish: string;
+    alGeneralKnowledge: string;
+    degrees: DegreeRow[];
     // Section 5
-    preferredLab1: string;
-    preferredLab2: string;
-    preferredLab3: string;
+    localBeforeCourses: CourseBeforeRow[];
+    foreignBeforeCourses: CourseBeforeRow[];
     // Section 6
-    disciplinaryNature: string;
-    disciplinaryStation: string;
-    disciplinaryDivision: string;
-    disciplinaryYesNo: string;
-    disciplinaryResult: string;
+    localAfterCourses: CourseAfterRow[];
+    foreignAfterCourses: CourseAfterRow[];
     // Section 7
-    servedAdminUnit: string;
-    servedAdminUnitYesNo: string;
-    attachedUnit: string;
-    attachedUnitYesNo: string;
-    attachedDivision: string;
-    attachedDivisionYesNo: string;
-    branch: string;
-    branchYesNo: string;
+    drivingLicenseNo: string;
+    vehicleCategories: string[];
+    heavyVehicleQualified: string;
+    lightVehicleQualified: string;
+    motorcycleQualified: string;
+    // Section 8
+    transferDraft: AssignmentRow;
+    transferHistory: AssignmentRow[];
+    // Section 9
+    specialDutyDraft: AssignmentRow;
+    specialDutyHistory: AssignmentRow[];
+    // Section 10
+    orderlyRoomStatus: ToggleChoice;
+    orderlyRoomResult: string;
+    preliminaryInquiryStatus: ToggleChoice;
+    preliminaryInquiryResult: string;
+    disciplinaryInquiryStatus: ToggleChoice;
+    disciplinaryInquiryResult: string;
+    // Section 11
+    specialIllnesses: string;
+    specialNotes: string;
 }
 
 let rowSeed = 1;
 const newId = () => rowSeed++;
 
+function createAssignmentRow(): AssignmentRow {
+    return {
+        id: newId(),
+        socoLab: '',
+        from: '',
+        to: '',
+        duration: '',
+        oic: '',
+        reason: '',
+        reasonOther: '',
+    };
+}
+
+function parseFormDate(value: string): Date | null {
+    if (!value) return null;
+    const parts = value.split('-');
+    if (parts.length !== 3) return null;
+
+    const numbers = parts.map(Number);
+    if (numbers.some(Number.isNaN)) return null;
+
+    if (parts[0].length === 4) {
+        const [year, month, day] = numbers;
+        return new Date(year, month - 1, day);
+    }
+
+    const [day, month, year] = numbers;
+    return new Date(year, month - 1, day);
+}
+
+function formatAssignmentDuration(from: string, to: string): string {
+    const fromDate = parseFormDate(from);
+    const toDate = parseFormDate(to);
+
+    if (!fromDate || !toDate || Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime()) || toDate < fromDate) {
+        return '';
+    }
+
+    let months =
+        (toDate.getFullYear() - fromDate.getFullYear()) * 12 +
+        (toDate.getMonth() - fromDate.getMonth());
+
+    if (toDate.getDate() < fromDate.getDate()) {
+        months -= 1;
+    }
+
+    if (months <= 0) {
+        const dayDiff = Math.max(0, Math.round((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)));
+        return `${dayDiff} Day${dayDiff === 1 ? '' : 's'}`;
+    }
+
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    const parts: string[] = [];
+
+    if (years > 0) parts.push(`${years} Year${years === 1 ? '' : 's'}`);
+    if (remainingMonths > 0) parts.push(`${remainingMonths} Month${remainingMonths === 1 ? '' : 's'}`);
+
+    return parts.join(' ');
+}
+
 function defaultForm(): FormData {
     return {
-        socoLab: '', rankDropdown: '', regNo: '', fullName: '',
+        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '',
         reportedDate: '', dob: '', dateJoinedSoco: '',
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
-        civilStatus: '', spouseDesignation: '', spouseNameAddress: '',
-        children: [{ id: newId(), name: '', age: '', school: '' }],
-        dateJoinedPolice: '', appointedRank: '', presentRank: '',
+        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '',
+        children: [{ id: newId(), name: '', birthday: '', status: '' }],
+        dateJoinedPolice: '', appointedRank: '', appointedRankId: '', presentRank: '', presentRankId: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
-        servedLabs: [{ id: newId(), lab: '', from: '', to: '', oic: '' }],
-        preferredLab1: '', preferredLab2: '', preferredLab3: '',
-        disciplinaryNature: '', disciplinaryStation: '', disciplinaryDivision: '',
-        disciplinaryYesNo: 'No', disciplinaryResult: '',
-        servedAdminUnit: '', servedAdminUnitYesNo: 'No',
-        attachedUnit: '', attachedUnitYesNo: 'No',
-        attachedDivision: '', attachedDivisionYesNo: 'No',
-        branch: '', branchYesNo: 'No',
+        // Education
+        olMandatorySubjects: [
+            { subject: 'First Language (Sinhala / Tamil)', grade: '' },
+            { subject: 'English (Second Language)', grade: '' },
+            { subject: 'Mathematics', grade: '' },
+            { subject: 'Science', grade: '' },
+            { subject: 'History', grade: '' },
+            { subject: 'Religion', grade: '' },
+        ],
+        olOptionalSubjects: [
+            { id: newId(), subject: '', grade: '' },
+            { id: newId(), subject: '', grade: '' },
+            { id: newId(), subject: '', grade: '' },
+        ],
+        alStream: '',
+        alSubjects: [
+            { id: newId(), subject: '', grade: '' },
+            { id: newId(), subject: '', grade: '' },
+            { id: newId(), subject: '', grade: '' },
+        ],
+        alGeneralEnglish: '',
+        alGeneralKnowledge: '',
+        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }],
+        localBeforeCourses: [
+            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+        ],
+        foreignBeforeCourses: [
+            { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+        ],
+        localAfterCourses: [
+            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+        ],
+        foreignAfterCourses: [
+            { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+        ],
+        drivingLicenseNo: '',
+        vehicleCategories: [],
+        heavyVehicleQualified: '',
+        lightVehicleQualified: '',
+        motorcycleQualified: '',
+        transferDraft: createAssignmentRow(),
+        transferHistory: [],
+        specialDutyDraft: createAssignmentRow(),
+        specialDutyHistory: [],
+        orderlyRoomStatus: '',
+        orderlyRoomResult: '',
+        preliminaryInquiryStatus: '',
+        preliminaryInquiryResult: '',
+        disciplinaryInquiryStatus: '',
+        disciplinaryInquiryResult: '',
+        specialIllnesses: '',
+        specialNotes: '',
     };
 }
 
-// ─── Duration calculator ──────────────────────────────────────────────────────
+// ─── Education Constants ──────────────────────────────────────────────────────
 
-function calcDuration(from: string, to: string): string {
-    if (!from || !to) return '';
-    const parseDate = (s: string) => {
-        const sep = s.includes('-') ? '-' : '/';
-        const parts = s.split(sep);
-        if (!parts[0] || !parts[1] || !parts[2]) return null;
-        const [a, b, c] = parts.map((p) => parseInt(p, 10));
-        if (isNaN(a) || isNaN(b) || isNaN(c)) return null;
-        if (parts[0].length === 4) {
-            return new Date(a, b - 1, c);
-        }
-        const year = c <= 99 ? 2000 + c : c;
-        return new Date(year, b - 1, a);
-    };
-    const f = parseDate(from);
-    const t = parseDate(to);
-    if (!f || !t || isNaN(f.getTime()) || isNaN(t.getTime())) return '';
-    const diffMs = t.getTime() - f.getTime();
-    if (diffMs < 0) return '';
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    return diffDays === 1 ? '1 day' : `${diffDays} days`;
-}
+const OL_GRADES: OLGrade[] = ['A', 'B', 'C', 'S', 'F'];
+
+const AL_STREAMS: { value: ALStream; label: string }[] = [
+    { value: 'Science', label: 'Science Stream' },
+    { value: 'Commerce', label: 'Commerce Stream' },
+    { value: 'Arts', label: 'Arts / Humanities Stream' },
+    { value: 'Technology', label: 'Technology Stream' },
+];
+
+const ASSIGNMENT_REASON_OPTIONS = [
+    'Administrative Requirement',
+    'Operational Requirement',
+    'Temporary Attachment',
+    'Training / Course',
+    'Relief Duty',
+    'Other',
+].map((label) => ({ value: label, label }));
+
+const QUALIFICATION_TYPE_OPTIONS = [
+    'Diploma',
+    'HND',
+    'Degree',
+    'Certificate',
+    'Masters',
+    'Doctorate',
+    'Professional Qualification',
+    'Other',
+].map((label) => ({ value: label, label }));
 
 // ─── Shared UI Components ─────────────────────────────────────────────────────
 
-function SectionHeader({ tableRef, title, titleSi }: { tableRef?: string; title: string; titleSi?: string }) {
+function SectionHeader({ sectionNo, title, titleSi }: { sectionNo: number; title: string; titleSi?: string }) {
     return (
-        <div className="flex items-start justify-between gap-3 mb-6 pb-3 border-b border-gray-200">
-            <div>
-                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{title}</h3>
+        <div className="flex items-start gap-3 mb-6 pb-3 border-b border-slate-200">
+            <span className="h-8 w-8 shrink-0 rounded-full border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold flex items-center justify-center shadow-sm">
+                {sectionNo}
+            </span>
+            <div className="pt-0.5">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{title}</h3>
                 {titleSi && <p className="text-xs text-gray-500 mt-1 font-noto-sinhala">{titleSi}</p>}
             </div>
-            {tableRef && (
-                <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full whitespace-nowrap">
-                    {tableRef}
-                </span>
-            )}
         </div>
     );
 }
 
-function AnnexLabel({ children }: { children: React.ReactNode }) {
+function SubSectionTitle({ title, titleSi }: { title: string; titleSi?: string }) {
     return (
-        <span className="inline-block text-[11px] text-gray-400 font-semibold mb-1 uppercase tracking-wide">{children}</span>
+        <div className="mb-4 mt-6 first:mt-0 pb-2 border-b border-slate-200/70">
+            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{title}</h4>
+            {titleSi && <p className="text-xs text-gray-500 mt-0.5 font-noto-sinhala">{titleSi}</p>}
+        </div>
+    );
+}
+
+function SectionActions({
+    showEdit = false,
+    isEditingSection,
+    onEdit,
+    onSave,
+    saving = false,
+    saveLabel = 'Save',
+}: {
+    showEdit?: boolean;
+    isEditingSection: boolean;
+    onEdit?: () => void;
+    onSave: () => void;
+    saving?: boolean;
+    saveLabel?: string;
+}) {
+    return (
+        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-200/80">
+            {showEdit && !isEditingSection && onEdit && (
+                <Button variant="secondary" type="button" onClick={onEdit}>
+                    Edit
+                </Button>
+            )}
+            {(!showEdit || isEditingSection) && (
+                <Button variant="success" type="button" onClick={onSave} disabled={saving}>
+                    {saving ? 'Saving...' : saveLabel}
+                </Button>
+            )}
+        </div>
     );
 }
 
@@ -173,13 +424,14 @@ function FieldLabel({ label, si }: { label: string; si?: string }) {
 }
 
 function GInput({
-    value, onChange, placeholder, maxLength, readOnly, type = 'text', min, max
+    value, onChange, placeholder, maxLength, readOnly, disabled, type = 'text', min, max
 }: {
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
     maxLength?: number;
     readOnly?: boolean;
+    disabled?: boolean;
     type?: string;
     min?: number;
     max?: number;
@@ -194,10 +446,33 @@ function GInput({
             min={min}
             max={max}
             readOnly={readOnly}
+            disabled={disabled}
             className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800
         focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500
         hover:border-gray-400 transition-colors
+        disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 disabled:hover:border-gray-300
         ${readOnly ? 'cursor-default bg-gray-100 text-gray-500' : ''}`}
+        />
+    );
+}
+
+function GTextarea({
+    value,
+    onChange,
+    placeholder,
+    className = '',
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    className?: string;
+}) {
+    return (
+        <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={`w-full min-h-[124px] rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 hover:border-gray-400 transition-colors resize-y ${className}`}
         />
     );
 }
@@ -213,10 +488,10 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
                 const base = 'min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors';
                 const yesStyle = isSelected
                     ? 'bg-green-50 border-green-300 text-green-800 font-medium'
-                    : 'bg-green-50/30 border-green-100 text-green-400 hover:border-green-200 hover:text-green-500';
+                    : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600';
                 const noStyle = isSelected
                     ? 'bg-red-50 border-red-300 text-red-800 font-medium'
-                    : 'bg-red-50/30 border-red-100 text-red-400 hover:border-red-200 hover:text-red-500';
+                    : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600';
                 return (
                     <label key={opt} className={`${base} ${isYes ? yesStyle : noStyle}`}>
                         <input
@@ -235,41 +510,112 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
     );
 }
 
-function AddRowBtn({ onClick, label }: { onClick: () => void; label?: string }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="mt-3 text-sm text-blue-700 hover:text-blue-800 font-semibold flex items-center gap-1 transition-colors"
-        >
-            <span className="text-base leading-none">+</span> {label ?? 'Add Row'}
-        </button>
-    );
-}
-
-function RemoveBtn({ onClick }: { onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="text-red-400 hover:text-red-600 text-lg leading-none transition-colors self-end pb-2"
-            aria-label="Remove row"
-        >
-            ×
-        </button>
-    );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AddOfficerPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const editId = searchParams.get('edit');
+    const isEditing = !!editId;
+    const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
+    const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [courseTiming, setCourseTiming] = useState<'before' | 'after'>('before');
+    const [courseLocation, setCourseLocation] = useState<'local' | 'foreign'>('local');
+    const [personalFamilyEditing, setPersonalFamilyEditing] = useState(!isEditing);
+    const [sectionSaving, setSectionSaving] = useState<string | null>(null);
+    const civilStatusRadioName = useId();
+    const showSpouseAndChildren = form.civilStatus === 'Married';
+
+    // Create dynamic SOCO Lab options from API data
+    const SOCO_LABS_OPTIONS = locations.length > 0
+        ? locations.map((loc) => ({ value: loc.name, label: loc.name }))
+        : ANNEX_01_SOCO_LABS.map((s) => ({ value: s, label: s })); // Fallback to hardcoded data
+    
+    // Create dynamic Rank options from API data
+    const RANK_OPTIONS = ranks.length > 0
+        ? ranks.map((rank) => ({ value: rank.name, label: rank.name }))
+        : ANNEX_12_RANK.map((s) => ({ value: s, label: s })); // Fallback to hardcoded data
+    
+    const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
+    const CHILD_STATUS_OPTIONS = [
+        'Toddler',
+        'Student',
+        'Unmarried Employed',
+        'Unmarried Unemployed',
+        'Married',
+    ].map((s) => ({ value: s, label: s }));
+    const ANNEX_13_CATEGORY_OPTIONS = [
+        'A1',
+        'A',
+        'B1',
+        'B2',
+        'B',
+        'C1',
+        'C',
+        'CE',
+        'D1',
+        'D',
+        'DE',
+        'G1',
+        'G',
+        'J',
+        'H',
+    ].map((s) => ({ value: s, label: s }));
 
     const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
         setForm((f) => ({ ...f, [key]: val }));
+    }, []);
+
+    // Handler for SOCO Lab selection - maps name to ID
+    const handleSocoLabChange = useCallback((labName: string) => {
+        const labId = locationNameToId.get(labName) || '';
+        setForm((f) => ({
+            ...f,
+            socoLab: labName,
+            socoLabId: labId,
+        }));
+    }, [locationNameToId]);
+
+    // Handler for Rank selection - maps name to ID
+    const handleRankChange = useCallback((rankName: string, rankIdField: 'rankDesignationId' | 'appointedRankId' | 'presentRankId') => {
+        const rankId = rankNameToId.get(rankName) || '';
+        
+        if (rankIdField === 'rankDesignationId') {
+            setForm((f) => ({
+                ...f,
+                rankDropdown: rankName,
+                rankDesignationId: rankId,
+            }));
+        } else if (rankIdField === 'appointedRankId') {
+            setForm((f) => ({
+                ...f,
+                appointedRank: rankName,
+                appointedRankId: rankId,
+            }));
+        } else if (rankIdField === 'presentRankId') {
+            setForm((f) => ({
+                ...f,
+                presentRank: rankName,
+                presentRankId: rankId,
+            }));
+        }
+    }, [rankNameToId]);
+
+    const toggleVehicleCategory = useCallback((value: string) => {
+        setForm((f) => {
+            const cur = f.vehicleCategories;
+            const has = cur.includes(value);
+            return {
+                ...f,
+                vehicleCategories: has ? cur.filter((v) => v !== value) : [...cur, value],
+            };
+        });
     }, []);
 
     // Photo upload
@@ -283,8 +629,7 @@ export default function AddOfficerPage() {
 
     // Children rows
     const addChild = () => {
-        if (form.children.length >= 4) return;
-        set('children', [...form.children, { id: newId(), name: '', age: '', school: '' }]);
+        set('children', [...form.children, { id: newId(), name: '', birthday: '', status: '' }]);
     };
     const updateChild = (id: number, patch: Partial<ChildRow>) =>
         set('children', form.children.map((c) => c.id === id ? { ...c, ...patch } : c));
@@ -293,7 +638,6 @@ export default function AddOfficerPage() {
 
     // Promotions
     const addPromotion = () => {
-        if (form.promotions.length >= 4) return;
         set('promotions', [...form.promotions, { id: newId(), rank: '', date: '' }]);
     };
     const updatePromotion = (id: number, patch: Partial<PromotionRow>) =>
@@ -301,204 +645,664 @@ export default function AddOfficerPage() {
     const removePromotion = (id: number) =>
         set('promotions', form.promotions.filter((p) => p.id !== id));
 
-    // Served labs
-    const addServedLab = () =>
-        set('servedLabs', [...form.servedLabs, { id: newId(), lab: '', from: '', to: '', oic: '' }]);
-    const updateServedLab = (id: number, patch: Partial<ServedLabRow>) =>
-        set('servedLabs', form.servedLabs.map((r) => r.id === id ? { ...r, ...patch } : r));
-    const removeServedLab = (id: number) =>
-        set('servedLabs', form.servedLabs.filter((r) => r.id !== id));
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const invalidChild = form.children.find((c) => {
-            if (c.age === '') return false;
-            const n = parseInt(c.age, 10);
-            return isNaN(n) || n < 1 || n > 99;
-        });
-        if (invalidChild) {
-            alert('Child age must be between 1 and 99.');
-            return;
-        }
-        setSubmitted(true);
-        // Future: POST to API
-        alert('Officer details saved successfully!');
+    const updateBeforeCourse = (
+        section: 'localBeforeCourses' | 'foreignBeforeCourses',
+        id: number,
+        patch: Partial<CourseBeforeRow>
+    ) => {
+        set(section, form[section].map((row) => (row.id === id ? { ...row, ...patch } : row)));
     };
 
-    return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
-            <Header />
-            <div className="flex flex-1 relative z-10 w-full pt-14">
-                <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-                    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-                        {/* Page header */}
-                        <div className="flex items-center gap-3 mb-6">
-                            <Link
-                                href="/crime-officer"
-                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                                aria-label="Back"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </Link>
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900">Add SOCO Officer</h2>
-                                <p className="text-sm text-gray-600 mt-0.5">
-                                    Complete all required details to register a new officer profile.
-                                </p>
-                                {submitted && (
-                                    <p className="mt-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 inline-block">
-                                        Officer details saved successfully.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
+    const addBeforeCourse = (section: 'localBeforeCourses' | 'foreignBeforeCourses') => {
+        setForm((f) => ({
+            ...f,
+            [section]: [
+                ...f[section],
+                { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
+            ],
+        }));
+    };
 
-                        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
+    const removeBeforeCourse = (section: 'localBeforeCourses' | 'foreignBeforeCourses', id: number) => {
+        if (form[section].length <= 1) return;
+        set(section, form[section].filter((r) => r.id !== id));
+    };
+
+    const updateAfterCourse = (
+        section: 'localAfterCourses' | 'foreignAfterCourses',
+        id: number,
+        patch: Partial<CourseAfterRow>
+    ) => {
+        set(section, form[section].map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    };
+
+    const addAfterCourse = (section: 'localAfterCourses' | 'foreignAfterCourses') => {
+        setForm((f) => ({
+            ...f,
+            [section]: [
+                ...f[section],
+                { id: newId(), courseName: '', from: '', to: '', time: '', institute: '' },
+            ],
+        }));
+    };
+
+    const removeAfterCourse = (section: 'localAfterCourses' | 'foreignAfterCourses', id: number) => {
+        if (form[section].length <= 1) return;
+        set(section, form[section].filter((r) => r.id !== id));
+    };
+
+    const updateAssignmentDraft = (section: 'transfer' | 'specialDuty', patch: Partial<AssignmentRow>) => {
+        setForm((f) => {
+            const currentDraft = section === 'transfer' ? f.transferDraft : f.specialDutyDraft;
+            const nextDraft = { ...currentDraft, ...patch };
+
+            if (patch.from !== undefined || patch.to !== undefined) {
+                nextDraft.duration = formatAssignmentDuration(nextDraft.from, nextDraft.to);
+            }
+
+            return section === 'transfer'
+                ? { ...f, transferDraft: nextDraft }
+                : { ...f, specialDutyDraft: nextDraft };
+        });
+    };
+
+    const addAssignmentRecord = (section: 'transfer' | 'specialDuty') => {
+        setForm((f) => {
+            const draft = section === 'transfer' ? f.transferDraft : f.specialDutyDraft;
+            const duration = draft.duration || formatAssignmentDuration(draft.from, draft.to);
+            const reasonValid = draft.reason === 'Other'
+                ? Boolean(draft.reasonOther.trim())
+                : Boolean(draft.reason);
+            const isComplete = Boolean(draft.socoLab && draft.from && draft.to && reasonValid && duration);
+
+            if (!isComplete) return f;
+
+            const nextRow = { ...draft, id: newId(), duration };
+
+            return section === 'transfer'
+                ? {
+                      ...f,
+                      transferHistory: [...f.transferHistory, nextRow],
+                      transferDraft: createAssignmentRow(),
+                  }
+                : {
+                      ...f,
+                      specialDutyHistory: [...f.specialDutyHistory, nextRow],
+                      specialDutyDraft: createAssignmentRow(),
+                  };
+        });
+    };
+
+    const removeAssignmentRecord = (section: 'transfer' | 'specialDuty', id: number) => {
+        setForm((f) =>
+            section === 'transfer'
+                ? { ...f, transferHistory: f.transferHistory.filter((row) => row.id !== id) }
+                : { ...f, specialDutyHistory: f.specialDutyHistory.filter((row) => row.id !== id) },
+        );
+    };
+
+    // ── Education handlers ────────────────────────────────────────────────────
+
+    const updateOLMandatory = (index: number, grade: OLGrade) => {
+        const updated = form.olMandatorySubjects.map((s, i) => i === index ? { ...s, grade } : s);
+        set('olMandatorySubjects', updated);
+    };
+
+    const updateOLOptional = (id: number, patch: Partial<OLOptionalSubject>) => {
+        set('olOptionalSubjects', form.olOptionalSubjects.map((s) => s.id === id ? { ...s, ...patch } : s));
+    };
+
+    const updateALSubject = (id: number, patch: Partial<ALSubjectRow>) => {
+        set('alSubjects', form.alSubjects.map((s) => s.id === id ? { ...s, ...patch } : s));
+    };
+
+    const addALSubject = () => {
+        if (form.alSubjects.length >= 5) return;
+        set('alSubjects', [...form.alSubjects, { id: newId(), subject: '', grade: '' }]);
+    };
+
+    const removeALSubject = (id: number) => {
+        if (form.alSubjects.length <= 3) return;
+        set('alSubjects', form.alSubjects.filter((s) => s.id !== id));
+    };
+
+    const updateDegree = (id: number, patch: Partial<DegreeRow>) => {
+        set('degrees', form.degrees.map((d) => d.id === id ? { ...d, ...patch } : d));
+    };
+
+    const addDegree = () => {
+        if (form.degrees.length >= 12) return;
+        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }]);
+    };
+
+    const removeDegree = (id: number) => {
+        if (form.degrees.length <= 1) return;
+        set('degrees', form.degrees.filter((d) => d.id !== id));
+    };
+
+    const buildChildrenData = (): ChildData[] =>
+        form.children
+            .filter((c) => c.name.trim())
+            .map((c) => ({
+                childName: c.name,
+                childDob: c.birthday,
+                childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                childStatusId: 2,
+            }));
+
+    const buildPersonalFamilyPayload = (): InsertNewOfficerRequest => {
+        const childrenData = buildChildrenData();
+        return {
+            username: form.regNo,
+            userFullName: form.fullName,
+            userCallingName: form.fullName.split(' ')[0],
+            locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
+            userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1,
+            userDob: form.dob,
+            phoneMobile: form.telMobile,
+            phoneOffice: form.telOffice,
+            phoneHome: form.telResidence,
+            userImageUrl: form.photoUrl,
+            civilStatus: form.civilStatus,
+            userRegiNo: form.regNo,
+            currentRank: form.presentRank,
+            appointRank: form.appointedRank,
+            courseNo: form.socoCourseNo,
+            socoJoinedDate: form.dateJoinedSoco,
+            ...(form.civilStatus === 'Married' && {
+                spouse: {
+                    spouseName: form.spouseName,
+                    spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
+                    spouseWorkAddress: form.spouseAddressOfInstitute,
+                },
+            }),
+            ...(childrenData.length > 0 && { children: childrenData }),
+        };
+    };
+
+    const savePersonalFamilySection = async () => {
+        if (!form.regNo.trim() || !form.fullName.trim()) {
+            setError('Registration number and full name are required.');
+            return;
+        }
+
+        setError(null);
+        setSectionSaving('personal-family');
+
+        try {
+            if (!isEditing) {
+                const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
+                if (!regiNoCheck.isAvailable) {
+                    setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
+                    return;
+                }
+
+                const result = await officerService.insertNewOfficer(buildPersonalFamilyPayload());
+                setSubmitted(true);
+                alert(`Officer ${result.message} (ID: ${result.systemUserId})`);
+            } else {
+                alert('Personal and family details saved.');
+            }
+
+            setPersonalFamilyEditing(false);
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save personal and family details');
+            setError(apiError.message || 'An error occurred while saving.');
+            console.error('Save personal/family error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const savePromotionsSection = async () => {
+        setError(null);
+        setSectionSaving('promotions');
+
+        try {
+            if (isEditing && editId) {
+                const promotions = form.promotions
+                    .filter((p) => p.rank.trim() && p.date.trim())
+                    .map((p) => ({
+                        promotedDate: p.date,
+                        promotedRankId: rankNameToId.get(p.rank) ? parseInt(rankNameToId.get(p.rank)!, 10) : 1,
+                    }));
+
+                if (promotions.length > 0) {
+                    await officerService.insertPromotions({
+                        systemUserId: parseInt(editId, 10),
+                        promotions,
+                    });
+                }
+            }
+
+            alert('Promotions saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save promotions');
+            setError(apiError.message || 'An error occurred while saving promotions.');
+            console.error('Save promotions error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveGenericSection = (sectionLabel: string) => {
+        setSectionSaving(sectionLabel);
+        alert(`${sectionLabel} saved.`);
+        setSectionSaving(null);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (form.alSubjects.length < 3) {
+            alert('Please keep at least 3 A/L subject rows.');
+            return;
+        }
+
+        setError(null);
+        setLoading(true);
+
+        try {
+            // Check if regNo is already in use
+            const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
+            if (!regiNoCheck.isAvailable) {
+                setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
+                setLoading(false);
+                return;
+            }
+
+            // Build children data
+            const childrenData: ChildData[] = form.children
+                .filter((c) => c.name.trim()) // Only include non-empty children
+                .map((c) => ({
+                    childName: c.name,
+                    childDob: c.birthday,
+                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                    childStatusId: 2, // Default status ID
+                }));
+
+            // Build the API request
+            const payload: InsertNewOfficerRequest = {
+                username: form.regNo, // Using regNo as username
+                userFullName: form.fullName,
+                userCallingName: form.fullName.split(' ')[0], // Use first name as calling name
+                locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
+                userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1, // Use mapped rank ID
+                userDob: form.dob,
+                phoneMobile: form.telMobile,
+                phoneOffice: form.telOffice,
+                phoneHome: form.telResidence,
+                userImageUrl: form.photoUrl,
+                civilStatus: form.civilStatus,
+                userRegiNo: form.regNo,
+                currentRank: form.presentRank,
+                appointRank: form.appointedRank,
+                courseNo: form.socoCourseNo,
+                socoJoinedDate: form.dateJoinedSoco,
+                ...(form.civilStatus === 'Married' && {
+                    spouse: {
+                        spouseName: form.spouseName,
+                        spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
+                        spouseWorkAddress: form.spouseAddressOfInstitute,
+                    },
+                }),
+                ...(childrenData.length > 0 && { children: childrenData }),
+            };
+
+            // Submit to API
+            const result = await officerService.insertNewOfficer(payload);
+
+            setSubmitted(true);
+            alert(`Officer ${result.message} (ID: ${result.systemUserId})`);
+
+            // Redirect after success
+            setTimeout(() => {
+                router.push('/crime-officer');
+            }, 1000);
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save officer');
+            setError(apiError.message || 'An error occurred while saving the officer.');
+            console.error('Submit error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const canConfirmTransfer = Boolean(
+        form.transferDraft.socoLab &&
+        form.transferDraft.from &&
+        form.transferDraft.to &&
+        form.transferDraft.duration &&
+        form.transferDraft.reason &&
+        (form.transferDraft.reason !== 'Other' || form.transferDraft.reasonOther.trim()),
+    );
+
+    const canConfirmSpecialDuty = Boolean(
+        form.specialDutyDraft.socoLab &&
+        form.specialDutyDraft.from &&
+        form.specialDutyDraft.to &&
+        form.specialDutyDraft.duration &&
+        form.specialDutyDraft.reason &&
+        (form.specialDutyDraft.reason !== 'Other' || form.specialDutyDraft.reasonOther.trim()),
+    );
+
+    return (
+        <PageLayout>
+            <PageHeader
+                backHref="/crime-officer"
+                title="Add SOCO Officer"
+                description="Complete all required details to register a new officer profile."
+            />
+            {error && (
+                <p className="mb-6 -mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 inline-block">
+                    {error}
+                </p>
+            )}
+            {submitted && (
+                <p className="mb-6 -mt-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 inline-block">
+                    Officer details saved successfully.
+                </p>
+            )}
+
+            <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-                            {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
+                            <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/80 flex items-center gap-3">
+                                <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Username:</span>
+                                <span className="text-sm font-mono text-blue-900 font-bold select-all bg-white px-2 py-1 rounded border border-blue-100">
+                                    {form.regNo || '—'}
+                                </span>
+                                <span className="text-xs text-blue-500">(Registration number used as login username)</span>
+                            </div>
+
+                            {/* ─── SECTION 1: Personal & Family Details ───────────────────── */}
+                            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
                                 <SectionHeader
-                                    tableRef="Table : 01"
-                                    title="PERSONNEL DETAILS OF SCENE OF CRIME OFFICER"
+                                    sectionNo={1}
+                                    title="PERSONAL DETAILS OF SCENE OF CRIME OFFICER"
                                     titleSi="අපරාධ ස්ථාන නිලධාරිගේ පුද්ගලික තොරතුරු"
                                 />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
-                                    {/* SOCO Lab */}
-                                    <div>
-                                        <AnnexLabel>Annex . 01</AnnexLabel>
-                                        <FieldLabel label="SOCO Lab" si="SOCO රසායනාගාරය" />
-                                        <CustomSelect value={form.socoLab} onChange={(v) => set('socoLab', v)}
-                                            options={SOCO_LABS_OPTIONS} placeholder="-- Select SOCO Lab --" />
-                                    </div>
+                                <fieldset disabled={!personalFamilyEditing} className="min-w-0 border-0 p-0 m-0 disabled:opacity-90">
+                                    <SubSectionTitle
+                                        title="Personal Details"
+                                        titleSi="පුද්ගලික තොරතුරු"
+                                    />
 
-                                    {/* Rank & Reg No */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:col-span-2">
-                                        <div>
-                                            <AnnexLabel>Annex . 12</AnnexLabel>
-                                            <FieldLabel label="Rank" si="තනතුර" />
-                                            <CustomSelect value={form.rankDropdown} onChange={(v) => set('rankDropdown', v)}
-                                                options={RANK_OPTIONS} placeholder="-- Rank --" />
+                                    <div className="flex flex-col xl:flex-row xl:items-start gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                            {/* SOCO Lab */}
+                                             <div>
+                                                 <FieldLabel label="SOCO Lab" si="SOCO රසායනාගාරය" />
+                                                 <CustomSelect 
+                                                     value={form.socoLab} 
+                                                     onChange={handleSocoLabChange}
+                                                     options={SOCO_LABS_OPTIONS} 
+                                                     placeholder={locationsLoading ? "Loading..." : "Select SOCO Lab"}
+                                                     disabled={locationsLoading || !personalFamilyEditing}
+                                                 />
+                                                 {locationsError && (
+                                                     <p className="text-xs text-red-600 mt-1">{locationsError}</p>
+                                                 )}
+                                             </div>
+
+                                            {/* Rank & Reg No */}
+                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:col-span-2">
+                                                 <div>
+                                                     <FieldLabel label="Rank" si="තනතුර" />
+                                                     <CustomSelect 
+                                                         value={form.rankDropdown} 
+                                                         onChange={(v) => handleRankChange(v, 'rankDesignationId')}
+                                                         options={RANK_OPTIONS} 
+                                                         placeholder={ranksLoading ? "Loading..." : "Rank"}
+                                                         disabled={ranksLoading || !personalFamilyEditing}
+                                                     />
+                                                     {ranksError && (
+                                                         <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                                     )}
+                                                 </div>
+                                                 <div>
+                                                     <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
+                                                     <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
+                                                 </div>
+                                            </div>
+
+                                            {/* Full Name */}
+                                            <div className="md:col-span-2 xl:col-span-3">
+                                                <FieldLabel label="Full Name" si="සම්පූර්ණ නම (max 50)" />
+                                                <GInput value={form.fullName} onChange={(v) => set('fullName', v)}
+                                                    placeholder="Full name" maxLength={50} />
+                                                <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
+                                            </div>
+
+                                            {/* Dates */}
+                                            <div>
+                                                <FieldLabel label="Reported Date / වාර්තා දිනය" />
+                                                <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Date of Birth / උපන් දිනය" />
+                                                <DatePicker value={form.dob} onChange={(v) => set('dob', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Date Joined SOCO Project / ව්‍යාපෘතියට එකතු වූ දිනය" />
+                                                <DatePicker value={form.dateJoinedSoco} onChange={(v) => set('dateJoinedSoco', v)} />
+                                            </div>
+
+                                            {/* Course & Service */}
+                                            <div>
+                                                <FieldLabel label="SOCO Course Number / SOCO පාඨමාලා අංකය" />
+                                                <GInput value={form.socoCourseNo} onChange={(v) => set('socoCourseNo', v)} placeholder="Course Number" />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="SOCO Service / SOCO සේවය" />
+                                                <GInput value={form.socoService} onChange={(v) => set('socoService', v)} placeholder="Service details" />
+                                            </div>
+
+                                            {/* Telephone */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
+                                                <div>
+                                                    <FieldLabel label="Office Tel. / කාර්යාල දුරකථන අංකය" />
+                                                    <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Residence Tel. / නිවාස දුරකථනය අංකය" />
+                                                    <GInput value={form.telResidence} onChange={(v) => set('telResidence', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Mobile / ජංගම දුරකථනය අංකය" />
+                                                    <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
+                                                <div>
+                                                    <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
+                                                    <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
+                                                    <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
+                                                        options={RANK_OPTIONS} placeholder="Select" />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Present Rank / වත්මන් තනතුර" />
+                                                    <CustomSelect value={form.presentRank} onChange={(v) => set('presentRank', v)}
+                                                        options={RANK_OPTIONS} placeholder="Select" />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <AnnexLabel>&nbsp;</AnnexLabel>
-                                            <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
-                                            <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
-                                        </div>
                                     </div>
 
-                                    {/* Full Name */}
-                                    <div className="md:col-span-2 xl:col-span-3">
-                                        <FieldLabel label="Full Name" si="සම්පූර්ණ නම (max 50)" />
-                                        <GInput value={form.fullName} onChange={(v) => set('fullName', v)}
-                                            placeholder="Full name" maxLength={50} />
-                                        <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
-                                    </div>
-
-                                    {/* Dates */}
-                                    <div>
-                                        <FieldLabel label="Reported Date / වාර්තා දිනය" />
-                                        <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Date of Birth / උපන් දිනය" />
-                                        <DatePicker value={form.dob} onChange={(v) => set('dob', v)} />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="Date Joined SOCO Project / SOCO ව්‍යාපෘතියට එකතු වූ දිනය" />
-                                        <DatePicker value={form.dateJoinedSoco} onChange={(v) => set('dateJoinedSoco', v)} />
-                                    </div>
-
-                                    {/* Course & Service */}
-                                    <div>
-                                        <FieldLabel label="SOCO Course Number / SOCO පාඨමාලා අංකය" />
-                                        <GInput value={form.socoCourseNo} onChange={(v) => set('socoCourseNo', v)} placeholder="Course Number" />
-                                    </div>
-                                    <div>
-                                        <FieldLabel label="SOCO Service / SOCO සේවය" />
-                                        <GInput value={form.socoService} onChange={(v) => set('socoService', v)} placeholder="Service details" />
-                                    </div>
-
-                                    {/* Telephone */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2 xl:col-span-3">
-                                        <div>
-                                            <FieldLabel label="Office Tel. / කාර්යාල දුරකථනය" />
-                                            <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
-                                        </div>
-                                        <div>
-                                            <FieldLabel label="Residence Tel. / නිවාස දුරකථනය" />
-                                            <GInput value={form.telResidence} onChange={(v) => set('telResidence', v)} placeholder="0XX-XXXXXXX" type="tel" />
-                                        </div>
-                                        <div>
-                                            <FieldLabel label="Mobile / ජංගම දුරකථනය" />
-                                            <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
+                                    {/* Photo upload — top right */}
+                                    <div className="shrink-0 w-full xl:w-auto flex flex-col items-center">
+                                        <div className="w-full max-w-[calc(2in+2.5rem)] mx-auto flex flex-col items-center">
+                                            <label className="block w-full text-center text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide leading-snug font-noto-sinhala">
+                                                Photo (2&quot; × 2.5&quot;) / ඡායාරූපය
+                                            </label>
+                                            <div className="rounded-xl border border-sky-200 bg-white pt-3 px-4 pb-4 xl:sticky xl:top-24 shadow-sm w-full flex flex-col items-stretch gap-4 transition-shadow duration-200 hover:shadow-md hover:border-sky-300/80">
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    className="group relative border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/80 flex items-center justify-center overflow-hidden cursor-pointer box-border max-w-full mx-auto
+                                                        transition-all duration-200 ease-out
+                                                        hover:border-sky-500 hover:bg-sky-50 hover:shadow-md hover:ring-2 hover:ring-sky-200/70
+                                                        active:scale-[0.99]
+                                                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                                                    style={{
+                                                        width: 'min(2in, 100%)',
+                                                        aspectRatio: '2 / 2.5',
+                                                        height: 'auto',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                    onClick={() => {
+                                                        if (personalFamilyEditing) fileRef.current?.click();
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            fileRef.current?.click();
+                                                        }
+                                                    }}
+                                                >
+                                                    {photoPreview
+                                                        ? <img src={photoPreview} alt="Photo" className="w-full h-full min-h-0 object-cover" />
+                                                        : (
+                                                            <div className="flex h-full w-full min-h-0 flex-col items-center justify-center gap-1.5 px-3 py-2 text-center pointer-events-none">
+                                                                <span className="text-xs font-medium text-gray-500 group-hover:text-sky-800 transition-colors duration-200">
+                                                                    Click to upload
+                                                                </span>
+                                                                <span className="text-[11px] text-gray-400 group-hover:text-sky-700/90 transition-colors duration-200 font-noto-sinhala">
+                                                                    2″ × 2.5″
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                </div>
+                                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={!personalFamilyEditing} />
+                                                <FileUploadButton variant="sky-block" type="button" onClick={() => fileRef.current?.click()} disabled={!personalFamilyEditing}>Upload Photo</FileUploadButton>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Photo upload — 2" x 2.5" */}
-                                <div className="mt-6 flex items-start gap-6">
-                                    <div>
-                                        <FieldLabel label='Photo (2" × 2.5") / ඡායාරූපය' />
-                                        <div
-                                            className="w-[96px] h-[120px] border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
-                                            onClick={() => fileRef.current?.click()}
-                                        >
-                                            {photoPreview
-                                                ? <img src={photoPreview} alt="Photo" className="w-full h-full object-cover" />
-                                                : <span className="text-xs text-gray-400 text-center px-1">Click to upload<br />2″ × 2.5″</span>
-                                            }
-                                        </div>
-                                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-                                        <button
-                                            type="button"
-                                            onClick={() => fileRef.current?.click()}
-                                            className="mt-2 text-xs text-blue-700 hover:text-blue-800 font-semibold transition-colors"
-                                        >
-                                            Upload Photo
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                                    <SubSectionTitle
+                                        title="Family Details"
+                                        titleSi="පවුල් තොරතුරු"
+                                    />
 
-                            {/* ─── SECTION 2: Family Details ───────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Family Details" titleSi="පවුල් තොරතුරු" />
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-                                    <div>
-                                        <AnnexLabel>Annex . 06</AnnexLabel>
+                                <div
+                                    className={`grid grid-cols-1 gap-4 ${
+                                        showSpouseAndChildren ? 'md:grid-cols-3' : 'md:grid-cols-1'
+                                    }`}
+                                >
+                                    <div className="min-w-0">
                                         <FieldLabel label="Civil Status / සිවිල් තත්වය" />
-                                        <CustomSelect value={form.civilStatus} onChange={(v) => set('civilStatus', v)}
-                                            options={CIVIL_STATUS_OPTIONS} placeholder="-- Select --" />
+                                        <div className="grid grid-cols-2 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                                            {ANNEX_06_CIVIL_STATUS.map((option) => (
+                                                <label
+                                                    key={option}
+                                                    className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name={civilStatusRadioName}
+                                                        value={option}
+                                                        checked={form.civilStatus === option}
+                                                        onChange={() => {
+                                                            if (option === 'Unmarried') {
+                                                                setForm((f) => ({
+                                                                    ...f,
+                                                                    civilStatus: 'Unmarried',
+                                                                    spouseDesignation: '',
+                                                                    spouseDesignationOther: '',
+                                                                    spouseNameAddress: '',
+                                                                    children: [
+                                                                        {
+                                                                            id: newId(),
+                                                                            name: '',
+                                                                            birthday: '',
+                                                                            status: '',
+                                                                        },
+                                                                    ],
+                                                                }));
+                                                            } else {
+                                                                set('civilStatus', option);
+                                                            }
+                                                        }}
+                                                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 shrink-0"
+                                                    />
+                                                    {option}
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <AnnexLabel>Annex . 07</AnnexLabel>
-                                        <FieldLabel label="Spouse Designation / කලත්‍රයාගේ තනතුර" />
-                                        <CustomSelect value={form.spouseDesignation} onChange={(v) => set('spouseDesignation', v)}
-                                            options={SPOUSE_DESIGNATION_OPTIONS} placeholder="-- Select --" />
-                                    </div>
+                                    {showSpouseAndChildren ? (
+                                        <>
+                                            <div className="min-w-0">
+                                                <FieldLabel label="Spouse Designation / කලත්‍රයාගේ තනතුර" />
+                                                <CustomSelect
+                                                    value={form.spouseDesignation}
+                                                    onChange={(v) => {
+                                                        set('spouseDesignation', v);
+                                                        if (v !== 'Other') set('spouseDesignationOther', '');
+                                                    }}
+                                                    options={SPOUSE_DESIGNATION_OPTIONS}
+                                                    placeholder="Select"
+                                                />
+                                            </div>
 
-                                    <div className="md:col-span-2">
-                                        <FieldLabel label="Spouse Name & Address of Institute / කලත්‍රයාගේ නම හා ආයතනයේ ලිපිනය" />
-                                        <GInput value={form.spouseNameAddress} onChange={(v) => set('spouseNameAddress', v)}
-                                            placeholder="Name and institute address" />
-                                    </div>
+                                            <div
+                                                className={`min-w-0 ${
+                                                    form.spouseDesignation === 'Other' ? '' : 'hidden md:block'
+                                                }`}
+                                            >
+                                                {form.spouseDesignation === 'Other' ? (
+                                                    <>
+                                                        <FieldLabel label="Specify designation / තනතුර දක්වන්න" />
+                                                        <GInput
+                                                            value={form.spouseDesignationOther}
+                                                            onChange={(v) => set('spouseDesignationOther', v)}
+                                                            placeholder="Enter designation"
+                                                        />
+                                                    </>
+                                                ) : null}
+                                            </div>
+                                            <div className="md:col-span-3 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <FieldLabel label="Spouse Name / කලත්‍රයාගේ නම" />
+                                                    <GInput
+                                                        value={form.spouseName}
+                                                        onChange={(v) => set('spouseName', v)}
+                                                        placeholder="Full name of spouse"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <FieldLabel label="Address of Institute / ආයතනයේ ලිපිනය" />
+                                                    <GInput
+                                                        value={form.spouseAddressOfInstitute}
+                                                        onChange={(v) => set('spouseAddressOfInstitute', v)}
+                                                        placeholder="Spouse's workplace address"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : null}
                                 </div>
 
                                 {/* Children table */}
+                                {showSpouseAndChildren ? (
                                 <div className="mt-6">
                                     <FieldLabel label="Details of Children / දරුවන්ගේ තොරතුරු" />
                                     <div className="overflow-x-auto rounded-xl border border-gray-200 mt-2">
-                                        <table className="w-full text-sm">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Name of the Child / දරුවාගේ නම</th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28 font-noto-sinhala">Age / වයස</th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">School / University / පාසල / විශ්ව.</th>
-                                                    <th className="w-8" />
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48 font-noto-sinhala">Birthday / උපන්දිනය</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Status / තත්වය</th>
+                                                    <th className="px-2 py-2.5 text-right w-px whitespace-nowrap">
+                                                        <span className="sr-only">Actions</span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -508,80 +1312,95 @@ export default function AddOfficerPage() {
                                                             <GInput value={child.name} onChange={(v) => updateChild(child.id, { name: v })} placeholder="Child name" />
                                                         </td>
                                                         <td className="px-2 py-1.5">
-                                                            <GInput
-                                                            value={child.age}
-                                                            onChange={(v) => {
-                                                                if (v === '') {
-                                                                    updateChild(child.id, { age: v });
-                                                                } else {
-                                                                    const n = parseInt(v, 10);
-                                                                    if (!isNaN(n) && n >= 1 && n <= 99) {
-                                                                        updateChild(child.id, { age: v });
-                                                                    }
-                                                                }
-                                                            }}
-                                                            placeholder="Age"
-                                                            type="number"
-                                                            min={1}
-                                                            max={99}
-                                                        />
+                                                            <DatePicker
+                                                                value={child.birthday}
+                                                                onChange={(v) => updateChild(child.id, { birthday: v })}
+                                                            />
                                                         </td>
                                                         <td className="px-2 py-1.5">
-                                                            <GInput value={child.school} onChange={(v) => updateChild(child.id, { school: v })} placeholder="School / University" />
+                                                            <CustomSelect
+                                                                value={child.status}
+                                                                onChange={(v) => updateChild(child.id, { status: v })}
+                                                                options={CHILD_STATUS_OPTIONS}
+                                                                placeholder="Select status"
+                                                            />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            {form.children.length > 1 && <RemoveBtn onClick={() => removeChild(child.id)} />}
+                                                        <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                            {form.children.length > 1 ? (
+                                                                <RemoveRowButton onClick={() => removeChild(child.id)} />
+                                                            ) : null}
                                                         </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
-                                    {form.children.length < 4 && (
-                                        <AddRowBtn onClick={addChild} label="Add Child" />
-                                    )}
-                                    {form.children.length >= 4 && (
-                                        <p className="text-xs text-gray-400 mt-1">Maximum 4 children reached.</p>
-                                    )}
+                                    <AddRowButton onClick={addChild}>Add Child</AddRowButton>
                                 </div>
+                                ) : null}
+                                </fieldset>
+
+                                <SectionActions
+                                    showEdit
+                                    isEditingSection={personalFamilyEditing}
+                                    onEdit={() => setPersonalFamilyEditing(true)}
+                                    onSave={savePersonalFamilySection}
+                                    saving={sectionSaving === 'personal-family'}
+                                    saveLabel="Save"
+                                />
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Official Information" titleSi="නිල තොරතුරු" />
+                            <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
+                                <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
+                                {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
                                         <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
                                         <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
                                     </div>
                                     <div>
-                                        <AnnexLabel>Annex . 12</AnnexLabel>
-                                        <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
-                                        <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
-                                            options={RANK_OPTIONS} placeholder="-- Select --" />
-                                    </div>
-                                    <div>
-                                        <AnnexLabel>Annex . 12</AnnexLabel>
-                                        <FieldLabel label="Present Rank / වත්මන් තනතුර" />
-                                        <CustomSelect value={form.presentRank} onChange={(v) => set('presentRank', v)}
-                                            options={RANK_OPTIONS} placeholder="-- Select --" />
-                                    </div>
-                                </div>
+                                         <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
+                                         <CustomSelect 
+                                             value={form.appointedRank} 
+                                             onChange={(v) => handleRankChange(v, 'appointedRankId')}
+                                             options={RANK_OPTIONS} 
+                                             placeholder={ranksLoading ? "Loading..." : "Select"}
+                                             disabled={ranksLoading}
+                                         />
+                                         {ranksError && (
+                                             <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                         )}
+                                     </div>
+                                     <div>
+                                         <FieldLabel label="Present Rank / වත්මන් තනතුර" />
+                                         <CustomSelect 
+                                             value={form.presentRank} 
+                                             onChange={(v) => handleRankChange(v, 'presentRankId')}
+                                             options={RANK_OPTIONS} 
+                                             placeholder={ranksLoading ? "Loading..." : "Select"}
+                                             disabled={ranksLoading}
+                                         />
+                                         {ranksError && (
+                                             <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                         )}
+                                     </div>
+                                </div> */}
 
                                 {/* Promotions */}
                                 <div className="mt-6">
                                     <FieldLabel label="Promotion Dates / උසස් කිරීමේ දිනය" />
                                     <div className="overflow-x-auto rounded-xl border border-gray-200 mt-2">
-                                        <table className="w-full text-sm">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48">
-                                                        <span className="text-gray-400 text-xs">Annex . 12</span><br />
                                                         Rank / තනතුර
                                                     </th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Date / දිනය (DD-MM-YYYY)</th>
-                                                    <th className="w-8" />
+                                                    <th className="px-2 py-2.5 text-right w-px whitespace-nowrap">
+                                                        <span className="sr-only">Actions</span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -589,207 +1408,969 @@ export default function AddOfficerPage() {
                                                     <tr key={promo.id} className="border-b border-gray-100 last:border-0">
                                                         <td className="px-2 py-1.5">
                                                             <CustomSelect value={promo.rank} onChange={(v) => updatePromotion(promo.id, { rank: v })}
-                                                                options={RANK_OPTIONS} placeholder="-- Rank --" />
+                                                                options={RANK_OPTIONS} placeholder="Rank" />
                                                         </td>
                                                         <td className="px-2 py-1.5">
                                                             <DatePicker value={promo.date} onChange={(v) => updatePromotion(promo.id, { date: v })} />
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            {form.promotions.length > 1 && <RemoveBtn onClick={() => removePromotion(promo.id)} />}
+                                                        <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                            {form.promotions.length > 1 ? (
+                                                                <RemoveRowButton onClick={() => removePromotion(promo.id)} />
+                                                            ) : null}
                                                         </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
-                                    {form.promotions.length < 4 && (
-                                        <AddRowBtn onClick={addPromotion} label="Add Promotion" />
-                                    )}
-                                    {form.promotions.length >= 4 && (
-                                        <p className="text-xs text-gray-400 mt-1">Maximum 4 promotions reached.</p>
-                                    )}
+                                    <AddRowButton onClick={addPromotion}>Add Promotion</AddRowButton>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={savePromotionsSection}
+                                    saving={sectionSaving === 'promotions'}
+                                />
                             </div>
 
-                            {/* ─── SECTION 4: Served SOCO Labs ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader
-                                    tableRef="Table : 04"
-                                    title="SERVED SOCO LABS AFTER FOLLOWED THE SOCO COURSE"
-                                    titleSi="SOCO පාඨමාලාවෙන් පසු සේවය කළ SOCO රසායනාගාර"
-                                />
+                            {/* ─── SECTION 4: Education ────────────────────────────────────── */}
+                            {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
+                                <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
-                                <div className="overflow-x-auto rounded-xl border border-gray-200">
-                                    <table className="w-full text-sm">
+                                {/* ── O/L Results ─────────────────────────────────────────── */}
+                                <div className="mb-6">
+                                    <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide mb-3">
+                                        Ordinary Level (O/L) Results
+                                    </h4>
+
+                                    {/* Mandatory subjects */}
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Mandatory Subjects</p>
+                                    <div className="overflow-x-auto rounded-xl border border-violet-100 mb-4">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
+                                            <thead>
+                                                <tr className="bg-violet-50 border-b border-violet-100">
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-56">Grade</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {form.olMandatorySubjects.map((row, idx) => (
+                                                    <tr key={row.subject} className="border-b border-violet-50 last:border-0 odd:bg-white even:bg-violet-50/20">
+                                                        <td className="px-3 py-2 text-sm text-gray-800 font-medium">{row.subject}</td>
+                                                        <td className="px-2 py-1.5">
+                                                            <div className="flex gap-1.5 flex-wrap">
+                                                                {OL_GRADES.map((g) => (
+                                                                    <ToggleChip key={g} size="grade" active={row.grade === g} activeVariant={g === 'F' ? 'danger' : 'violet'} onClick={() => updateOLMandatory(idx, g)}>{g}</ToggleChip>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Optional subjects */}
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Optional Subjects</p>
+                                    <div className="overflow-x-auto rounded-xl border border-violet-100">
+                                        <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
+                                            <thead>
+                                                <tr className="bg-violet-50 border-b border-violet-100">
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-8">#</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-56">Grade</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {form.olOptionalSubjects.map((row, idx) => (
+                                                    <tr key={row.id} className="border-b border-violet-50 last:border-0 odd:bg-white even:bg-violet-50/20">
+                                                        <td className="px-3 py-2 text-xs text-gray-400 font-semibold">{idx + 1}</td>
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={row.subject}
+                                                                onChange={(v) => updateOLOptional(row.id, { subject: v })}
+                                                                placeholder="Subject name"
+                                                            />
+                                                        </td>
+                                                        <td className="px-2 py-1.5">
+                                                            <div className="flex gap-1.5 flex-wrap">
+                                                                {OL_GRADES.map((g) => (
+                                                                    <ToggleChip key={g} size="grade" active={row.grade === g} activeVariant={g === 'F' ? 'danger' : 'violet'} onClick={() => updateOLOptional(row.id, { grade: g })}>{g}</ToggleChip>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* ── A/L Results ─────────────────────────────────────────── */}
+                                <div className="mb-6">
+                                    <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide mb-3">
+                                        Advanced Level (A/L) Results
+                                    </h4>
+
+                                    <div className="mb-4">
+                                        <FieldLabel label="Stream / ධාරාව" />
+                                        <div className="flex flex-wrap gap-2">
+                                            {AL_STREAMS.map((s) => (
+                                                <ToggleChip key={s.value} active={form.alStream === s.value} onClick={() => set('alStream', s.value)}>{s.label}</ToggleChip>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {form.alStream && (
+                                        <div className="rounded-xl border border-violet-100 overflow-hidden">
+                                            <div className="px-4 py-2.5 bg-violet-50/70 border-b border-violet-100">
+                                                <span className="text-xs font-bold text-violet-800 uppercase tracking-wide">{form.alStream} Stream — Subjects</span>
+                                            </div>
+                                            <div className="overflow-x-auto">
+                                                <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
+                                                    <thead>
+                                                        <tr className="bg-gray-50 border-b border-gray-200">
+                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
+                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject Name</th>
+                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Grade</th>
+                                                            <th className="px-2 py-2.5 w-px whitespace-nowrap"><span className="sr-only">Actions</span></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {form.alSubjects.map((row, idx) => (
+                                                            <tr key={row.id} className="border-b border-gray-100 last:border-0">
+                                                                <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">{idx + 1}</td>
+                                                                <td className="px-2 py-1.5">
+                                                                    <GInput
+                                                                        value={row.subject}
+                                                                        onChange={(v) => updateALSubject(row.id, { subject: v })}
+                                                                        placeholder="Subject name"
+                                                                    />
+                                                                </td>
+                                                                <td className="px-2 py-1.5">
+                                                                    <GInput
+                                                                        value={row.grade}
+                                                                        onChange={(v) => updateALSubject(row.id, { grade: v })}
+                                                                        placeholder="e.g. A, B, C"
+                                                                        maxLength={3}
+                                                                    />
+                                                                </td>
+                                                                <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
+                                                                    {form.alSubjects.length > 3 && (
+                                                                        <RemoveRowButton onClick={() => removeALSubject(row.id)} />
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                        {/* General English */}
+                                                        <tr className="border-b border-gray-100 bg-violet-50/30">
+                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GE</td>
+                                                            <td className="px-3 py-2 text-sm font-medium text-gray-700">General English</td>
+                                                            <td className="px-2 py-1.5">
+                                                                <GInput
+                                                                    value={form.alGeneralEnglish}
+                                                                    onChange={(v) => set('alGeneralEnglish', v)}
+                                                                    placeholder="e.g. A, B, C"
+                                                                    maxLength={3}
+                                                                />
+                                                            </td>
+                                                            <td />
+                                                        </tr>
+                                                        {/* General Knowledge */}
+                                                        <tr className="bg-violet-50/30">
+                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GK</td>
+                                                            <td className="px-3 py-2 text-sm font-medium text-gray-700">General Knowledge</td>
+                                                            <td className="px-2 py-1.5">
+                                                                <GInput
+                                                                    value={form.alGeneralKnowledge}
+                                                                    onChange={(v) => set('alGeneralKnowledge', v)}
+                                                                    placeholder="e.g. A, B, C"
+                                                                    maxLength={3}
+                                                                />
+                                                            </td>
+                                                            <td />
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {form.alSubjects.length < 5 && (
+                                                <div className="px-4 pb-3">
+                                                    <AddRowButton onClick={addALSubject}>Add Subject</AddRowButton>
+                                                </div>
+                                            )}
+                                            {form.alSubjects.length >= 5 && (
+                                                <p className="px-4 pb-3 text-xs text-gray-400">Maximum 5 subjects reached.</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ── Degrees ─────────────────────────────────────────────── */}
+                                <div className="mb-5">
+                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
+                                        <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
+                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">
+                                                Degrees / Qualifications
+                                            </h4>
+                                            <p className="text-xs text-violet-700 mt-0.5">
+                                                Record qualifications obtained before or after joining the Police Department
+                                            </p>
+                                        </div>
+                                        <div className="p-4 space-y-3">
+                                            {form.degrees.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-3">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
+                                                        {form.degrees.length > 1 && (
+                                                            <RemoveRowButton onClick={() => removeDegree(row.id)} size="sm" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <FieldLabel label="University / Institute" />
+                                                        <GInput value={row.university} onChange={(v) => updateDegree(row.id, { university: v })} placeholder="University or Institute name" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(['before', 'after'] as const).map((val) => {
+                                                                const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                                const isSelected = row.timing === val;
+                                                                return (
+                                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                                        isSelected
+                                                                            ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
+                                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                                    }`}>
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={`degree-timing-${row.id}`}
+                                                                            value={val}
+                                                                            checked={isSelected}
+                                                                            onChange={() => updateDegree(row.id, { timing: val })}
+                                                                            className="accent-violet-600"
+                                                                        />
+                                                                        {label}
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        <div>
+                                                            <FieldLabel label="Qualification Type" />
+                                                            <CustomSelect
+                                                                value={row.qualificationType}
+                                                                onChange={(v) => {
+                                                                    updateDegree(row.id, {
+                                                                        qualificationType: v as QualificationType,
+                                                                        qualificationTypeOther: v === 'Other' ? row.qualificationTypeOther : '',
+                                                                    });
+                                                                }}
+                                                                options={QUALIFICATION_TYPE_OPTIONS}
+                                                                placeholder="Select type"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <FieldLabel label="Degree / Qualification Name" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree(row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
+                                                        </div>
+                                                    </div>
+                                                    {row.qualificationType === 'Other' && (
+                                                        <div>
+                                                            <FieldLabel label="Specify Qualification Type" />
+                                                            <GInput
+                                                                value={row.qualificationTypeOther}
+                                                                onChange={(v) => updateDegree(row.id, { qualificationTypeOther: v })}
+                                                                placeholder="Enter qualification type"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex gap-2">
+                                                        <div className="w-32">
+                                                            <FieldLabel label="From" />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                        <div className="w-32">
+                                                            <FieldLabel label="To" />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {form.degrees.length < 12 && (
+                                            <div className="px-4 pb-4"><AddRowButton onClick={addDegree}>Add Qualification</AddRowButton></div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Education')}
+                                    saving={sectionSaving === 'Education'}
+                                />
+                            </div>}
+
+                            {/* ─── SECTION 5: Course Details ──────────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-indigo-200 bg-indigo-50/70">
+                                <SectionHeader
+                                    sectionNo={5}
+                                    title="COURSE DETAILS"
+                                />
+                                <p className="text-sm text-indigo-900/80 mb-4">
+                                    Record departmental and external training completed.
+                                </p>
+
+                                <div className="flex flex-wrap gap-6 mb-5">
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                        <div className="flex gap-3">
+                                            {(['before', 'after'] as const).map((val) => {
+                                                const label = val === 'before' ? 'Before Joining SOCO' : 'After Joining SOCO';
+                                                const isSelected = courseTiming === val;
+                                                return (
+                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                        isSelected
+                                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-medium'
+                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                    }`}>
+                                                        <input
+                                                            type="radio"
+                                                            name="course-timing"
+                                                            value={val}
+                                                            checked={isSelected}
+                                                            onChange={() => setCourseTiming(val)}
+                                                            className="accent-indigo-600"
+                                                        />
+                                                        {label}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Location</p>
+                                        <div className="flex gap-3">
+                                            {(['local', 'foreign'] as const).map((val) => {
+                                                const isSelected = courseLocation === val;
+                                                return (
+                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                        isSelected
+                                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-medium'
+                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                    }`}>
+                                                        <input
+                                                            type="radio"
+                                                            name="course-location"
+                                                            value={val}
+                                                            checked={isSelected}
+                                                            onChange={() => setCourseLocation(val)}
+                                                            className="accent-indigo-600"
+                                                        />
+                                                        {val.charAt(0).toUpperCase() + val.slice(1)}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {(() => {
+                                    const isBefore = courseTiming === 'before';
+                                    const isLocal = courseLocation === 'local';
+                                    const dataKey = isBefore
+                                        ? isLocal ? 'localBeforeCourses' : 'foreignBeforeCourses'
+                                        : isLocal ? 'localAfterCourses' : 'foreignAfterCourses';
+                                    const rows = form[dataKey];
+                                    const updateRow: (...args: any[]) => void = isBefore ? updateBeforeCourse : updateAfterCourse;
+                                    const addRow: (...args: any[]) => void = isBefore ? addBeforeCourse : addAfterCourse;
+                                    const removeRow: (...args: any[]) => void = isBefore ? removeBeforeCourse : removeAfterCourse;
+
+                                    return (
+                                        <div className="rounded-xl border border-indigo-100 bg-white shadow-sm overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-indigo-100 bg-indigo-50/60">
+                                                <h4 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">
+                                                    {isLocal ? 'Local' : 'Foreign'}
+                                                </h4>
+                                                <p className="text-xs text-indigo-700">Department & Others</p>
+                                            </div>
+                                            <div className="overflow-x-auto">
+                                                {isBefore ? (
+                                                    <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                        <thead>
+                                                            <tr className="bg-gray-50 border-b border-gray-200">
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{isLocal ? 'Institute' : 'Country & Institute'}</th>
+                                                                <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                                    <span className="sr-only">Actions</span>
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rows.map((row: any) => (
+                                                                <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-indigo-50/20 last:border-0">
+                                                                    <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateRow(dataKey, row.id, { conNo: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateRow(dataKey, row.id, { policeStation: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateRow(dataKey, row.id, { branch: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateRow(dataKey, row.id, { from: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateRow(dataKey, row.id, { to: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateRow(dataKey, row.id, { institute: v })} /></td>
+                                                                    <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                        {rows.length > 1 ? (
+                                                                            <RemoveRowButton onClick={() => removeRow(dataKey, row.id)} />
+                                                                        ) : null}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                ) : (
+                                                    <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                        <thead>
+                                                            <tr className="bg-gray-50 border-b border-gray-200">
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
+                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{isLocal ? 'Department or Institute' : 'Country & Institute'}</th>
+                                                                <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                                    <span className="sr-only">Actions</span>
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rows.map((row: any) => (
+                                                                <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-indigo-50/20 last:border-0">
+                                                                    <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateRow(dataKey, row.id, { courseName: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateRow(dataKey, row.id, { from: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateRow(dataKey, row.id, { to: v })} /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateRow(dataKey, row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
+                                                                    <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateRow(dataKey, row.id, { institute: v })} /></td>
+                                                                    <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                        {rows.length > 1 ? (
+                                                                            <RemoveRowButton onClick={() => removeRow(dataKey, row.id)} />
+                                                                        ) : null}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+                                            </div>
+                                            <div className="px-4 pb-3">
+                                                <AddRowButton onClick={() => addRow(dataKey)}>Add row</AddRowButton>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Course Details')}
+                                    saving={sectionSaving === 'Course Details'}
+                                />
+                            </div>}
+
+                            {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
+                                <SectionHeader sectionNo={7} title="Driving License Details" />
+
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4 xl:col-span-2">
+                                        <h4 className="text-sm font-bold text-rose-900 uppercase tracking-wide mb-3">License Information</h4>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <FieldLabel label="Driving License No" />
+                                                <GInput
+                                                    value={form.drivingLicenseNo}
+                                                    onChange={(v) => set('drivingLicenseNo', v)}
+                                                    placeholder="Enter driving license number"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Categories of Vehicles" />
+                                                <p className="text-sm text-gray-500 mb-2">Select all categories that apply.</p>
+                                                <div
+                                                    className="grid grid-cols-3 sm:grid-cols-5 gap-2"
+                                                    role="group"
+                                                    aria-label="Vehicle categories (multi-select)"
+                                                >
+                                                    {ANNEX_13_CATEGORY_OPTIONS.map((opt) => {
+                                                        const selected = form.vehicleCategories.includes(opt.value);
+                                                        return (
+                                                            <label
+                                                                key={opt.value}
+                                                                className={`flex flex-row items-center justify-between gap-2 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors min-h-11 ${
+                                                                    selected
+                                                                        ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200/80'
+                                                                        : 'border-gray-200 bg-white hover:border-rose-200'
+                                                                }`}
+                                                            >
+                                                                <span className="text-sm font-semibold text-gray-800 leading-snug text-left min-w-0 pr-1">
+                                                                    {opt.label}
+                                                                </span>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    name="officer-vehicle-categories"
+                                                                    value={opt.value}
+                                                                    checked={selected}
+                                                                    onChange={() => toggleVehicleCategory(opt.value)}
+                                                                    className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
+                                                                />
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4 xl:col-span-1">
+                                        <h4 className="text-sm font-bold text-rose-900 uppercase tracking-wide">Police Driving / Riding Qualified</h4>
+                                        <p className="text-xs text-rose-700 mt-1 mb-4">Select only Yes or No for each vehicle type.</p>
+
+                                        <div className="space-y-3">
+                                            <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <span className="text-sm font-semibold text-gray-800">Heavy Vehicle</span>
+                                                <YesNo value={form.heavyVehicleQualified} onChange={(v) => set('heavyVehicleQualified', v)} />
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <span className="text-sm font-semibold text-gray-800">Light Vehicle</span>
+                                                <YesNo value={form.lightVehicleQualified} onChange={(v) => set('lightVehicleQualified', v)} />
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <span className="text-sm font-semibold text-gray-800">Motor Cycle</span>
+                                                <YesNo value={form.motorcycleQualified} onChange={(v) => set('motorcycleQualified', v)} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Driving License')}
+                                    saving={sectionSaving === 'Driving License'}
+                                />
+                            </div>}
+
+                            {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
+                                <SectionHeader sectionNo={8} title="Transfer" titleSi="මාරු" />
+
+                                <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50/80 p-4 sm:p-5 shadow-sm">
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="SOCO LAB" si="SOCO සේවාස්ථානය" />
+                                            <CustomSelect
+                                                value={form.transferDraft.socoLab}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { socoLab: v })}
+                                                options={SOCO_LABS_OPTIONS}
+                                                placeholder="Select SOCO LAB"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="From" />
+                                            <DatePicker
+                                                value={form.transferDraft.from}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { from: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="To" />
+                                            <DatePicker
+                                                value={form.transferDraft.to}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { to: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="Duration" />
+                                            <GInput
+                                                value={form.transferDraft.duration}
+                                                onChange={() => undefined}
+                                                placeholder="Auto-calculated"
+                                                readOnly
+                                            />
+                                        </div>
+
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="OIC, A/OIC" />
+                                            <GInput
+                                                value={form.transferDraft.oic}
+                                                onChange={(v) => updateAssignmentDraft('transfer', { oic: v })}
+                                                placeholder="Officer in charge"
+                                            />
+                                        </div>
+
+                                        {/* ── Reason + Other text box ── */}
+                                        <div className="lg:col-span-6 space-y-2">
+                                            <div>
+                                                <FieldLabel label="Reason" si="හේතුව" />
+                                                <CustomSelect
+                                                    value={form.transferDraft.reason}
+                                                    onChange={(v) =>
+                                                        updateAssignmentDraft('transfer', { reason: v, reasonOther: '' })
+                                                    }
+                                                    options={ASSIGNMENT_REASON_OPTIONS}
+                                                    placeholder="Select Reason"
+                                                />
+                                            </div>
+                                            {form.transferDraft.reason === 'Other' && (
+                                                <div>
+                                                    <FieldLabel label="Specify Reason" si="හේතුව සඳහන් කරන්න" />
+                                                    <GInput
+                                                        value={form.transferDraft.reasonOther}
+                                                        onChange={(v) =>
+                                                            updateAssignmentDraft('transfer', { reasonOther: v })
+                                                        }
+                                                        placeholder="Enter specific reason"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="lg:col-span-3 flex items-end">
+                                            <AddRowButton onClick={() => addAssignmentRecord('transfer')}>Add transfer record</AddRowButton>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 overflow-x-auto rounded-2xl border border-fuchsia-200 bg-white shadow-sm">
+                                    <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
                                         <thead>
-                                            <tr className="bg-gray-50 border-b border-gray-200">
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-40">
-                                                    <span className="text-gray-400 text-xs block">Annex . 01</span>
-                                                    SOCO Lab
-                                                </th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">From (DD-MM-YYYY)</th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">To (DD-MM-YYYY)</th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Duration</th>
-                                                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">OIC / A-OIC</th>
-                                                <th className="w-8" />
+                                            <tr className="border-b border-fuchsia-100 bg-fuchsia-50/80">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">SOCO LAB</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">From</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">To</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Duration</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">OIC, A/OIC</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Reason</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {form.servedLabs.map((row) => {
-                                                const dur = calcDuration(row.from, row.to);
-                                                return (
-                                                    <tr key={row.id} className="border-b border-gray-100 last:border-0">
-                                                        <td className="px-2 py-1.5">
-                                                            <CustomSelect value={row.lab} onChange={(v) => updateServedLab(row.id, { lab: v })}
-                                                                options={SOCO_LABS_OPTIONS} placeholder="-- Select Lab --" />
+                                            {form.transferHistory.length > 0 ? (
+                                                form.transferHistory.map((row) => (
+                                                    <tr key={row.id} className="border-b border-fuchsia-50 last:border-0">
+                                                        <td className="px-4 py-3 text-gray-800">{row.socoLab}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.from}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.to}</td>
+                                                        <td className="px-4 py-3 font-medium text-gray-800">{row.duration}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.oic || '-'}</td>
+                                                        <td className="px-4 py-3 text-gray-700">
+                                                            {row.reason === 'Other' && row.reasonOther
+                                                                ? `Other: ${row.reasonOther}`
+                                                                : row.reason}
                                                         </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <DatePicker value={row.from} onChange={(v) => updateServedLab(row.id, { from: v })} />
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <DatePicker value={row.to} onChange={(v) => updateServedLab(row.id, { to: v })} />
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <GInput value={dur} onChange={() => { }} readOnly placeholder="Auto" />
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <GInput value={row.oic} onChange={(v) => updateServedLab(row.id, { oic: v })} placeholder="OIC / A-OIC" />
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
-                                                            {form.servedLabs.length > 1 && <RemoveBtn onClick={() => removeServedLab(row.id)} />}
+                                                        <td className="px-4 py-3 text-right">
+                                                            <RemoveRowButton onClick={() => removeAssignmentRecord('transfer', row.id)}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                Delete
+                                                            </RemoveRowButton>
                                                         </td>
                                                     </tr>
-                                                );
-                                            })}
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                                                        No transfer records added yet.
+                                                    </td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
-                                <AddRowBtn onClick={addServedLab} label="Add Lab" />
-                            </div>
 
-                            {/* ─── SECTION 5: Willing to Serve ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Willing to Serve SOCO Labs" titleSi="සේවය කිරීමට කැමති SOCO රසායනාගාර" />
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Transfer')}
+                                    saving={sectionSaving === 'Transfer'}
+                                />
+                            </div>}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
-                                    {([1, 2, 3] as const).map((n) => {
-                                        const key = `preferredLab${n}` as keyof FormData;
-                                        return (
-                                            <div key={n}>
-                                                <AnnexLabel>Annex . 01</AnnexLabel>
-                                                <FieldLabel label={`${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'} Preference / ${n} වන කැමැත්ත`} />
+                            {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
+                                <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
+
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-sm">
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="SOCO LAB" si="SOCO සේවාස්ථානය" />
+                                            <CustomSelect
+                                                value={form.specialDutyDraft.socoLab}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { socoLab: v })}
+                                                options={SOCO_LABS_OPTIONS}
+                                                placeholder="Select SOCO LAB"
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="From" />
+                                            <DatePicker
+                                                value={form.specialDutyDraft.from}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { from: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="To" />
+                                            <DatePicker
+                                                value={form.specialDutyDraft.to}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { to: v })}
+                                            />
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="Duration" />
+                                            <GInput
+                                                value={form.specialDutyDraft.duration}
+                                                onChange={() => undefined}
+                                                placeholder="Auto-calculated"
+                                                readOnly
+                                            />
+                                        </div>
+
+                                        <div className="lg:col-span-3">
+                                            <FieldLabel label="OIC, A/OIC" />
+                                            <GInput
+                                                value={form.specialDutyDraft.oic}
+                                                onChange={(v) => updateAssignmentDraft('specialDuty', { oic: v })}
+                                                placeholder="Officer in charge"
+                                            />
+                                        </div>
+
+                                        {/* ── Reason + Other text box ── */}
+                                        <div className="lg:col-span-6 space-y-2">
+                                            <div>
+                                                <FieldLabel label="Reason" si="හේතුව" />
                                                 <CustomSelect
-                                                    value={form[key] as string}
-                                                    onChange={(v) => set(key, v)}
-                                                    options={SOCO_LABS_OPTIONS}
-                                                    placeholder="-- Select Lab --"
+                                                    value={form.specialDutyDraft.reason}
+                                                    onChange={(v) =>
+                                                        updateAssignmentDraft('specialDuty', { reason: v, reasonOther: '' })
+                                                    }
+                                                    options={ASSIGNMENT_REASON_OPTIONS}
+                                                    placeholder="Select Reason"
                                                 />
                                             </div>
-                                        );
-                                    })}
+                                            {form.specialDutyDraft.reason === 'Other' && (
+                                                <div>
+                                                    <FieldLabel label="Specify Reason" si="හේතුව සඳහන් කරන්න" />
+                                                    <GInput
+                                                        value={form.specialDutyDraft.reasonOther}
+                                                        onChange={(v) =>
+                                                            updateAssignmentDraft('specialDuty', { reasonOther: v })
+                                                        }
+                                                        placeholder="Enter specific reason"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="lg:col-span-3 flex items-end">
+                                            <AddRowButton onClick={() => addAssignmentRecord('specialDuty')}>Add special duty record</AddRowButton>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* ─── SECTION 6: Disciplinary Inquiries ───────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                                <div className="mt-5 overflow-x-auto rounded-2xl border border-amber-200 bg-white shadow-sm">
+                                    <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
+                                        <thead>
+                                            <tr className="border-b border-amber-100 bg-amber-50/80">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">SOCO LAB</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">From</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">To</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Duration</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">OIC, A/OIC</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Reason</th>
+                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {form.specialDutyHistory.length > 0 ? (
+                                                form.specialDutyHistory.map((row) => (
+                                                    <tr key={row.id} className="border-b border-amber-50 last:border-0">
+                                                        <td className="px-4 py-3 text-gray-800">{row.socoLab}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.from}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.to}</td>
+                                                        <td className="px-4 py-3 font-medium text-gray-800">{row.duration}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{row.oic || '-'}</td>
+                                                        <td className="px-4 py-3 text-gray-700">
+                                                            {row.reason === 'Other' && row.reasonOther
+                                                                ? `Other: ${row.reasonOther}`
+                                                                : row.reason}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <RemoveRowButton onClick={() => removeAssignmentRecord('specialDuty', row.id)}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                Delete
+                                                            </RemoveRowButton>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                                                        No special duty records added yet.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-                                    <div>
-                                        <FieldLabel label="Nature / ස්වභාවය" />
-                                        <GInput value={form.disciplinaryNature} onChange={(v) => set('disciplinaryNature', v)} placeholder="Nature of inquiry" />
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Special Duty')}
+                                    saving={sectionSaving === 'Special Duty'}
+                                />
+                            </div>}
+
+                            {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
+                                <SectionHeader sectionNo={10} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                                <p className="text-sm text-emerald-900/80 mb-4">
+                                    Record current inquiry status and any relevant findings for each disciplinary category.
+                                </p>
+
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                                    <div className="rounded-xl border border-emerald-100 bg-white shadow-sm p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Orderly Room</h4>
+                                            <YesNo value={form.orderlyRoomStatus} onChange={(v) => set('orderlyRoomStatus', v as ToggleChoice)} />
+                                        </div>
+                                        <div>
+                                            <FieldLabel label="Result / විස්තර" />
+                                            <GTextarea
+                                                value={form.orderlyRoomResult}
+                                                onChange={(v) => set('orderlyRoomResult', v)}
+                                                placeholder="Enter orderly room result or remarks"
+                                                className="min-h-[140px]"
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <FieldLabel label="Police Station / පොලිස් ස්ථානය" />
-                                        <GInput value={form.disciplinaryStation} onChange={(v) => set('disciplinaryStation', v)} placeholder="Police Station" />
+
+                                    <div className="rounded-xl border border-emerald-100 bg-white shadow-sm p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Preliminary Inquiry</h4>
+                                            <YesNo value={form.preliminaryInquiryStatus} onChange={(v) => set('preliminaryInquiryStatus', v as ToggleChoice)} />
+                                        </div>
+                                        <div>
+                                            <FieldLabel label="Result / විස්තර" />
+                                            <GTextarea
+                                                value={form.preliminaryInquiryResult}
+                                                onChange={(v) => set('preliminaryInquiryResult', v)}
+                                                placeholder="Enter preliminary inquiry result or remarks"
+                                                className="min-h-[140px]"
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <FieldLabel label="Division / කොට්ඨාසය" />
-                                        <GInput value={form.disciplinaryDivision} onChange={(v) => set('disciplinaryDivision', v)} placeholder="Division" />
+
+                                    <div className="rounded-xl border border-emerald-100 bg-white shadow-sm p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">Disciplinary Inquiry</h4>
+                                            <YesNo value={form.disciplinaryInquiryStatus} onChange={(v) => set('disciplinaryInquiryStatus', v as ToggleChoice)} />
+                                        </div>
+                                        <div>
+                                            <FieldLabel label="Result / විස්තර" />
+                                            <GTextarea
+                                                value={form.disciplinaryInquiryResult}
+                                                onChange={(v) => set('disciplinaryInquiryResult', v)}
+                                                placeholder="Enter disciplinary inquiry result or remarks"
+                                                className="min-h-[140px]"
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <FieldLabel label="Yes / No" />
-                                        <YesNo value={form.disciplinaryYesNo} onChange={(v) => set('disciplinaryYesNo', v)} />
+                                </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Disciplinary Inquiries')}
+                                    saving={sectionSaving === 'Disciplinary Inquiries'}
+                                />
+                            </div>}
+
+                            {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
+                                <SectionHeader
+                                    sectionNo={11}
+                                    title="Special Illnesses & Special Notes"
+                                    titleSi="විශේෂ රෝග හා විශේෂ සටහන්"
+                                />
+                                <p className="text-sm text-sky-900/80 mb-4">
+                                    Record any known medical conditions and additional notes relevant to this officer.
+                                </p>
+
+                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="rounded-xl border border-sky-100 bg-white shadow-sm p-4">
+                                        <h4 className="text-sm font-bold text-sky-900 uppercase tracking-wide mb-3">
+                                            Special Illnesses
+                                        </h4>
+                                        <FieldLabel label="Known Medical Conditions / විශේෂ රෝග" />
+                                        <GTextarea
+                                            value={form.specialIllnesses}
+                                            onChange={(v) => set('specialIllnesses', v)}
+                                            placeholder="Enter any known illnesses or medical conditions..."
+                                            className="min-h-[160px]"
+                                        />
                                     </div>
-                                    <div className="md:col-span-2">
-                                        <FieldLabel label="Result / ප්‍රතිඵලය" />
-                                        <textarea
-                                            value={form.disciplinaryResult}
-                                            onChange={(e) => set('disciplinaryResult', e.target.value)}
-                                            rows={4}
-                                            placeholder="Describe the result of the disciplinary inquiry..."
-                                            className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 
-                        focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500
-                        hover:border-gray-400 transition-colors resize-y"
+
+                                    <div className="rounded-xl border border-sky-100 bg-white shadow-sm p-4">
+                                        <h4 className="text-sm font-bold text-sky-900 uppercase tracking-wide mb-3">
+                                            Special Notes
+                                        </h4>
+                                        <FieldLabel label="Additional Notes / විශේෂ සටහන්" />
+                                        <GTextarea
+                                            value={form.specialNotes}
+                                            onChange={(v) => set('specialNotes', v)}
+                                            placeholder="Enter any additional remarks or special notes..."
+                                            className="min-h-[160px]"
                                         />
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* ─── SECTION 7: Transfer Details ─────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-gray-200 bg-gray-50/80">
-                                <SectionHeader title="Transfer Details" titleSi="මාරුවීම් තොරතුරු" />
-
-                                <div className="space-y-4">
-                                    {[
-                                        { label: 'Served in Administrative Unit / පරිපාලන ඒකකයේ සේවය', fieldKey: 'servedAdminUnit', ynKey: 'servedAdminUnitYesNo' },
-                                        { label: 'Attached Unit / අමුණා ගත් ඒකකය', fieldKey: 'attachedUnit', ynKey: 'attachedUnitYesNo' },
-                                        { label: 'Division / කොට්ඨාසය', fieldKey: 'attachedDivision', ynKey: 'attachedDivisionYesNo' },
-                                        { label: 'Branch / ශාඛාව', fieldKey: 'branch', ynKey: 'branchYesNo' },
-                                    ].map(({ label, fieldKey, ynKey }) => (
-                                        <div key={fieldKey} className="flex flex-row gap-4 items-end">
-                                            <div className="flex-shrink-0">
-                                                <FieldLabel label="Yes / No" />
-                                                <YesNo
-                                                    value={form[ynKey as keyof FormData] as string}
-                                                    onChange={(v) => set(ynKey as keyof FormData, v)}
-                                                />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <FieldLabel label={label} />
-                                                <GInput
-                                                    value={form[fieldKey as keyof FormData] as string}
-                                                    onChange={(v) => set(fieldKey as keyof FormData, v)}
-                                                    placeholder="Details..."
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveGenericSection('Special Illnesses & Notes')}
+                                    saving={sectionSaving === 'Special Illnesses & Notes'}
+                                />
+                            </div>}
 
                             </div>
 
-                            {/* ─── Action Bar ───────────────────────────────────────────────── */}
+                            {/* ─── Action Bar ──────────────────────────────────────────────── */}
                             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
-                                <Link
-                                    href="/crime-officer"
-                                    className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    Cancel
-                                </Link>
+                                <div />
                                 <div className="flex items-center gap-2">
-                                    <button
+                                    <Button
+                                        variant="secondary"
                                         type="button"
-                                        className="px-5 py-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors"
+                                        onClick={() => router.push('/crime-officer')}
+                                        className="min-h-[42px] px-4 py-2.5 text-sm font-medium"
+                                        disabled={loading}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    {/* <Button 
+                                        variant="amber" 
+                                        type="button" 
                                         onClick={() => alert('Draft saved!')}
+                                        disabled={loading}
                                     >
                                         Save as Draft
-                                    </button>
-                                    <button
+                                    </Button> */}
+                                    <Button 
+                                        variant="primary" 
                                         type="submit"
-                                        className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors"
+                                        disabled={loading}
                                     >
-                                        Save Officer
-                                    </button>
+                                        {loading ? 'Saving...' : 'Save Officer'}
+                                    </Button>
                                 </div>
+                                <div />
                             </div>
 
                         </form>
-                    </div>
-                    <Footer />
-                </main>
-            </div>
-        </div>
+        </PageLayout>
     );
 }

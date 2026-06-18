@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import Button from '@/components/buttons/Button';
+import Badge from '@/components/ui/Badge';
 import type { CrimeVisit } from '@/types/crimeVisit';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { Clock, CheckCircle, Trash2, ExternalLink } from 'lucide-react';
@@ -11,6 +12,7 @@ interface CrimeVisitListProps {
     visits: CrimeVisit[];
     onDelete?: (id: string) => void;
     showStatusBadge?: boolean;
+    draftDetailBasePath?: '/crime-visit-registry/drafts' | '/crime-visit-registry/crime-visits';
     sortKey?: keyof CrimeVisit | string | null;
     sortAsc?: boolean;
     onSort?: (key: keyof CrimeVisit | string) => void;
@@ -20,17 +22,15 @@ interface CrimeVisitListProps {
 function statusBadge(status: CrimeVisit['status']) {
     if (status === 'DRAFT') {
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                <Clock className="w-3 h-3" />
+            <Badge variant="draft" icon={<Clock className="w-3 h-3" />}>
                 Draft
-            </span>
+            </Badge>
         );
     }
     return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-            <CheckCircle className="w-3 h-3" />
+        <Badge variant="submitted" icon={<CheckCircle className="w-3 h-3" />}>
             Submitted
-        </span>
+        </Badge>
     );
 }
 
@@ -46,6 +46,7 @@ export default function CrimeVisitList({
     visits,
     onDelete,
     showStatusBadge = true,
+    draftDetailBasePath = '/crime-visit-registry/drafts',
     sortKey = null,
     sortAsc = true,
     onSort,
@@ -110,7 +111,7 @@ export default function CrimeVisitList({
             render: (_, row) => {
                 const isDraft = row.status === 'DRAFT';
                 const detailHref = isDraft
-                    ? `/crime-visit-registry/drafts?id=${row.id}`
+                    ? `${draftDetailBasePath}?id=${row.id}`
                     : `/crime-visit-registry/crime-visits?id=${row.id}`;
                 return (
                     <div className="flex items-center justify-end gap-2">

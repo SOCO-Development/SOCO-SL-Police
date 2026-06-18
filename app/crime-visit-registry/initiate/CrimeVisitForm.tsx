@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type {
   SectionA,
   SectionB,
@@ -16,6 +16,8 @@ import CustomSelect from "@/components/forms/CustomSelect";
 import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
+import { IconButton } from "@/components/ui";
+import { getLocationRegistry } from "@/lib/api/locationService";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -33,6 +35,7 @@ const emptyExpert = (): Expert => ({
   outTime: "",
 });
 
+/* Initiate Visit: support officers UI removed — uncomment block + SupportOfficersEditor + state + JSX below to restore.
 type SupportOfficerMap = NonNullable<
   NonNullable<SectionB["socoOfficers"]>["support"]
 >;
@@ -50,20 +53,18 @@ const SUPPORT_ROLE_OPTIONS: { value: SupportRole; label: string }[] = [
   { value: "evidenceCollector", label: "Evidence Collector" },
   { value: "otherOfficer", label: "Other" },
 ];
+*/
 
-const REQUEST_STATION_OPTIONS = [
-  {
-    value: "Colombo Fort Police Station",
-    label: "Colombo Fort Police Station",
-  },
-  { value: "Borella Police Station", label: "Borella Police Station" },
-  { value: "Kandy Police Station", label: "Kandy Police Station" },
-  { value: "Galle Police Station", label: "Galle Police Station" },
-  { value: "Kurunegala Police Station", label: "Kurunegala Police Station" },
-  { value: "Jaffna Police Station", label: "Jaffna Police Station" },
+const FALLBACK_STATIONS = [
+  { value: "Colombo Fort Police Station", label: "Colombo Fort Police Station", division: "Colombo Division" },
+  { value: "Borella Police Station", label: "Borella Police Station", division: "Colombo Division" },
+  { value: "Kandy Police Station", label: "Kandy Police Station", division: "Kandy Division" },
+  { value: "Galle Police Station", label: "Galle Police Station", division: "Galle Division" },
+  { value: "Kurunegala Police Station", label: "Kurunegala Police Station", division: "Kurunegala Division" },
+  { value: "Jaffna Police Station", label: "Jaffna Police Station", division: "Jaffna Division" },
 ];
 
-const REQUEST_DIVISION_OPTIONS = [
+const FALLBACK_DIVISIONS = [
   { value: "Colombo Division", label: "Colombo Division" },
   { value: "Kandy Division", label: "Kandy Division" },
   { value: "Gampaha Division", label: "Gampaha Division" },
@@ -109,8 +110,9 @@ const OFFENCE_TYPES = [
   { value: "GCR", label: "GCR" },
   { value: "Other", label: "Other" },
 ];
+const OFFENCE_TYPE_PRESETS = OFFENCE_TYPES.map((item) => item.value);
 
-let supportOfficerRowSeed = 1;
+/* let supportOfficerRowSeed = 1;
 
 const newSupportOfficerRow = (
   role: SupportRole = "photographer",
@@ -163,6 +165,7 @@ const rowsToSupport = (rows: SupportOfficerRow[]): SupportOfficerMap => {
   });
   return support;
 };
+*/
 
 function defaultFormData(): CrimeVisitFormData {
   return {
@@ -171,6 +174,7 @@ function defaultFormData(): CrimeVisitFormData {
       requestDivision: "",
       offence: "",
       offenceType: "",
+      offenceTypeOther: "",
       requestReason: "",
       reportedToSocoLab: { date: "", time: "" },
       out: emptyDatetime(),
@@ -333,25 +337,22 @@ function DateTimeRow({
           />
         )}
       </FieldGroup>
-      {/* Page and Para Fields */}
-      <div className="grid grid-cols-2 gap-2">
-        <FieldGroup label="Page">
-          <TextInput
-            isReadOnly={isReadOnly}
-            value={value.page ?? ""}
-            onChange={(e) => onChange({ ...value, page: e.target.value })}
-            placeholder="No."
-          />
-        </FieldGroup>
-        <FieldGroup label="Para">
-          <TextInput
-            isReadOnly={isReadOnly}
-            value={value.para ?? ""}
-            onChange={(e) => onChange({ ...value, para: e.target.value })}
-            placeholder="Para"
-          />
-        </FieldGroup>
-      </div>
+      <FieldGroup label="Page">
+        <TextInput
+          isReadOnly={isReadOnly}
+          value={value.page ?? ""}
+          onChange={(e) => onChange({ ...value, page: e.target.value })}
+          placeholder="No."
+        />
+      </FieldGroup>
+      <FieldGroup label="Para">
+        <TextInput
+          isReadOnly={isReadOnly}
+          value={value.para ?? ""}
+          onChange={(e) => onChange({ ...value, para: e.target.value })}
+          placeholder="Para"
+        />
+      </FieldGroup>
     </>
   );
 
@@ -359,10 +360,13 @@ function DateTimeRow({
     return (
       <div className={label ? "space-y-2" : ""}>
         {label && (
-          <div className="text-sm font-medium text-gray-700">{label}</div>
+          <div className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+            {label}
+          </div>
         )}
-        {/* Adjusted to 3 columns: Date, Time, and (Page/Para) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{fields}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {fields}
+        </div>
       </div>
     );
   }
@@ -377,16 +381,20 @@ function DateTimeRow({
   );
 }
 
-// ─── Experts table ────────────────────────────────────────────────────────────
+// ─── Support officers editor (commented out — Initiate Visit) ─────────────────
 
-interface SupportOfficersEditorProps {
+/* interface SupportOfficersEditorProps {
   rows: SupportOfficerRow[];
   isReadOnly?: boolean;
+  otherRoleLabel: string;
+  onOtherRoleLabelChange: (value: string) => void;
   onChange: (rows: SupportOfficerRow[]) => void;
 }
 function SupportOfficersEditor({
   rows,
   isReadOnly = false,
+  otherRoleLabel,
+  onOtherRoleLabelChange,
   onChange,
 }: SupportOfficersEditorProps) {
   const updateRow = (id: number, patch: Partial<SupportOfficerRow>) =>
@@ -409,46 +417,71 @@ function SupportOfficersEditor({
         {rows.map((row) => (
           <div
             key={row.id}
-            className="grid grid-cols-[1.2fr,2fr,1fr,40px] gap-3 items-end"
+            className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-3"
           >
-            <FieldGroup label="Role">
+            <FieldGroup label="Team Role">
               {isReadOnly ? (
                 <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
-                  {SUPPORT_ROLE_OPTIONS.find((o) => o.value === row.role)
-                    ?.label ??
+                  {SUPPORT_ROLE_OPTIONS.find((o) => o.value === row.role)?.label ??
                     (row.role || "—")}
                 </div>
               ) : (
-                <CustomSelect
-                  value={row.role}
-                  onChange={(v) =>
-                    updateRow(row.id, { role: v as SupportRole })
-                  }
-                  options={SUPPORT_ROLE_OPTIONS.filter(
-                    (opt) =>
-                      opt.value === row.role ||
-                      !rows.some(
-                        (r) => r.id !== row.id && r.role === opt.value,
-                      ),
-                  )}
-                  placeholder="Select role"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
+                  <div className="min-w-0">
+                    <div className="grid w-full grid-cols-4 gap-x-2 sm:gap-x-3 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                      {SUPPORT_ROLE_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="flex min-w-0 w-full items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name={`support-role-${row.id}`}
+                            checked={row.role === opt.value}
+                            onChange={() => {
+                              const nextRole = opt.value as SupportRole;
+                              updateRow(row.id, { role: nextRole });
+                              if (nextRole !== "otherOfficer") {
+                                onOtherRoleLabelChange("");
+                              }
+                            }}
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          />
+                          {opt.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="min-w-0 w-full">
+                    {row.role === "otherOfficer" ? (
+                      <TextInput
+                        isReadOnly={isReadOnly}
+                        value={otherRoleLabel}
+                        onChange={(e) => onOtherRoleLabelChange(e.target.value)}
+                        placeholder="Specify team role"
+                      />
+                    ) : (
+                      <div className="min-h-10" />
+                    )}
+                  </div>
+                </div>
               )}
             </FieldGroup>
-            <FieldGroup label="Name">
-              <TextInput
-                isReadOnly={isReadOnly}
-                value={row.officer.name ?? ""}
-                onChange={(e) =>
-                  updateRow(row.id, {
-                    officer: { ...row.officer, name: e.target.value },
-                  })
-                }
-                placeholder="Full name"
-              />
-            </FieldGroup>
-            <div className="grid grid-cols-2 gap-2">
-              <FieldGroup label="Reg. Number">
+
+            <div className="flex items-end gap-3">
+              <FieldGroup label="Name" className="mb-0 flex-1">
+                <TextInput
+                  isReadOnly={isReadOnly}
+                  value={row.officer.name ?? ""}
+                  onChange={(e) =>
+                    updateRow(row.id, {
+                      officer: { ...row.officer, name: e.target.value },
+                    })
+                  }
+                  placeholder="Full name"
+                />
+              </FieldGroup>
+              <FieldGroup label="Reg. No" className="mb-0 flex-1">
                 <TextInput
                   isReadOnly={isReadOnly}
                   value={row.officer.regNo ?? ""}
@@ -457,10 +490,10 @@ function SupportOfficersEditor({
                       officer: { ...row.officer, regNo: e.target.value },
                     })
                   }
-                  placeholder="Reg. No."
+                  placeholder="Reg. No"
                 />
               </FieldGroup>
-              <FieldGroup label="Rank">
+              <FieldGroup label="Rank" className="mb-0 flex-1">
                 <TextInput
                   isReadOnly={isReadOnly}
                   value={row.officer.rank ?? ""}
@@ -472,19 +505,21 @@ function SupportOfficersEditor({
                   placeholder="Rank"
                 />
               </FieldGroup>
+              {!isReadOnly ? (
+                <div className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.id)}
+                    className="h-10 self-end whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors text-xs font-semibold"
+                    aria-label="Remove officer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div />
+              )}
             </div>
-            {!isReadOnly ? (
-              <button
-                type="button"
-                onClick={() => removeRow(row.id)}
-                className="h-10 text-red-400 hover:text-red-600 text-lg leading-none transition-colors"
-                aria-label="Remove officer"
-              >
-                ×
-              </button>
-            ) : (
-              <div />
-            )}
           </div>
         ))}
       </div>
@@ -500,7 +535,7 @@ function SupportOfficersEditor({
       )}
     </div>
   );
-}
+} */
 
 // ─── Form Props ───────────────────────────────────────────────────────────────
 
@@ -528,11 +563,57 @@ export default function CrimeVisitForm({
   const [formData, setFormData] = useState<CrimeVisitFormData>(
     initialData ?? defaultFormData(),
   );
+  const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
+  const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
+
+  useEffect(() => {
+    getLocationRegistry().then(({ locations }) => {
+      if (!locations || locations.length === 0) return;
+      const uniqueDivisionsMap = new Map<string, string>();
+      locations.forEach(loc => {
+        if (loc.division) {
+          uniqueDivisionsMap.set(loc.division, loc.division);
+        }
+      });
+      const divisionOpts = Array.from(uniqueDivisionsMap.keys()).map(name => ({
+        value: name,
+        label: name,
+      })).sort((a, b) => a.label.localeCompare(b.label));
+
+      const stationOpts = locations.map(loc => ({
+        value: loc.name,
+        label: loc.name,
+        division: loc.division,
+      })).sort((a, b) => a.label.localeCompare(b.label));
+
+      setDivisions(divisionOpts);
+      setStations(stationOpts);
+    }).catch(err => {
+      console.error("Failed to load locations for form dropdowns", err);
+    });
+  }, []);
+
+  const filteredStationOptions = useMemo(() => {
+    const selectedDiv = formData.sectionA?.requestDivision;
+    if (!selectedDiv) return stations;
+    return stations.filter(s => s.division === selectedDiv);
+  }, [stations, formData.sectionA?.requestDivision]);
+
+  const [offenceTypeOther, setOffenceTypeOther] = useState<string>(() => {
+    const defaults = initialData ?? defaultFormData();
+    const value = defaults.sectionA?.offenceType ?? "";
+    return defaults.sectionA?.offenceTypeOther ?? (OFFENCE_TYPE_PRESETS.includes(value) ? "" : value);
+  });
+  /* Initiate Visit: support officers — uncomment with SupportOfficersEditor + types/helpers above
+  const [supportOtherRole, setSupportOtherRole] = useState<string>(
+    () => (initialData ?? defaultFormData()).sectionB?.socoOfficers?.supportOtherRole ?? "",
+  );
   const [supportRows, setSupportRows] = useState<SupportOfficerRow[]>(() =>
     supportToRows(
       (initialData ?? defaultFormData()).sectionB?.socoOfficers?.support,
     ),
   );
+  */
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const updateA = useCallback(
@@ -553,7 +634,7 @@ export default function CrimeVisitForm({
     [],
   );
 
-  const updateSupportRows = useCallback((rows: SupportOfficerRow[]) => {
+  /* const updateSupportRows = useCallback((rows: SupportOfficerRow[]) => {
     setSupportRows(rows);
     setFormData((f) => ({
       ...f,
@@ -565,7 +646,7 @@ export default function CrimeVisitForm({
         },
       },
     }));
-  }, []);
+  }, []); */
 
   const updateC = useCallback(
     (patch: Partial<SectionC>) =>
@@ -597,12 +678,12 @@ export default function CrimeVisitForm({
             Initiate Visit
           </h3>
 
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
               Request Details
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FieldGroup label="Division">
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
@@ -612,12 +693,20 @@ export default function CrimeVisitForm({
                   <CustomSelect
                     value={sA.requestDivision ?? ""}
                     onChange={(val) =>
-                      setFormData((f) => ({
-                        ...f,
-                        sectionA: { ...f.sectionA, requestDivision: val },
-                      }))
+                      setFormData((f) => {
+                        const currentStation = f.sectionA?.requestFromStation;
+                        const matches = stations.find(s => s.value === currentStation && s.division === val);
+                        return {
+                          ...f,
+                          sectionA: {
+                            ...f.sectionA,
+                            requestDivision: val,
+                            requestFromStation: matches ? currentStation : "",
+                          },
+                        };
+                      })
                     }
-                    options={REQUEST_DIVISION_OPTIONS}
+                    options={divisions}
                     placeholder="Select division"
                   />
                 )}
@@ -632,12 +721,22 @@ export default function CrimeVisitForm({
                   <CustomSelect
                     value={sA.requestFromStation ?? ""}
                     onChange={(val) =>
-                      setFormData((f) => ({
-                        ...f,
-                        sectionA: { ...f.sectionA, requestFromStation: val },
-                      }))
+                      setFormData((f) => {
+                        const matchingStation = stations.find(s => s.value === val);
+                        const newDivision = matchingStation && matchingStation.division
+                          ? matchingStation.division
+                          : f.sectionA?.requestDivision;
+                        return {
+                          ...f,
+                          sectionA: {
+                            ...f.sectionA,
+                            requestFromStation: val,
+                            requestDivision: newDivision,
+                          },
+                        };
+                      })
                     }
-                    options={REQUEST_STATION_OPTIONS}
+                    options={filteredStationOptions}
                     placeholder="Select police station"
                   />
                 )}
@@ -663,6 +762,7 @@ export default function CrimeVisitForm({
                   </div>
                 ) : (
                   <MultiSelect
+                    className="[&>div>button]:min-h-10 [&>div>button]:px-3 [&>div>button]:py-2"
                     value={
                       Array.isArray(sA.offence)
                         ? sA.offence
@@ -684,7 +784,7 @@ export default function CrimeVisitForm({
 
               {Array.isArray(sA.offence) && sA.offence.length > 0 && (
                 <div className="md:col-span-2 lg:col-span-3 mt-1 animate-in fade-in slide-in-from-top-1">
-                  <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/50">
+                  <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/65">
                     <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-2 px-1">
                       Selected Offences
                     </p>
@@ -699,21 +799,7 @@ export default function CrimeVisitForm({
                             {off}
                           </span>
                           {!locked && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = (sA.offence as string[]).filter(
-                                  (_, i) => i !== idx,
-                                );
-                                setFormData((f) => ({
-                                  ...f,
-                                  sectionA: { ...f.sectionA, offence: updated },
-                                }));
-                              }}
-                              className="ml-1 text-violet-400 hover:text-red-500 transition-colors"
-                            >
-                              ×
-                            </button>
+                            <IconButton variant="danger" className="ml-1" aria-label="Remove offence" onClick={() => { const updated = (sA.offence as string[]).filter((_, i) => i !== idx); setFormData((f) => ({ ...f, sectionA: { ...f.sectionA, offence: updated } })); }}>×</IconButton>
                           )}
                         </div>
                       ))}
@@ -724,23 +810,68 @@ export default function CrimeVisitForm({
 
               <FieldGroup label="Offence Type">
                 {locked ? (
-                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500 font-medium">
-                    {sA.offenceType || "—"}
+                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
+                    {sA.offenceType === "Other"
+                      ? sA.offenceTypeOther || offenceTypeOther || "Other"
+                      : sA.offenceType || "—"}
                   </div>
                 ) : (
-                  <CustomSelect
-                    value={sA.offenceType ?? ""}
-                    onChange={(val) =>
-                      setFormData((f) => ({
-                        ...f,
-                        sectionA: { ...f.sectionA, offenceType: val },
-                      }))
-                    }
-                    options={OFFENCE_TYPES}
-                    placeholder="D / GCR"
-                  />
+                  <div className="grid grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                    {OFFENCE_TYPES.map((option) => (
+                      <label
+                        key={option.value}
+                        className="inline-flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="radio"
+                          name="offenceType"
+                          checked={(sA.offenceType ?? "") === option.value}
+                          onChange={() =>
+                            setFormData((f) => ({
+                              ...f,
+                              sectionA: {
+                                ...f.sectionA,
+                                offenceType: option.value,
+                                offenceTypeOther:
+                                  option.value === "Other"
+                                    ? f.sectionA.offenceTypeOther
+                                    : "",
+                              },
+                            }))
+                          }
+                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
                 )}
               </FieldGroup>
+
+              {(sA.offenceType ?? "") === "Other" && (
+                <FieldGroup
+                  label="Other Offence Type"
+                  className="md:col-start-2 lg:col-start-2"
+                >
+                  <TextInput
+                    isReadOnly={locked}
+                    value={sA.offenceTypeOther ?? offenceTypeOther}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setOffenceTypeOther(next);
+                      setFormData((f) => ({
+                        ...f,
+                        sectionA: {
+                          ...f.sectionA,
+                          offenceType: "Other",
+                          offenceTypeOther: next,
+                        },
+                      }));
+                    }}
+                    placeholder="Specify offence type"
+                  />
+                </FieldGroup>
+              )}
 
               {/* <FieldGroup
                 label="Reason"
@@ -771,79 +902,101 @@ export default function CrimeVisitForm({
           </div>
 
           {/* OUT & IN Section */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-4">
+          <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65 space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
-              OUT & IN Details
+              OUT Details
             </h4>
 
-            <div className="grid grid-cols-1 gap-6">
-              <DateTimeRow
-                label="OUT"
-                value={sA.out ?? emptyDatetime()}
-                isReadOnly={locked}
-                onChange={(v) => updateA("out", v)}
-                layout="stack"
-              />
-
-              <div className="border-t border-dashed border-gray-300 relative my-2">
-                <span className="absolute left-4 -top-3 bg-gray-50 px-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                  Return Details
-                </span>
-              </div>
-
-              <DateTimeRow
-                label="IN"
-                value={sA.in ?? emptyDatetime()}
-                isReadOnly={ro}
-                onChange={(v) => updateA("in", v)}
-                layout="stack"
-              />
-            </div>
+            <DateTimeRow
+              label="OUT"
+              value={sA.out ?? emptyDatetime()}
+              isReadOnly={locked}
+              onChange={(v) => updateA("out", v)}
+              layout="stack"
+            />
           </div>
 
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-4">
+          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/80 space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
               Vehicle & Driver Details
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-              {/* Vehicle Number - Spans 1 column */}
-              <div className="md:col-span-1">
-                <FieldGroup label="Vehicle Number">
-                  <TextInput
-                    isReadOnly={ro}
-                    value={sC.vehicleNo ?? ""}
-                    onChange={(e) => updateC({ vehicleNo: e.target.value })}
-                    placeholder="e.g. CAB-1234"
-                  />
-                </FieldGroup>
-              </div>
-
-              {/* Driver Details - Spans 2 columns */}
-              <div className="md:col-span-2">
-                <OfficerRow
-                  label="Driver"
-                  value={sC.driver ?? emptyOfficer()}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+              <FieldGroup label="Vehicle Number">
+                <TextInput
                   isReadOnly={ro}
-                  onChange={(v) => updateC({ driver: v })}
-                  compact
+                  value={sC.vehicleNo ?? ""}
+                  onChange={(e) => updateC({ vehicleNo: e.target.value })}
+                  placeholder="e.g. CAB-1234"
                 />
-              </div>
+              </FieldGroup>
+              <FieldGroup label="Driver Name">
+                <TextInput
+                  isReadOnly={ro}
+                  value={sC.driver?.name ?? ""}
+                  onChange={(e) =>
+                    updateC({
+                      driver: { ...(sC.driver ?? emptyOfficer()), name: e.target.value },
+                    })
+                  }
+                  placeholder="Full name"
+                />
+              </FieldGroup>
+              <FieldGroup label="Driver Reg. Number">
+                <TextInput
+                  isReadOnly={ro}
+                  value={sC.driver?.regNo ?? ""}
+                  onChange={(e) =>
+                    updateC({
+                      driver: { ...(sC.driver ?? emptyOfficer()), regNo: e.target.value },
+                    })
+                  }
+                  placeholder="Reg. No."
+                />
+              </FieldGroup>
+              <FieldGroup label="Driver Rank">
+                <TextInput
+                  isReadOnly={ro}
+                  value={sC.driver?.rank ?? ""}
+                  onChange={(e) =>
+                    updateC({
+                      driver: { ...(sC.driver ?? emptyOfficer()), rank: e.target.value },
+                    })
+                  }
+                  placeholder="Rank"
+                />
+              </FieldGroup>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80">
+          {/* Initiate Visit: Support Officers section — uncomment with state + SupportOfficersEditor above
+          <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+              <span className="w-1.5 h-4 rounded-full bg-pink-500 inline-block flex-shrink-0" />
               Support Officers
             </h4>
             <SupportOfficersEditor
               rows={supportRows}
               isReadOnly={locked}
+              otherRoleLabel={supportOtherRole}
+              onOtherRoleLabelChange={(next) => {
+                setSupportOtherRole(next);
+                setFormData((f) => ({
+                  ...f,
+                  sectionB: {
+                    ...f.sectionB,
+                    socoOfficers: {
+                      ...f.sectionB?.socoOfficers,
+                      supportOtherRole: next,
+                    },
+                  },
+                }));
+              }}
               onChange={updateSupportRows}
             />
           </div>
+          */}
         </div>
       </div>
 
@@ -854,17 +1007,17 @@ export default function CrimeVisitForm({
         {/* Centre actions */}
         {!readOnlyAll ? (
           <div className="flex items-center gap-2">
-            <Button variant="ghost" type="button" onClick={onCancel}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={onCancel}
+              className="min-h-[42px] px-4 py-2.5 text-sm font-medium"
+            >
               Cancel
             </Button>
-            {!appendMode && (
-              <Button variant="success" type="button" onClick={handleSaveDraft}>
-                Save as Draft
-              </Button>
-            )}
-            {onSubmit && appendMode && (
+            {onSubmit && (
               <Button variant="success" type="button" onClick={() => onSubmit(formData)}>
-                Submit
+                Submit Visit
               </Button>
             )}
           </div>

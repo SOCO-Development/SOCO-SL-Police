@@ -1,15 +1,12 @@
 'use client';
 
 import { FormEvent, useMemo, useState } from 'react';
-import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import FormInput from '@/components/forms/FormInput';
 import CustomSelect from '@/components/forms/CustomSelect';
 import VehicleList from './VehicleList';
 import type { VehicleRecord } from './types';
-import Button from '@/components/buttons/Button';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { PageHeader, PageLayout, Button, TabBar } from '@/components/ui';
+import { Plus } from 'lucide-react';
 
 type FilterTab = 'ALL' | 'ADD';
 
@@ -166,55 +163,28 @@ export default function VehicleConfigPage() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
-            <Header />
-            <div className="flex flex-1 relative z-10 w-full pt-14">
-                <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-                    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
-                        <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-                            <div className="flex items-center gap-3">
-                                <Link
-                                    href="/system-config"
-                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                    aria-label="Back"
-                                >
-                                    <ArrowLeft className="w-5 h-5" />
-                                </Link>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">Vehicle Configuration</h2>
-                                    <p className="text-sm text-gray-500 mt-0.5">Manage SOCO vehicles — add and view vehicle assignments.</p>
-                                </div>
-                            </div>
-                            <Button variant="primary" onClick={() => setFilter('ADD')}>
-                                <Plus className="w-4 h-4" /> Add New Vehicle
-                            </Button>
-                        </div>
+        <PageLayout>
+            <PageHeader
+                backHref="/system-config"
+                title="Vehicle Configuration"
+                description="Manage SOCO vehicles — add and view vehicle assignments."
+                actions={
+                    <Button variant="primary" onClick={() => setFilter('ADD')}>
+                        <Plus className="w-4 h-4" /> Add New Vehicle
+                    </Button>
+                }
+            />
 
-                        <div className="flex gap-2 mb-6 border-b border-gray-200">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.value}
-                                    type="button"
-                                    onClick={() => setFilter(tab.value)}
-                                    className={`px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-                                        filter === tab.value
-                                            ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {tab.label}
-                                    {tab.value === 'ALL' && (
-                                        <span
-                                            className={`ml-2 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                                                filter === tab.value ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                                            }`}
-                                        >
-                                            {vehicles.length}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
+                        <TabBar
+                            className="mb-6 border-b border-gray-200 pb-0"
+                            tabs={tabs.map((tab) => ({
+                              label: tab.label,
+                              value: tab.value,
+                              count: tab.value === 'ALL' ? vehicles.length : undefined,
+                            }))}
+                            value={filter}
+                            onChange={setFilter}
+                        />
 
                         {filter === 'ADD' && (
                             <div className="bg-white rounded-xl border border-gray-200 flex flex-col mb-6">
@@ -328,10 +298,6 @@ export default function VehicleConfigPage() {
                                 />
                             </>
                         )}
-                    </div>
-                    <Footer />
-                </main>
-            </div>
-        </div>
+        </PageLayout>
     );
 }

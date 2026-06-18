@@ -2,13 +2,13 @@
 
 import { cloneElement, isValidElement, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'amber';
+type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'amber' | 'teal-outline';
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'min-h-[42px] px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 rounded-lg transition-colors shadow-sm',
   secondary:
-    'min-h-[42px] px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 active:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
+    'min-h-[42px] px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-amber-50 hover:text-amber-800 hover:border-amber-200 active:bg-amber-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
   success:
     'min-h-[42px] px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:opacity-60 rounded-lg transition-colors shadow-sm',
   danger:
@@ -17,6 +17,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     'min-h-[42px] px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100 rounded-lg transition-colors',
   amber:
     'min-h-[42px] px-5 py-2.5 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 hover:border-amber-300 active:bg-amber-200 transition-colors',
+  'teal-outline':
+    'text-sm font-semibold text-teal-700 hover:text-teal-900 border border-teal-300 bg-teal-50 hover:bg-teal-100 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40 disabled:pointer-events-none',
 };
 
 const baseClasses =

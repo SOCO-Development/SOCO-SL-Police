@@ -4,7 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { publicAssetSrc } from '@/lib/publicAsset';
+import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { usePathname, useRouter } from 'next/navigation';
+import { authService } from '@/lib/api';
+import { getUsername } from '@/lib/api/authStorage';
+import { getErrorMessage, showErrorAlert } from '@/lib/alerts';
 import {
   Home,
   FileText,
@@ -21,7 +25,7 @@ import {
   Settings,
 } from 'lucide-react';
 
-interface HeaderProps {
+export interface HeaderProps {
   userName?: string;
   homeTheme?: 'dark' | 'light';
   onToggleHomeTheme?: () => void;
@@ -35,9 +39,11 @@ const NAV_LINKS = [
   { href: '/system-config', label: 'Configuration', icon: Settings, isActive: (p: string) => p === '/system-config' || p.startsWith('/system-config/') },
 ] as const;
 
-export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeTheme }: HeaderProps) {
+export default function Header({ userName: userNameProp, homeTheme, onToggleHomeTheme }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [storedUserName, setStoredUserName] = useState(userNameProp ?? 'User');
+  const userName = userNameProp ?? storedUserName;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -47,6 +53,9 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isHome = pathname === '/home';
   const isDark = isHome && homeTheme !== 'light';
+
+  useDropdownBodyScrollLock(userMenuOpen);
+  useDropdownBodyScrollLock(mobileMenuOpen);
 
   const updateDropdownPos = useCallback(() => {
     if (!triggerRef.current) return;
@@ -83,18 +92,24 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  function handleLogoutConfirm() {
+  useEffect(() => {
+    const username = getUsername();
+    if (username) setStoredUserName(username);
+  }, []);
+
+  async function handleLogoutConfirm() {
     setIsLoggingOut(true);
-    // Brief "Logging out..." state then redirect for smooth transition
-    setTimeout(() => {
+    const username = getUsername() ?? '';
+    try {
+      if (username) await authService.logout(username);
+    } catch (err) {
+      showErrorAlert('Logout Failed', getErrorMessage(err, 'Could not reach the server.'));
+    } finally {
       setShowLogoutConfirm(false);
       setUserMenuOpen(false);
       setIsLoggingOut(false);
-      localStorage.removeItem('isAuthenticated');
-      localStorage.removeItem('username');
-      localStorage.removeItem('authTimestamp');
       router.replace('/login');
-    }, 500);
+    }
   }
 
   function toggleMenu() {
@@ -106,6 +121,7 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
     ? createPortal(
         <div
           ref={dropdownRef}
+          data-scroll-lock-exempt
           className={`${isDark ? 'dropdown-blur-dark' : 'dropdown-blur'} fixed w-52 rounded-xl border py-1.5 z-[99999] animate-fade-in ${
             isDark ? 'border-gray-600/50' : 'border-white/50'
           }`}
@@ -168,7 +184,8 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
 
   return (
     <>
-      <header className={`h-14 flex-shrink-0 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
+      <header
+        className={`h-14 flex-shrink-0 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${
         isDark
           ? 'bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/50'
           : 'bg-white/70 backdrop-blur-2xl backdrop-saturate-150 shadow-sm border-b border-gray-200/50'
@@ -187,7 +204,7 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
                 fetchPriority="high"
               />
               <div className="hidden sm:block min-w-0">
-                <span className={`text-base font-semibold truncate block transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>SOCO CMS</span>
+                <span className={`text-base font-semibold truncate block transition-colors duration-300 ${isDark ? 'text-white' : 'text-gray-900'}`}>SOCO - SL Police</span>
                 <span className={`text-[10px] truncate block transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>SL Police</span>
               </div>
             </Link>
@@ -279,7 +296,10 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
 
         {/* Mobile nav overlay */}
         {mobileMenuOpen && (
-          <div className={`md:hidden absolute top-14 left-0 right-0 border-b shadow-lg animate-fade-in z-40 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div
+            data-scroll-lock-exempt
+            className={`md:hidden absolute top-14 left-0 right-0 border-b shadow-lg animate-fade-in z-40 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}
+          >
             <nav className="p-4 space-y-1">
               {NAV_LINKS.map(({ href, label, icon: Icon, isActive }) => {
                 const active = isActive(pathname);
@@ -330,7 +350,7 @@ export default function Header({ userName = 'Sandun', homeTheme, onToggleHomeThe
                     <LogOut className="w-7 h-7 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-800">Sign out of SOCO CMS?</h3>
+                    <h3 className="text-base font-bold text-gray-800">Sign out of SOCO - SL Police?</h3>
                     <p className="text-sm text-gray-500 mt-1">
                       You will be returned to the login screen.
                     </p>

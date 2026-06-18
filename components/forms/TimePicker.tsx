@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
+import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { FaClock } from 'react-icons/fa';
 
 interface TimePickerProps {
@@ -28,6 +29,8 @@ export default function TimePicker({
   const [popupStyle, setPopupStyle] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const timePickerRef = useRef<HTMLDivElement>(null);
   const portalId = useId().replace(/:/g, '');
+
+  useDropdownBodyScrollLock(isOpen);
 
   useEffect(() => {
     if (value !== undefined) {
@@ -175,7 +178,12 @@ export default function TimePicker({
         </button>
 
         {isOpen && popupStyle && typeof document !== 'undefined' && createPortal(
-          <div id={`time-picker-portal-${portalId}`} style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }} className="dropdown-blur mt-1 w-[150px] border border-white/50 rounded-lg">
+          <div
+            data-scroll-lock-exempt
+            id={`time-picker-portal-${portalId}`}
+            style={{ position: 'fixed', ...(popupStyle.top != null ? { top: popupStyle.top } : { bottom: popupStyle.bottom }), left: popupStyle.left, zIndex: 99999 }}
+            className="dropdown-blur mt-1 w-[150px] border border-white/50 rounded-lg"
+          >
                 <div className="flex flex-row divide-x divide-gray-200">
                   {/* Hours */}
                   <div className="time-picker-scroll p-1 max-h-56 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>

@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { publicAssetSrc } from "@/lib/publicAsset";
 import FormInput from "@/components/forms/FormInput";
+import { Button } from "@/components/ui";
 import { Lock, Shield, User, CheckCircle } from "lucide-react";
+import { authService } from "@/lib/api";
+import { clearAuthSession, isAuthenticated as hasValidSession } from "@/lib/api/authStorage";
+import { getErrorMessage, showErrorAlert } from "@/lib/alerts";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,61 +21,24 @@ export default function LoginPage() {
   // Clear expired sessions on mount, but don't auto-redirect
   // Let user explicitly log in or navigate to protected routes
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isAuthenticated = localStorage.getItem("isAuthenticated");
-      const username = localStorage.getItem("username");
-      const authTimestamp = localStorage.getItem("authTimestamp");
-
-      // Check if session is expired (24 hours)
-      const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-      const isSessionExpired = authTimestamp
-        ? Date.now() - parseInt(authTimestamp) > SESSION_DURATION
-        : true;
-
-      // Clear expired or invalid authentication data
-      if (
-        isSessionExpired ||
-        !isAuthenticated ||
-        !username ||
-        username.trim() === ""
-      ) {
-        localStorage.removeItem("isAuthenticated");
-        localStorage.removeItem("username");
-        localStorage.removeItem("authTimestamp");
-      }
-      // Note: We don't auto-redirect here - let the user explicitly log in
-      // If they're already authenticated, they can navigate to protected routes directly
+    if (typeof window !== "undefined" && !hasValidSession()) {
+      clearAuthSession();
     }
   }, []);
-
-  // Default credentials for development/testing
-  const DEFAULT_USERNAME = "admin";
-  const DEFAULT_PASSWORD = "admin123";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Simple authentication check (replace with API call in production)
-    if (username === DEFAULT_USERNAME && password === DEFAULT_PASSWORD) {
-      // Store authentication with timestamp (in production, use secure tokens)
-      if (typeof window !== "undefined") {
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("username", username);
-        localStorage.setItem("authTimestamp", Date.now().toString());
-      }
+    try {
+      await authService.login({ username: username.trim(), password });
       setLoginSuccess(true);
-      setIsLoading(false);
-      // Brief success state then smooth redirect to home
-      setTimeout(() => {
-        router.push("/crime-visit-registry");
-      }, 700);
-    } else {
-      setError("Invalid username or password. Please try again.");
+      router.replace("/crime-visit-registry");
+    } catch (err) {
+      const message = getErrorMessage(err, "Invalid username or password. Please try again.");
+      setError(message);
+      showErrorAlert("Login Failed", message);
       setIsLoading(false);
     }
   };
@@ -301,10 +268,10 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-[#0b2f64] to-[#0a4685] hover:from-[#0e3c7f] hover:to-[#0e57a3] text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-noto flex items-center justify-center gap-2"
+                    className="w-full !min-h-[48px] bg-gradient-to-r from-[#0b2f64] to-[#0a4685] hover:from-[#0e3c7f] hover:to-[#0e57a3] text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-noto"
                   >
                     {isLoading ? (
                       <>
@@ -336,32 +303,10 @@ export default function LoginPage() {
                         Sign In
                       </>
                     )}
-                  </button>
+                  </Button>
                 </form>
               )}
 
-              {/* Development Credentials - hide when success */}
-              {!loginSuccess && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl">
-                  <p className="text-xs text-gray-700 font-noto text-center">
-                    <strong className="text-blue-700">Development Mode:</strong>
-                  </p>
-                  <div className="mt-2 flex items-center justify-center gap-4 text-xs">
-                    <div className="flex items-center gap-1">
-                      <User className="w-3 h-3 text-blue-600" />
-                      <code className="bg-white px-2 py-1 rounded text-blue-700 font-mono">
-                        admin
-                      </code>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-purple-600" />
-                      <code className="bg-white px-2 py-1 rounded text-purple-700 font-mono">
-                        admin123
-                      </code>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

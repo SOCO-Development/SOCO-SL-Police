@@ -1,5 +1,3 @@
-// ─── Shared sub-types ─────────────────────────────────────────────────────────
-
 export interface OfficerInfo {
   rank?: string;
   regNo?: string;
@@ -7,26 +5,25 @@ export interface OfficerInfo {
 }
 
 export interface DateTimeEntry {
-  date?: string; // DD-MM-YYYY
-  time?: string; // HH:MM
+  date?: string;
+  time?: string;
   page?: string;
   para?: string;
 }
 
 export interface Expert {
-  annex?: string; // e.g. "Annex 20"
+  annex?: string;
   name?: string;
   inTime?: string;
   outTime?: string;
 }
-
-// ─── Sections ────────────────────────────────────────────────────────────────
 
 export interface SectionA {
   requestFromStation?: string;
   requestDivision?: string;
   offence: {};
   offenceType: string;
+  offenceTypeOther?: string;
   requestReason?: string;
   reportedToSocoLab?: DateTimeEntry;
   out?: DateTimeEntry;
@@ -38,6 +35,7 @@ export interface SectionA {
 export interface SectionB {
   socoOfficers?: {
     inCharge?: OfficerInfo;
+    supportOtherRole?: string;
     support?: {
       photographer?: OfficerInfo;
       sketcher?: OfficerInfo;
@@ -52,24 +50,16 @@ export interface SectionC {
   vehicleNo?: string;
   driver?: OfficerInfo;
   examinedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };
-  reExaminedBySocoOfficers?: {
-    date?: string;
-    timeIn?: string;
-    timeOut?: string;
-  };
+  reExaminedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };
   investigationOfficer?: OfficerInfo;
   reAssignedCaseOfficer?: OfficerInfo;
   sceneGuard?: OfficerInfo;
 }
 
-// ─── Draft additions (append-only layer) ─────────────────────────────────────
-
 export interface DraftAdditions {
   experts?: Expert[];
   in?: DateTimeEntry;
 }
-
-// ─── Locked snapshot (read-only layer for draft editing) ─────────────────────
 
 export interface LockedSnapshot {
   sectionA?: SectionA;
@@ -77,36 +67,23 @@ export interface LockedSnapshot {
   sectionC?: SectionC;
 }
 
-// ─── Root type ───────────────────────────────────────────────────────────────
-
-export type CrimeVisitStatus = "DRAFT" | "SUBMITTED";
+export type CrimeVisitStatus = 'DRAFT' | 'SUBMITTED';
 
 export interface CrimeVisit {
   id: string;
   referenceNo?: string;
   status: CrimeVisitStatus;
-  createdAt: string; // ISO
-  updatedAt: string; // ISO
-
+  createdAt: string;
+  updatedAt: string;
   sectionA: SectionA;
   sectionB: SectionB;
   sectionC: SectionC;
-
-  /** Snapshot of data at last save — rendered as read-only in draft editing */
   lockedSnapshot?: LockedSnapshot;
-
-  /** New rows appended while editing a draft before the next save */
   draftAdditions?: DraftAdditions;
 }
 
-// ─── Form-local type (mirrors CrimeVisit but all fields optional for partial saves) ─
-
 export type CrimeVisitFormData = Omit<
   CrimeVisit,
-  | "id"
-  | "status"
-  | "createdAt"
-  | "updatedAt"
-  | "lockedSnapshot"
-  | "draftAdditions"
+  'id' | 'status' | 'createdAt' | 'updatedAt' | 'lockedSnapshot' | 'draftAdditions'
 >;
+

@@ -1,10 +1,14 @@
 {
-  "name": "client",
+  "name": "soco-sl-police",
   "version": "0.1.0",
   "private": true,
+  "description": "Sri Lanka Police Scene of Crime Operations (SOCO) web application",
+  "author": "Sri Lanka Police",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "node scripts/dev-with-ip.mjs",
-    "build": "next build",
+    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && node scripts/dev-with-ip.mjs",
+    "build": "next build && node -e \"require('fs').copyFileSync('web.config','out/web.config')\"",
     "start": "next start",
     "lint": "eslint"
   },

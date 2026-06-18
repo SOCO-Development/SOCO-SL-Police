@@ -2,12 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import CustomSelect from '@/components/forms/CustomSelect';
+import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
+import { PageHeader, PageLayout, Button, SearchInput, ActionChipButton, PaginationControls } from '@/components/ui';
 import { ANNEX_01_SOCO_LABS, ANNEX_12_RANK } from '@/lib/annexData';
-import { MagnifyingGlass, Pencil, Trash, Eye, FunnelSimple, CaretUp, CaretDown } from 'phosphor-react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 
 const LAB_FILTER_OPTIONS = [{ value: '', label: 'All Labs' }, ...ANNEX_01_SOCO_LABS.map((l) => ({ value: l, label: l }))];
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
@@ -24,8 +24,7 @@ const MOCK_OFFICERS = [
     { id: 7, photo: null, name: 'D.R. Dissanayake', rank: 'IP', regNo: 'P78901', socoLab: 'Trincomalee', mobile: '071-7890123', presentRank: 'CI' },
 ];
 
-type SortKey = 'name' | 'rank' | 'dateJoined';
-type SortDir = 'asc' | 'desc';
+type SortKey = 'name' | 'rank' | 'regNo' | 'socoLab' | 'mobile' | 'presentRank';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100].map((n) => ({ value: String(n), label: `${n} per page` }));
 
@@ -34,19 +33,10 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100].map((n) => ({ value: String(n), l
 function OfficerAvatar({ name }: { name: string }) {
     const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
     return (
-        <div className="w-10 h-12 rounded border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs shadow-sm">
+        <div className="w-10 h-12 rounded border border-gray-200 bg-blue-50 flex items-center justify-center text-blue-700 font-bold text-xs shadow-sm">
             {initials}
         </div>
     );
-}
-
-// ─── Sort indicator ───────────────────────────────────────────────────────────
-
-function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
-    if (col !== sortKey) return <span className="ml-1 text-gray-300 inline-flex flex-col leading-none"><CaretUp size={8} /><CaretDown size={8} /></span>;
-    return sortDir === 'asc'
-        ? <CaretUp size={11} className="ml-1 text-blue-500 inline" />
-        : <CaretDown size={11} className="ml-1 text-blue-500 inline" />;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -58,15 +48,19 @@ export default function ViewOfficersPage() {
     const [filterLab, setFilterLab] = useState('');
     const [filterRank, setFilterRank] = useState('');
     const [sortKey, setSortKey] = useState<SortKey>('name');
-    const [sortDir, setSortDir] = useState<SortDir>('asc');
+    const [sortAsc, setSortAsc] = useState(true);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [showFilters, setShowFilters] = useState(false);
     const [viewingOfficer, setViewingOfficer] = useState<Officer | null>(null);
 
-    const handleSort = (key: SortKey) => {
-        if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        else { setSortKey(key); setSortDir('asc'); }
+    const handleSort = (key: string) => {
+        const k = key as SortKey;
+        if (k === sortKey) setSortAsc((prev) => !prev);
+        else {
+            setSortKey(k);
+            setSortAsc(true);
+        }
     };
 
     const filtered = useMemo(() => {
@@ -82,15 +76,18 @@ export default function ViewOfficersPage() {
         if (filterLab) data = data.filter((o) => o.socoLab === filterLab);
         if (filterRank) data = data.filter((o) => o.rank === filterRank);
         data.sort((a, b) => {
-            const av = a[sortKey as keyof typeof a] as string ?? '';
-            const bv = b[sortKey as keyof typeof b] as string ?? '';
-            return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+            const av = String(a[sortKey] ?? '');
+            const bv = String(b[sortKey] ?? '');
+            const cmp = av.localeCompare(bv, undefined, { sensitivity: 'base' });
+            return sortAsc ? cmp : -cmp;
         });
         return data;
-    }, [search, filterLab, filterRank, sortKey, sortDir]);
+    }, [search, filterLab, filterRank, sortKey, sortAsc]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-    const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+    const effectivePage = Math.min(page, totalPages);
+
+    const paginated = filtered.slice((effectivePage - 1) * pageSize, effectivePage * pageSize);
 
     const handleDelete = (id: number) => {
         if (confirm('Are you sure you want to delete this officer record?')) {
@@ -98,61 +95,118 @@ export default function ViewOfficersPage() {
         }
     };
 
-    return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-gray-50">
-            <Header />
-            <div className="flex flex-1 relative z-10 w-full pt-14">
-                <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-                    <div className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
+    const columns: AppTableColumn<Officer>[] = useMemo(
+        () => [
+            {
+                key: 'photo',
+                label: 'Photo',
+                sortable: false,
+                render: (_, row) => <OfficerAvatar name={row.name} />,
+            },
+            {
+                key: 'name',
+                label: 'Name',
+                sortable: true,
+                render: (v) => <span className="font-medium text-gray-800">{String(v)}</span>,
+            },
+            {
+                key: 'rank',
+                label: 'Rank',
+                sortable: true,
+                render: (v) => (
+                    <span className="inline-block px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded">
+                        {String(v)}
+                    </span>
+                ),
+            },
+            {
+                key: 'regNo',
+                label: 'Reg. No',
+                sortable: true,
+                render: (v) => <span className="text-gray-600 font-mono text-xs">{String(v)}</span>,
+            },
+            {
+                key: 'socoLab',
+                label: 'SOCO Lab',
+                sortable: true,
+                render: (v) => <span className="text-gray-700">{String(v)}</span>,
+            },
+            {
+                key: 'mobile',
+                label: 'Mobile',
+                sortable: true,
+                render: (v) => <span className="text-gray-700">{String(v)}</span>,
+            },
+            {
+                key: 'presentRank',
+                label: 'Present Rank',
+                sortable: true,
+                render: (v) => (
+                    <span className="inline-block px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 rounded">
+                        {String(v)}
+                    </span>
+                ),
+            },
+            {
+                key: 'actions',
+                label: 'Actions',
+                sortable: false,
+                align: 'right' as const,
+                render: (_, row) => (
+                    <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <ActionChipButton variant="blue" title="View" onClick={() => setViewingOfficer(row)}><Eye className="w-3 h-3" /> View</ActionChipButton>
+                        <Link
+                            href={`/crime-officer/add?edit=${row.id}`}
+                            title="Edit"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
+                        >
+                            <Pencil className="w-3 h-3" />
+                            Edit
+                        </Link>
+                        <ActionChipButton variant="red" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 className="w-3 h-3" /> Delete</ActionChipButton>
+                    </div>
+                ),
+            },
+        ],
+        [],
+    );
 
-                        {/* Page header */}
-                        <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-                            <div className="flex items-center gap-3">
-                                <Link
-                                    href="/crime-officer"
-                                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                                    aria-label="Back"
-                                >
-                                    <ArrowLeft className="w-5 h-5" />
-                                </Link>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">View SOCO Officers</h2>
-                                    <p className="text-sm text-gray-600 mt-0.5 font-noto-sinhala">
-                                        SOCO නිලධාරීන් — {filtered.length} records found
-                                    </p>
-                                </div>
-                            </div>
-                            <Link
-                                href="/crime-officer/add"
-                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
-                            >
-                                <Plus className="w-4 h-4" /> Add Officer
-                            </Link>
-                        </div>
+    return (
+        <>
+        <PageLayout>
+            <PageHeader
+                backHref="/crime-officer"
+                title="View SOCO Officers"
+                description={`SOCO නිලධාරීන් — ${filtered.length} records found`}
+                actions={
+                    <Button variant="primary" asChild>
+                        <Link href="/crime-officer/add">
+                            <Plus className="w-4 h-4" /> Add Officer
+                        </Link>
+                    </Button>
+                }
+            />
 
                         {/* Search & Filters */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
                             <div className="flex gap-3 flex-wrap items-center">
-                                {/* Search */}
-                                <div className="flex-1 min-w-[200px] relative">
-                                    <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        value={search}
-                                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                        placeholder="Search name, reg no, mobile..."
-                                        className="w-full pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors"
-                                    />
-                                </div>
+                                <SearchInput
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                    placeholder="Search name, reg no, mobile..."
+                                    wrapperClassName="flex-1 min-w-[200px]"
+                                    icon={<MagnifyingGlass size={15} />}
+                                />
 
-                                {/* Filter toggle */}
-                                <button
+                                <Button
                                     type="button"
+                                    variant={showFilters ? 'primary' : 'secondary'}
                                     onClick={() => setShowFilters((f) => !f)}
-                                    className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border rounded-lg transition-colors ${showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'}`}
+                                    className={showFilters ? '!min-h-[38px] !py-2 !text-sm' : '!min-h-[38px] !py-2 !text-sm'}
                                 >
                                     <FunnelSimple size={15} />
                                     Filters
-                                </button>
+                                </Button>
                             </div>
 
                             {showFilters && (
@@ -186,145 +240,49 @@ export default function ViewOfficersPage() {
                                     </div>
                                     {(filterLab || filterRank || search) && (
                                         <div className="flex items-end">
-                                            <button
+                                            <Button
                                                 type="button"
+                                                variant="ghost"
                                                 onClick={() => { setFilterLab(''); setFilterRank(''); setSearch(''); setPage(1); }}
-                                                className="px-3 py-2 text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
+                                                className="!min-h-9 !px-3 !text-xs !text-red-500 hover:!text-red-700"
                                             >
                                                 Clear filters
-                                            </button>
+                                            </Button>
                                         </div>
                                     )}
                                 </div>
                             )}
                         </div>
 
-                        {/* Table */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-fade-in">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-gray-50 border-b border-gray-200">
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Photo</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-blue-600 transition-colors"
-                                                onClick={() => handleSort('name')}>
-                                                Name <SortIcon col="name" sortKey={sortKey} sortDir={sortDir} />
-                                            </th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-blue-600 transition-colors"
-                                                onClick={() => handleSort('rank')}>
-                                                Rank <SortIcon col="rank" sortKey={sortKey} sortDir={sortDir} />
-                                            </th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reg. No</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">SOCO Lab</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Mobile</th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Present Rank</th>
-                                            <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {paginated.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">
-                                                    No officers found matching your search criteria.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            paginated.map((officer, idx) => (
-                                                <tr
-                                                    key={officer.id}
-                                                    className={`border-b border-gray-100 last:border-0 hover:bg-blue-50/40 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/30'}`}
-                                                >
-                                                    <td className="px-4 py-3">
-                                                        <OfficerAvatar name={officer.name} />
-                                                    </td>
-                                                    <td className="px-4 py-3 font-medium text-gray-800">{officer.name}</td>
-                                                    <td className="px-4 py-3">
-                                                        <span className="inline-block px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 rounded">
-                                                            {officer.rank}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{officer.regNo}</td>
-                                                    <td className="px-4 py-3 text-gray-600">{officer.socoLab}</td>
-                                                    <td className="px-4 py-3 text-gray-600">{officer.mobile}</td>
-                                                    <td className="px-4 py-3">
-                                                        <span className="inline-block px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border border-green-100 rounded">
-                                                            {officer.presentRank}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <button
-                                                                type="button"
-                                                                title="View"
-                                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                                onClick={() => setViewingOfficer(officer)}
-                                                            >
-                                                                <Eye size={15} />
-                                                            </button>
-                                                            <Link
-                                                                href={`/crime-officer/add?edit=${officer.id}`}
-                                                                title="Edit"
-                                                                className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                                                            >
-                                                                <Pencil size={15} />
-                                                            </Link>
-                                                            <button
-                                                                type="button"
-                                                                title="Delete"
-                                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                                onClick={() => handleDelete(officer.id)}
-                                                            >
-                                                                <Trash size={15} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                        {/* Table — same AppTable card style as Crime Visits */}
+                        <div className="animate-fade-in">
+                            <AppTable<Officer>
+                                columns={columns}
+                                data={paginated}
+                                keyField="id"
+                                sortKey={sortKey}
+                                sortAsc={sortAsc}
+                                onSort={handleSort}
+                                emptyMessage="No officers found matching your search criteria."
+                                variant="card"
+                            />
 
-                            {/* Pagination */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/50">
-                                <p className="text-xs text-gray-500">
-                                    Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length} officers
-                                </p>
-                                <div className="flex gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                        disabled={page === 1}
-                                        className="px-3 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        ← Prev
-                                    </button>
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                        <button
-                                            key={p}
-                                            type="button"
-                                            onClick={() => setPage(p)}
-                                            className={`px-3 py-1 text-xs font-medium border rounded transition-colors ${p === page ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                                        >
-                                            {p}
-                                        </button>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={page === totalPages}
-                                        className="px-3 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        Next →
-                                    </button>
+                            {filtered.length > 0 && (
+                                <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
+                                    <p className="text-sm text-gray-600">
+                                        Showing {filtered.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1} to{' '}
+                                        {Math.min(effectivePage * pageSize, filtered.length)} of {filtered.length} officers
+                                    </p>
+                                    <PaginationControls
+                                        page={effectivePage}
+                                        totalPages={totalPages}
+                                        onPageChange={setPage}
+                                    />
                                 </div>
-                            </div>
+                            )}
                         </div>
 
-                    </div>
-                    <Footer />
-                </main>
-            </div>
+        </PageLayout>
 
             {/* View Officer Modal */}
             {viewingOfficer && (
@@ -338,14 +296,15 @@ export default function ViewOfficersPage() {
                     >
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/80">
                             <h3 className="text-lg font-semibold text-gray-900">Officer Details</h3>
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={() => setViewingOfficer(null)}
-                                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                                className="!min-h-9 !w-9 !p-2"
                                 aria-label="Close"
                             >
                                 <span className="text-xl leading-none">×</span>
-                            </button>
+                            </Button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             <div className="flex items-center gap-4">
@@ -381,17 +340,13 @@ export default function ViewOfficersPage() {
                             >
                                 Edit
                             </Link>
-                            <button
-                                type="button"
-                                onClick={() => setViewingOfficer(null)}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
-                            >
+                            <Button type="button" variant="secondary" onClick={() => setViewingOfficer(null)}>
                                 Close
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }

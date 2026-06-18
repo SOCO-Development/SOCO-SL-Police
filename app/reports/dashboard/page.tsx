@@ -1,20 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
+import { PageHeader, PageLayout } from '@/components/ui';
 import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import CustomSelect from '@/components/forms/CustomSelect';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { TrendingUp, Handshake, Users, Trash2 } from 'lucide-react';
-import { FaArrowLeft } from 'react-icons/fa';
-import Button from '@/components/buttons/Button';
 import FilterPrimaryButton from '@/components/buttons/FilterPrimaryButton';
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [selectedItems1, setSelectedItems1] = useState('11');
   const [selectedItems2, setSelectedItems2] = useState('7');
   const [selectedItems3, setSelectedItems3] = useState('835');
@@ -217,19 +212,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
-      <div className="flex flex-1 w-full relative z-10 pt-14">
-        <main className="flex-1 overflow-x-hidden min-w-0 flex flex-col min-h-screen">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-10 flex-1">
-            {/* Page Title and Back Button */}
-            <div className="flex items-center gap-4 mb-6">
-              <Button variant="secondary" onClick={() => router.push('/reports')}>
-                <FaArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <h1 className="text-3xl font-bold text-gray-900">360 Dashboard</h1>
-            </div>
+    <PageLayout contentClassName="py-10">
+      <PageHeader backHref="/reports" title="360 Dashboard" />
 
             {/* Filter Section - 2 Rows, 4 Columns */}
             <div className="bg-gradient-to-r from-teal-50 via-blue-50 to-teal-50 border border-teal-200/50 rounded-xl p-6 mb-6 shadow-md backdrop-blur-sm relative z-10">
@@ -527,10 +511,6 @@ export default function DashboardPage() {
                     </ResponsiveContainer>
                   </div>
             </div>
-          </div>
-          <Footer />
-        </main>
-      </div>
-    </div>
+    </PageLayout>
   );
 }
