@@ -2404,7 +2404,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── Action Bar ──────────────────────────────────────────────── */}
-                            <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
+                            {!isEditing && <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
                                 <div />
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -2433,7 +2433,7 @@ export default function AddOfficerPage() {
                                     </Button>
                                 </div>
                                 <div />
-                            </div>
+                            </div> }
 
                         </form>
         </PageLayout>
