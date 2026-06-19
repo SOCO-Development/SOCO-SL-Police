@@ -7,6 +7,7 @@ import { publicAssetSrc } from '@/lib/publicAsset';
 import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { usePathname, useRouter } from 'next/navigation';
 import { authService } from '@/lib/api';
+import { getCurrentUserInfo } from '@/lib/api/userService';
 import { getUsername } from '@/lib/api/authStorage';
 import { getErrorMessage, showErrorAlert } from '@/lib/alerts';
 import {
@@ -44,6 +45,8 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
   const router = useRouter();
   const [storedUserName, setStoredUserName] = useState(userNameProp ?? 'User');
   const userName = userNameProp ?? storedUserName;
+  const [callingName, setCallingName] = useState('User');
+  const [designationName, setDesignationName] = useState('Officer');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -97,6 +100,27 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
     if (username) setStoredUserName(username);
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCurrentUserInfo() {
+      try {
+        const currentUserInfo = await getCurrentUserInfo();
+        if (!isMounted) return;
+        if (currentUserInfo.callingName) setCallingName(currentUserInfo.callingName);
+        if (currentUserInfo.designationName) setDesignationName(currentUserInfo.designationName);
+      } catch {
+        // Keep fallback values if the request fails.
+      }
+    }
+
+    loadCurrentUserInfo();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   async function handleLogoutConfirm() {
     setIsLoggingOut(true);
     const username = getUsername() ?? '';
@@ -129,11 +153,11 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
         >
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-              {userName.charAt(0).toUpperCase()}
+              {callingName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userName}</p>
-              <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>SOCO Officer</p>
+              <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{callingName}</p>
+              <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{designationName}</p>
             </div>
           </div>
 
@@ -270,14 +294,14 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
               >
                 <div className="hidden sm:flex flex-col items-end min-w-0">
                   <span className={`text-sm font-semibold leading-tight truncate max-w-[100px] transition-colors duration-300 ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
-                    {userName}
+                    {callingName}
                   </span>
                   <span className={`text-[10px] leading-tight transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                    Officer
+                    {designationName}
                   </span>
                 </div>
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-                  {userName.charAt(0).toUpperCase()}
+                  {callingName.charAt(0).toUpperCase()}
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${isDark ? 'text-gray-400' : 'text-gray-400'} ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
