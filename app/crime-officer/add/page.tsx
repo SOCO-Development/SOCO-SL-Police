@@ -986,11 +986,16 @@ export default function AddOfficerPage() {
 
     return (
         <PageLayout>
-            <PageHeader
+        {isEditing ? <PageHeader
+                backHref="/crime-officer"
+                title="Edit SOCO Officer"
+                description="Complete all required details to register a new officer profile."
+            /> : 
+                <PageHeader
                 backHref="/crime-officer"
                 title="Add SOCO Officer"
                 description="Complete all required details to register a new officer profile."
-            />
+            /> } 
             {error && (
                 <p className="mb-6 -mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 inline-block">
                     {error}
@@ -2399,7 +2404,7 @@ export default function AddOfficerPage() {
                             </div>
 
                             {/* ─── Action Bar ──────────────────────────────────────────────── */}
-                            <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
+                            {!isEditing && <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
                                 <div />
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -2428,7 +2433,7 @@ export default function AddOfficerPage() {
                                     </Button>
                                 </div>
                                 <div />
-                            </div>
+                            </div> }
 
                         </form>
         </PageLayout>
