@@ -114,6 +114,7 @@ interface DegreeRow {
     yearFrom: string;
     yearTo: string;
     timing: DegreeTiming;
+    sponsored: boolean;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -295,7 +296,7 @@ function defaultForm(): FormData {
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }],
+        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before', sponsored: false }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -770,7 +771,7 @@ export default function AddOfficerPage() {
 
     const addDegree = () => {
         if (form.degrees.length >= 12) return;
-        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before' }]);
+        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before', sponsored: false }]);
     };
 
     const removeDegree = (id: number) => {
@@ -1519,88 +1520,97 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
 
-                                    {form.alStream && (
-                                        <div className="rounded-xl border border-violet-100 overflow-hidden">
-                                            <div className="px-4 py-2.5 bg-violet-50/70 border-b border-violet-100">
-                                                <span className="text-xs font-bold text-violet-800 uppercase tracking-wide">{form.alStream} Stream — Subjects</span>
-                                            </div>
-                                            <div className="overflow-x-auto">
-                                                <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
-                                                    <thead>
-                                                        <tr className="bg-gray-50 border-b border-gray-200">
-                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
-                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject Name</th>
-                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Grade</th>
-                                                            <th className="px-2 py-2.5 w-px whitespace-nowrap"><span className="sr-only">Actions</span></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {form.alSubjects.map((row, idx) => (
-                                                            <tr key={row.id} className="border-b border-gray-100 last:border-0">
-                                                                <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">{idx + 1}</td>
-                                                                <td className="px-2 py-1.5">
-                                                                    <GInput
-                                                                        value={row.subject}
-                                                                        onChange={(v) => updateALSubject(row.id, { subject: v })}
-                                                                        placeholder="Subject name"
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-1.5">
-                                                                    <GInput
-                                                                        value={row.grade}
-                                                                        onChange={(v) => updateALSubject(row.id, { grade: v })}
-                                                                        placeholder="e.g. A, B, C"
-                                                                        maxLength={3}
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
-                                                                    {form.alSubjects.length > 3 && (
-                                                                        <RemoveRowButton onClick={() => removeALSubject(row.id)} />
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                        {/* General English */}
-                                                        <tr className="border-b border-gray-100 bg-violet-50/30">
-                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GE</td>
-                                                            <td className="px-3 py-2 text-sm font-medium text-gray-700">General English</td>
-                                                            <td className="px-2 py-1.5">
-                                                                <GInput
-                                                                    value={form.alGeneralEnglish}
-                                                                    onChange={(v) => set('alGeneralEnglish', v)}
-                                                                    placeholder="e.g. A, B, C"
-                                                                    maxLength={3}
-                                                                />
-                                                            </td>
-                                                            <td />
-                                                        </tr>
-                                                        {/* General Knowledge */}
-                                                        <tr className="bg-violet-50/30">
-                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GK</td>
-                                                            <td className="px-3 py-2 text-sm font-medium text-gray-700">General Knowledge</td>
-                                                            <td className="px-2 py-1.5">
-                                                                <GInput
-                                                                    value={form.alGeneralKnowledge}
-                                                                    onChange={(v) => set('alGeneralKnowledge', v)}
-                                                                    placeholder="e.g. A, B, C"
-                                                                    maxLength={3}
-                                                                />
-                                                            </td>
-                                                            <td />
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            {form.alSubjects.length < 5 && (
-                                                <div className="px-4 pb-3">
-                                                    <AddRowButton onClick={addALSubject}>Add Subject</AddRowButton>
-                                                </div>
-                                            )}
-                                            {form.alSubjects.length >= 5 && (
-                                                <p className="px-4 pb-3 text-xs text-gray-400">Maximum 5 subjects reached.</p>
-                                            )}
+                                    <div className={`rounded-xl border border-violet-100 overflow-hidden transition-all duration-200 ${
+                                        !form.alStream ? 'opacity-50 pointer-events-none select-none bg-gray-50/50' : ''
+                                    }`}>
+                                        <div className="px-4 py-2.5 bg-violet-50/70 border-b border-violet-100">
+                                            <span className="text-xs font-bold text-violet-800 uppercase tracking-wide">
+                                                {form.alStream ? `${form.alStream} Stream — Subjects` : 'Subjects (Select Stream to edit)'}
+                                            </span>
                                         </div>
-                                    )}
+                                        <div className="overflow-x-auto">
+                                            <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
+                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject Name</th>
+                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Grade</th>
+                                                        <th className="px-2 py-2.5 w-px whitespace-nowrap"><span className="sr-only">Actions</span></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.alSubjects.map((row, idx) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 last:border-0">
+                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">{idx + 1}</td>
+                                                            <td className="px-2 py-1.5">
+                                                                <GInput
+                                                                    value={row.subject}
+                                                                    onChange={(v) => updateALSubject(row.id, { subject: v })}
+                                                                    placeholder="Subject name"
+                                                                    disabled={!form.alStream}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1.5">
+                                                                <GInput
+                                                                    value={row.grade}
+                                                                    onChange={(v) => updateALSubject(row.id, { grade: v })}
+                                                                    placeholder="e.g. A, B, C"
+                                                                    maxLength={3}
+                                                                    disabled={!form.alStream}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
+                                                                {form.alSubjects.length > 3 && (
+                                                                    <RemoveRowButton 
+                                                                        onClick={() => removeALSubject(row.id)} 
+                                                                        disabled={!form.alStream}
+                                                                    />
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* General English */}
+                                                    <tr className="border-b border-gray-100 bg-violet-50/30">
+                                                        <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GE</td>
+                                                        <td className="px-3 py-2 text-sm font-medium text-gray-700">General English</td>
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={form.alGeneralEnglish}
+                                                                onChange={(v) => set('alGeneralEnglish', v)}
+                                                                placeholder="e.g. A, B, C"
+                                                                maxLength={3}
+                                                                disabled={!form.alStream}
+                                                            />
+                                                        </td>
+                                                        <td />
+                                                    </tr>
+                                                    {/* General Knowledge */}
+                                                    <tr className="bg-violet-50/30">
+                                                        <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GK</td>
+                                                        <td className="px-3 py-2 text-sm font-medium text-gray-700">General Knowledge</td>
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={form.alGeneralKnowledge}
+                                                                onChange={(v) => set('alGeneralKnowledge', v)}
+                                                                placeholder="e.g. A, B, C"
+                                                                maxLength={3}
+                                                                disabled={!form.alStream}
+                                                            />
+                                                        </td>
+                                                        <td />
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {form.alSubjects.length < 5 && (
+                                            <div className="px-4 pb-3">
+                                                <AddRowButton onClick={addALSubject} disabled={!form.alStream}>Add Subject</AddRowButton>
+                                            </div>
+                                        )}
+                                        {form.alSubjects.length >= 5 && (
+                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 5 subjects reached.</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
@@ -1628,7 +1638,7 @@ export default function AddOfficerPage() {
                                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
                                                     <div className="flex flex-wrap gap-2">
                                                         {(['before', 'after'] as const).map((val) => {
-                                                            const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                            const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police';
                                                             const isSelected = row.timing === val;
                                                             return (
                                                                 <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
@@ -1680,7 +1690,7 @@ export default function AddOfficerPage() {
                                                         />
                                                     </div>
                                                 )}
-                                                <div className="flex gap-2">
+                                                <div className="flex flex-wrap items-end gap-3">
                                                     <div className="w-32">
                                                         <FieldLabel label="From" />
                                                         <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
@@ -1688,6 +1698,17 @@ export default function AddOfficerPage() {
                                                     <div className="w-32">
                                                         <FieldLabel label="To" />
                                                         <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                    </div>
+                                                    <div className="flex items-center h-10">
+                                                        <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={row.sponsored || false}
+                                                                onChange={(e) => updateDegree(row.id, { sponsored: e.target.checked })}
+                                                                className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                                                            />
+                                                            Sponsored
+                                                        </label>
                                                     </div>
                                                 </div>
                                             </div>
