@@ -161,3 +161,173 @@ export interface CurrentUserInfo {
   userImageUrl: string;
 }
 
+// ─── Update Promotions (SOCO_U4) ──────────────────────────────────────
+
+export interface UpdatePromotionsRequest {
+  systemUserId: number;
+  promotions: PromotionRecord[];
+}
+
+export interface UpdatePromotionsData {
+  message: string;
+}
+
+// ─── Update Education (SOCO_U5) ───────────────────────────────────────
+
+export interface OLResultData {
+  subjectName: string;
+  subjectResult: string;
+}
+
+export interface ALResultData {
+  stream: string;
+  subjectName: string;
+  subjectResult: string;
+}
+
+export interface HigherEducationData {
+  doneBeforeJoin: string; // "Yes" | "No"
+  sponsored: string; // "Yes" | "No"
+  educationType: string;
+  qualificationName: string;
+  instituteName: string;
+  fromYear: number;
+  toYear: number;
+}
+
+export interface UpdateEducationRequest {
+  systemUserId: number;
+  olResults: OLResultData[];
+  alResults: ALResultData[];
+  higherEducations: HigherEducationData[];
+}
+
+export interface UpdateEducationData {
+  message: string;
+}
+
+// ─── Update Courses (SOCO_U6) ─────────────────────────────────────────
+
+export interface CourseUpdateData {
+  courseTypeId: number; // 1=Local, 2=Foreign
+  courseDoneId: number; // 1=Before, 2=After
+  conNo: string;
+  policeStation: string;
+  branch: string;
+  fromDate: string;
+  toDate: string;
+  duration: string;
+  institute: string;
+  country: string;
+}
+
+export interface UpdateCoursesRequest {
+  systemUserId: number;
+  courses: CourseUpdateData[];
+}
+
+export interface UpdateCoursesData {
+  message: string;
+}
+
+// ─── Update Driving License (SOCO_U7) ─────────────────────────────────
+
+export interface CategoryDetailData {
+  drivingLicenseNo: string;
+  licenceCategoryId: number;
+}
+
+export interface QualificationDetailData {
+  qualificationTypeId: number; // 1=Heavy, 2=Light, 3=Motorcycle
+}
+
+export interface UpdateDrivingRequest {
+  systemUserId: number;
+  categoryDetails: CategoryDetailData[];
+  qualificationDetails: QualificationDetailData[];
+}
+
+export interface UpdateDrivingData {
+  message: string;
+}
+
+// ─── Update Transfers (SOCO_U8) ───────────────────────────────────────
+
+export interface TransferData {
+  locationId: number;
+  fromDate: string;
+  toDate: string;
+  duration: string;
+  officerInchargeUserId: number;
+  reason: string;
+}
+
+export interface UpdateTransfersRequest {
+  systemUserId: number;
+  transfers: TransferData[];
+}
+
+export interface UpdateTransfersData {
+  message: string;
+}
+
+// ─── Update Special Duty (SOCO_U9) ────────────────────────────────────
+
+export interface SpecialDutyData {
+  locationId: number;
+  fromDate: string;
+  toDate: string;
+  duration: string;
+  officerInchargeUserId: number;
+  reason: string;
+}
+
+export interface UpdateSpecialDutyRequest {
+  systemUserId: number;
+  specialDuties: SpecialDutyData[];
+}
+
+export interface UpdateSpecialDutyData {
+  message: string;
+}
+
+// ─── Update Disciplinary Inquiries (SOCO_U10) ─────────────────────────
+
+export interface DisciplinaryInquiryData {
+  orderlyRoomStatus: string; // "Yes" | "No"
+  orderlyRoomResult: string;
+  preliminaryInquiryStatus: string; // "Yes" | "No"
+  preliminaryInquiryResult: string;
+  disciplinaryInquiryStatus: string; // "Yes" | "No"
+  disciplinaryInquiryResult: string;
+}
+
+export interface UpdateDisciplinaryInquiriesRequest {
+  systemUserId: number;
+  disciplinaryInquiries: DisciplinaryInquiryData[];
+}
+
+export interface UpdateDisciplinaryInquiriesData {
+  message: string;
+}
+
+// ─── Update Special Illnesses & Notes (SOCO_U11) ──────────────────────
+
+export interface SpecialIllnessNote {
+  specialIllnessNote: string;
+}
+
+export interface SpecialNote {
+  specialNote: string;
+}
+
+export interface UpdateSpecialIllnessesNotesRequest {
+  systemUserId: number;
+  specialIllnesses: SpecialIllnessNote[];
+  specialNotes: SpecialNote[];
+}
+
+export interface UpdateSpecialIllnessesNotesData {
+  message: string;
+}
+
