@@ -986,11 +986,16 @@ export default function AddOfficerPage() {
 
     return (
         <PageLayout>
-            <PageHeader
+        {isEditing ? <PageHeader
+                backHref="/crime-officer"
+                title="Edit SOCO Officer"
+                description="Complete all required details to register a new officer profile."
+            /> : 
+                <PageHeader
                 backHref="/crime-officer"
                 title="Add SOCO Officer"
                 description="Complete all required details to register a new officer profile."
-            />
+            /> } 
             {error && (
                 <p className="mb-6 -mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 inline-block">
                     {error}
