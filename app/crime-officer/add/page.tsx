@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useId, useEffect } from 'react';
+import { useState, useRef, useCallback, useId, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
@@ -44,6 +44,12 @@ const ANNEX_13_CATEGORY_OPTIONS = [
     'J',
     'H',
 ].map((s) => ({ value: s, label: s }));
+
+const CATEGORY_NAME_TO_ID: Record<string, number> = {
+    A1: 1, A: 2, B1: 3, B2: 4, B: 5,
+    C1: 6, C: 7, CE: 8, D1: 9, D: 10,
+    DE: 11, G1: 12, G: 13, J: 14, H: 15,
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,19 +108,12 @@ interface ALSubjectRow {
     grade: string;
 }
 
-type DegreeTiming = 'before' | 'after';
-type QualificationType = 'Diploma' | 'HND' | 'Degree' | 'Certificate' | 'Masters' | 'Doctorate' | 'Professional Qualification' | 'Other' | '';
-
 interface DegreeRow {
     id: number;
-    qualificationType: QualificationType;
-    qualificationTypeOther: string;
     degree: string;
     university: string;
     yearFrom: string;
     yearTo: string;
-    timing: DegreeTiming;
-    sponsored: boolean;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -168,7 +167,8 @@ interface FormData {
     alSubjects: ALSubjectRow[];
     alGeneralEnglish: string;
     alGeneralKnowledge: string;
-    degrees: DegreeRow[];
+    degreesBefore: DegreeRow[];
+    degreesAfter: DegreeRow[];
     // Section 5
     localBeforeCourses: CourseBeforeRow[];
     foreignBeforeCourses: CourseBeforeRow[];
@@ -296,7 +296,8 @@ function defaultForm(): FormData {
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degrees: [{ id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before', sponsored: false }],
+        degreesBefore: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
+        degreesAfter: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -346,17 +347,6 @@ const ASSIGNMENT_REASON_OPTIONS = [
     'Temporary Attachment',
     'Training / Course',
     'Relief Duty',
-    'Other',
-].map((label) => ({ value: label, label }));
-
-const QUALIFICATION_TYPE_OPTIONS = [
-    'Diploma',
-    'HND',
-    'Degree',
-    'Certificate',
-    'Masters',
-    'Doctorate',
-    'Professional Qualification',
     'Other',
 ].map((label) => ({ value: label, label }));
 
@@ -518,10 +508,20 @@ export default function AddOfficerPage() {
     const searchParams = useSearchParams();
     const editId = searchParams.get('edit');
     const isEditing = !!editId;
+
+    // Convert dd-mm-yyyy → yyyy-mm-dd for the API
+    const toApiDate = (d: string): string => {
+        if (!d) return '';
+        const parts = d.split('-');
+        if (parts.length !== 3) return d;
+        if (parts[0].length === 4) return d; // already yyyy-mm-dd
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    };
     const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
     const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -566,6 +566,207 @@ export default function AddOfficerPage() {
         'J',
         'H',
     ].map((s) => ({ value: s, label: s }));
+
+    const locationIdToName = useMemo(() => {
+        const map = new Map<string, string>();
+        locations.forEach((loc) => map.set(loc.id, loc.name));
+        return map;
+    }, [locations]);
+
+    // Load officer data when editing
+    useEffect(() => {
+        if (!isEditing || !editId) return;
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const data = await officerService.getOfficerById(parseInt(editId, 10));
+                if (cancelled || !data.personalInfo?.length) return;
+                const p = data.personalInfo[0];
+
+                setForm({
+                    ...defaultForm(),
+                    // Section 1
+                    socoLab: locationIdToName.get(p.LOCATION_ID) || '',
+                    socoLabId: p.LOCATION_ID,
+                    rankDropdown: rankNameToId.get(p.RANK_ID || '') || '',
+                    rankDesignationId: p.RANK_ID || '',
+                    regNo: p.USER_REGI_NO || '',
+                    fullName: p.USER_FULL_NAME || '',
+                    reportedDate: '',
+                    dob: p.USER_DOB || '',
+                    dateJoinedSoco: p.SOCO_JOINED_DATE || '',
+                    socoCourseNo: p.COURSE_NO || '',
+                    socoService: '',
+                    telOffice: p.PHONE_OFFICE || '',
+                    telResidence: p.PHONE_HOME || '',
+                    telMobile: p.PHONE_MOBILE || '',
+                    photoUrl: p.USER_IMAGE_URL || '',
+                    // Section 2
+                    civilStatus: p.CIVIL_STATUS || '',
+                    spouseName: data.spouse?.[0]?.SPOUSE_NAME || '',
+                    spouseDesignation: data.spouse?.[0]?.SPOUSE_DESIGNATION || '',
+                    spouseAddressOfInstitute: data.spouse?.[0]?.SPOUSE_WORK_ADDRESS || '',
+                    children: (data.children?.length
+                        ? data.children.map((c) => ({
+                            id: newId(),
+                            name: c.CHILD_NAME || '',
+                            birthday: c.CHILD_DOB || '',
+                            status: '',
+                        }))
+                        : [{ id: newId(), name: '', birthday: '', status: '' }]
+                    ),
+                    // Section 3
+                    dateJoinedPolice: '',
+                    appointedRank: p.APPOINT_RANK || '',
+                    presentRank: p.CURRENT_RANK || '',
+                    promotions: (data.promotions?.length
+                        ? data.promotions.map((pr) => ({
+                            id: newId(),
+                            rank: rankNameToId.get(pr.PROMOTED_RANK_ID) || '',
+                            date: pr.PROMOTED_DATE || '',
+                        }))
+                        : [{ id: newId(), rank: '', date: '' }]
+                    ),
+                    // Section 4 – Education
+                    olMandatorySubjects: [
+                        { subject: 'First Language (Sinhala / Tamil)', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Sinhala' || r.SUBJECT_NAME === 'Tamil')?.SUBJECT_RESULT || '' },
+                        { subject: 'English (Second Language)', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'English')?.SUBJECT_RESULT || '' },
+                        { subject: 'Mathematics', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Mathematics')?.SUBJECT_RESULT || '' },
+                        { subject: 'Science', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Science')?.SUBJECT_RESULT || '' },
+                        { subject: 'History', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'History')?.SUBJECT_RESULT || '' },
+                        { subject: 'Religion', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Religion')?.SUBJECT_RESULT || '' },
+                    ].filter(Boolean) as OLSubjectResult[],
+                    olOptionalSubjects: (data.olResults || [])
+                        .filter((r) => !['Sinhala', 'Tamil', 'English', 'Mathematics', 'Science', 'History', 'Religion'].includes(r.SUBJECT_NAME))
+                        .map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT as OLGrade })),
+                    alStream: (data.alResults?.[0]?.STREAM || '') as ALStream,
+                    alSubjects: (data.alResults?.length
+                        ? data.alResults.map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT }))
+                        : [
+                            { id: newId(), subject: '', grade: '' },
+                            { id: newId(), subject: '', grade: '' },
+                            { id: newId(), subject: '', grade: '' },
+                        ]
+                    ),
+                    alGeneralEnglish: '',
+                    alGeneralKnowledge: '',
+                    degreesBefore: (data.higherEducation || [])
+                        .filter((h) => h.DONE_BEFORE_JOIN === 'Yes')
+                        .map((h) => ({
+                            id: newId(),
+                            degree: h.QUALIFICATION_NAME || '',
+                            university: h.INSTITUTE_NAME || '',
+                            yearFrom: h.FROM_YEAR || '',
+                            yearTo: h.TO_YEAR || '',
+                        })),
+                    degreesAfter: (data.higherEducation || [])
+                        .filter((h) => h.DONE_BEFORE_JOIN === 'No' || !h.DONE_BEFORE_JOIN)
+                        .map((h) => ({
+                            id: newId(),
+                            degree: h.QUALIFICATION_NAME || '',
+                            university: h.INSTITUTE_NAME || '',
+                            yearFrom: h.FROM_YEAR || '',
+                            yearTo: h.TO_YEAR || '',
+                        })),
+                    // Sections 5/6 – Courses
+                    localBeforeCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '1')
+                        .map((c) => ({
+                            id: newId(),
+                            conNo: c.CON_NO || '',
+                            policeStation: c.POLICE_STATION || '',
+                            branch: c.BRANCH || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            institute: c.INSTITUTE || '',
+                        })),
+                    foreignBeforeCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '2')
+                        .map((c) => ({
+                            id: newId(),
+                            conNo: c.CON_NO || '',
+                            policeStation: c.POLICE_STATION || '',
+                            branch: c.BRANCH || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            institute: c.COUNTRY || c.INSTITUTE || '',
+                        })),
+                    localAfterCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '1')
+                        .map((c) => ({
+                            id: newId(),
+                            courseName: c.CON_NO || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            time: c.DURATION || '',
+                            institute: c.INSTITUTE || '',
+                        })),
+                    foreignAfterCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '2')
+                        .map((c) => ({
+                            id: newId(),
+                            courseName: c.CON_NO || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            time: c.DURATION || '',
+                            institute: c.COUNTRY || c.INSTITUTE || '',
+                        })),
+                    // Section 7 – Driving License
+                    drivingLicenseNo: data.drivingCategoryDetails?.[0]?.DRIVING_LICENSE_NO || '',
+                    vehicleCategories: (data.drivingCategoryDetails || []).map((d) =>
+                        Object.entries(CATEGORY_NAME_TO_ID).find(([, id]) => id === parseInt(d.LICENCE_CATEGORY_ID))?.[0] || ''
+                    ).filter(Boolean),
+                    heavyVehicleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '1') ? 'Yes' : '',
+                    lightVehicleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '2') ? 'Yes' : '',
+                    motorcycleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '3') ? 'Yes' : '',
+                    // Section 8 – Transfer
+                    transferDraft: createAssignmentRow(),
+                    transferHistory: (data.transfers || []).map((t) => ({
+                        id: newId(),
+                        socoLab: locationIdToName.get(t.LOCATION_ID) || '',
+                        from: t.FROM_DATE || '',
+                        to: t.TO_DATE || '',
+                        duration: t.DURATION || '',
+                        oic: '',
+                        reason: t.REASON || '',
+                        reasonOther: '',
+                    })),
+                    // Section 9 – Special Duty
+                    specialDutyDraft: createAssignmentRow(),
+                    specialDutyHistory: (data.specialDuty || []).map((d) => ({
+                        id: newId(),
+                        socoLab: locationIdToName.get(d.LOCATION_ID) || '',
+                        from: d.FROM_DATE || '',
+                        to: d.TO_DATE || '',
+                        duration: d.DURATION || '',
+                        oic: '',
+                        reason: d.REASON || '',
+                        reasonOther: '',
+                    })),
+                    // Section 10 – Disciplinary Inquiries
+                    orderlyRoomStatus: (data.disciplinaryInquiries?.[0]?.ORDERLY_ROOM_STATUS || '') as ToggleChoice,
+                    orderlyRoomResult: data.disciplinaryInquiries?.[0]?.ORDERLY_ROOM_RESULT || '',
+                    preliminaryInquiryStatus: (data.disciplinaryInquiries?.[0]?.PRELIMINARY_INQUIRY_STATUS || '') as ToggleChoice,
+                    preliminaryInquiryResult: data.disciplinaryInquiries?.[0]?.PRELIMINARY_INQUIRY_RESULT || '',
+                    disciplinaryInquiryStatus: (data.disciplinaryInquiries?.[0]?.DISCIPLINARY_INQUIRY_STATUS || '') as ToggleChoice,
+                    disciplinaryInquiryResult: data.disciplinaryInquiries?.[0]?.DISCIPLINARY_INQUIRY_RESULT || '',
+                    // Section 11 – Special Illnesses & Notes
+                    specialIllnesses: data.specialIllnesses?.map((s) => s.SPECIAL_ILLNESS_NOTE).join('\n') || '',
+                    specialNotes: data.specialNotes?.map((s) => s.SPECIAL_NOTE).join('\n') || '',
+                });
+
+                if (p.USER_IMAGE_URL && (p.USER_IMAGE_URL.startsWith('http://') || p.USER_IMAGE_URL.startsWith('https://') || p.USER_IMAGE_URL.startsWith('/'))) {
+                    setPhotoPreview(p.USER_IMAGE_URL);
+                }
+            } catch (err) {
+                const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officer data');
+                setError(apiError.message || 'An error occurred while loading officer data.');
+                console.error('Load officer data error:', err);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
+    }, [isEditing, editId, locationIdToName, rankNameToId]);
 
     const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
         setForm((f) => ({ ...f, [key]: val }));
@@ -621,6 +822,7 @@ export default function AddOfficerPage() {
     const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setPhotoFile(file);
         const url = URL.createObjectURL(file);
         setPhotoPreview(url);
         set('photoUrl', url);
@@ -765,18 +967,18 @@ export default function AddOfficerPage() {
         set('alSubjects', form.alSubjects.filter((s) => s.id !== id));
     };
 
-    const updateDegree = (id: number, patch: Partial<DegreeRow>) => {
-        set('degrees', form.degrees.map((d) => d.id === id ? { ...d, ...patch } : d));
+    const updateDegree = (section: 'degreesBefore' | 'degreesAfter', id: number, patch: Partial<DegreeRow>) => {
+        set(section, form[section].map((d) => d.id === id ? { ...d, ...patch } : d));
     };
 
-    const addDegree = () => {
-        if (form.degrees.length >= 12) return;
-        set('degrees', [...form.degrees, { id: newId(), qualificationType: '', qualificationTypeOther: '', degree: '', university: '', yearFrom: '', yearTo: '', timing: 'before', sponsored: false }]);
+    const addDegree = (section: 'degreesBefore' | 'degreesAfter') => {
+        if (form[section].length >= 6) return;
+        set(section, [...form[section], { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }]);
     };
 
-    const removeDegree = (id: number) => {
-        if (form.degrees.length <= 1) return;
-        set('degrees', form.degrees.filter((d) => d.id !== id));
+    const removeDegree = (section: 'degreesBefore' | 'degreesAfter', id: number) => {
+        if (form[section].length <= 1) return;
+        set(section, form[section].filter((d) => d.id !== id));
     };
 
     const buildChildrenData = (): ChildData[] =>
@@ -784,8 +986,8 @@ export default function AddOfficerPage() {
             .filter((c) => c.name.trim())
             .map((c) => ({
                 childName: c.name,
-                childDob: c.birthday,
-                childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                childDob: toApiDate(c.birthday),
+                childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                 childStatusId: 2,
             }));
 
@@ -796,26 +998,26 @@ export default function AddOfficerPage() {
             userFullName: form.fullName,
             userCallingName: form.fullName.split(' ')[0],
             locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
-            userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1,
-            userDob: form.dob,
+            userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
+            userDob: toApiDate(form.dob),
             phoneMobile: form.telMobile,
             phoneOffice: form.telOffice,
             phoneHome: form.telResidence,
-            userImageUrl: form.photoUrl,
+            userImageUrl: form.photoUrl || '',
             civilStatus: form.civilStatus,
             userRegiNo: form.regNo,
-            currentRank: form.presentRank,
-            appointRank: form.appointedRank,
+            currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+            appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
             courseNo: form.socoCourseNo,
-            socoJoinedDate: form.dateJoinedSoco,
+            socoJoinedDate: toApiDate(form.dateJoinedSoco),
             ...(form.civilStatus === 'Married' && {
                 spouse: {
                     spouseName: form.spouseName,
                     spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                     spouseWorkAddress: form.spouseAddressOfInstitute,
                 },
+                children: childrenData.length > 0 ? childrenData : [],
             }),
-            ...(childrenData.length > 0 && { children: childrenData }),
         };
     };
 
@@ -831,12 +1033,26 @@ export default function AddOfficerPage() {
         try {
             if (!isEditing) {
                 const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
-                if (!regiNoCheck.isAvailable) {
+if (regiNoCheck.isAvailable) {
                     setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
                     return;
                 }
 
-                const result = await officerService.insertNewOfficer(buildPersonalFamilyPayload());
+                // Upload profile photo if a file was selected
+                let imageUrl = '';
+                if (photoFile) {
+                    try {
+                        imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                    } catch (uploadErr) {
+                        setError('Failed to upload profile image. Please try again.');
+                        return;
+                    }
+                }
+
+                const payload = buildPersonalFamilyPayload();
+                if (imageUrl) payload.userImageUrl = imageUrl;
+                console.log('InsertNewOfficer payload:', JSON.stringify(payload, null, 2));
+                const result = await officerService.insertNewOfficer(payload);
                 setSubmitted(true);
                 alert(`Officer ${result.message} (ID: ${result.systemUserId})`);
             } else {
@@ -884,10 +1100,324 @@ export default function AddOfficerPage() {
         }
     };
 
-    const saveGenericSection = (sectionLabel: string) => {
+    const saveEducation = async () => {
+        setError(null);
+        setSectionSaving('Education');
+
+        try {
+            if (isEditing && editId) {
+                const olResults = [
+                    ...form.olMandatorySubjects.filter((s) => s.grade).map((s) => ({
+                        subjectName: s.subject,
+                        subjectResult: s.grade,
+                    })),
+                    ...form.olOptionalSubjects.filter((s) => s.subject.trim() && s.grade).map((s) => ({
+                        subjectName: s.subject,
+                        subjectResult: s.grade,
+                    })),
+                ];
+
+                const alResults = form.alSubjects
+                    .filter((s) => s.subject.trim() && s.grade)
+                    .map((s) => ({
+                        stream: form.alStream || '',
+                        subjectName: s.subject,
+                        subjectResult: s.grade,
+                    }));
+
+                const higherEducations = [
+                    ...form.degreesBefore.map((d) => ({
+                        doneBeforeJoin: 'Yes' as const,
+                        sponsored: 'No' as const,
+                        educationType: 'Degree',
+                        qualificationName: d.degree,
+                        instituteName: d.university,
+                        fromYear: parseInt(d.yearFrom) || 0,
+                        toYear: parseInt(d.yearTo) || 0,
+                    })),
+                    ...form.degreesAfter.map((d) => ({
+                        doneBeforeJoin: 'No' as const,
+                        sponsored: 'Yes' as const,
+                        educationType: 'Degree',
+                        qualificationName: d.degree,
+                        instituteName: d.university,
+                        fromYear: parseInt(d.yearFrom) || 0,
+                        toYear: parseInt(d.yearTo) || 0,
+                    })),
+                ];
+
+                await officerService.updateEducation({
+                    systemUserId: parseInt(editId, 10),
+                    olResults,
+                    alResults,
+                    higherEducations,
+                });
+            }
+
+            alert('Education saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save education');
+            setError(apiError.message || 'An error occurred while saving education.');
+            console.error('Save education error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveCourses = async (sectionLabel: string, courseDoneId: number) => {
+        setError(null);
         setSectionSaving(sectionLabel);
-        alert(`${sectionLabel} saved.`);
-        setSectionSaving(null);
+
+        try {
+            if (isEditing && editId) {
+                let courses: {
+                    courseTypeId: number;
+                    courseDoneId: number;
+                    conNo: string;
+                    policeStation: string;
+                    branch: string;
+                    fromDate: string;
+                    toDate: string;
+                    duration: string;
+                    institute: string;
+                    country: string;
+                }[] = [];
+
+                if (courseDoneId === 1) {
+                    courses = [
+                        ...form.localBeforeCourses.map((c) => ({
+                            courseTypeId: 1,
+                            courseDoneId,
+                            conNo: c.conNo || '',
+                            policeStation: c.policeStation || '',
+                            branch: c.branch || '',
+                            fromDate: c.from,
+                            toDate: c.to,
+                            duration: '',
+                            institute: c.institute || '',
+                            country: '',
+                        })),
+                        ...form.foreignBeforeCourses.map((c) => ({
+                            courseTypeId: 2,
+                            courseDoneId,
+                            conNo: c.conNo || '',
+                            policeStation: c.policeStation || '',
+                            branch: c.branch || '',
+                            fromDate: c.from,
+                            toDate: c.to,
+                            duration: '',
+                            institute: c.institute || '',
+                            country: c.institute || '',
+                        })),
+                    ];
+                } else {
+                    courses = [
+                        ...form.localAfterCourses.map((c) => ({
+                            courseTypeId: 1,
+                            courseDoneId,
+                            conNo: '',
+                            policeStation: '',
+                            branch: '',
+                            fromDate: c.from,
+                            toDate: c.to,
+                            duration: c.time || '',
+                            institute: c.institute || '',
+                            country: '',
+                        })),
+                        ...form.foreignAfterCourses.map((c) => ({
+                            courseTypeId: 2,
+                            courseDoneId,
+                            conNo: '',
+                            policeStation: '',
+                            branch: '',
+                            fromDate: c.from,
+                            toDate: c.to,
+                            duration: c.time || '',
+                            institute: c.institute || '',
+                            country: c.institute || '',
+                        })),
+                    ];
+                }
+
+                await officerService.updateCourses({
+                    systemUserId: parseInt(editId, 10),
+                    courses,
+                });
+            }
+
+            alert(`${sectionLabel} saved.`);
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError(`Failed to save ${sectionLabel}`);
+            setError(apiError.message || `An error occurred while saving ${sectionLabel}.`);
+            console.error(`Save ${sectionLabel} error:`, err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveDrivingLicense = async () => {
+        setError(null);
+        setSectionSaving('Driving License');
+
+        try {
+            if (isEditing && editId) {
+                const categoryDetails = form.vehicleCategories
+                    .filter((cat) => CATEGORY_NAME_TO_ID[cat])
+                    .map((cat) => ({
+                        drivingLicenseNo: form.drivingLicenseNo,
+                        licenceCategoryId: CATEGORY_NAME_TO_ID[cat],
+                    }));
+
+                const qualificationDetails: { qualificationTypeId: number }[] = [];
+                if (form.heavyVehicleQualified === 'Yes') qualificationDetails.push({ qualificationTypeId: 1 });
+                if (form.lightVehicleQualified === 'Yes') qualificationDetails.push({ qualificationTypeId: 2 });
+                if (form.motorcycleQualified === 'Yes') qualificationDetails.push({ qualificationTypeId: 3 });
+
+                await officerService.updateDriving({
+                    systemUserId: parseInt(editId, 10),
+                    categoryDetails,
+                    qualificationDetails,
+                });
+            }
+
+            alert('Driving license saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save driving license');
+            setError(apiError.message || 'An error occurred while saving driving license.');
+            console.error('Save driving license error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveTransfers = async () => {
+        setError(null);
+        setSectionSaving('Transfer');
+
+        try {
+            if (isEditing && editId) {
+                const transfers = form.transferHistory
+                    .filter((t) => t.socoLab && t.from && t.to)
+                    .map((t) => {
+                        const locId = locationNameToId.get(t.socoLab);
+                        return {
+                            locationId: locId ? parseInt(locId, 10) : 1,
+                            fromDate: t.from,
+                            toDate: t.to,
+                            duration: t.duration || '',
+                            officerInchargeUserId: 1,
+                            reason: t.reason === 'Other' ? t.reasonOther : (t.reason || ''),
+                        };
+                    });
+
+                await officerService.updateTransfers({
+                    systemUserId: parseInt(editId, 10),
+                    transfers,
+                });
+            }
+
+            alert('Transfers saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save transfers');
+            setError(apiError.message || 'An error occurred while saving transfers.');
+            console.error('Save transfers error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveSpecialDuty = async () => {
+        setError(null);
+        setSectionSaving('Special Duty');
+
+        try {
+            if (isEditing && editId) {
+                const specialDuties = form.specialDutyHistory
+                    .filter((d) => d.socoLab && d.from && d.to)
+                    .map((d) => {
+                        const locId = locationNameToId.get(d.socoLab);
+                        return {
+                            locationId: locId ? parseInt(locId, 10) : 1,
+                            fromDate: d.from,
+                            toDate: d.to,
+                            duration: d.duration || '',
+                            officerInchargeUserId: 1,
+                            reason: d.reason === 'Other' ? d.reasonOther : (d.reason || ''),
+                        };
+                    });
+
+                await officerService.updateSpecialDuty({
+                    systemUserId: parseInt(editId, 10),
+                    specialDuties,
+                });
+            }
+
+            alert('Special duty saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special duty');
+            setError(apiError.message || 'An error occurred while saving special duty.');
+            console.error('Save special duty error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveDisciplinaryInquiries = async () => {
+        setError(null);
+        setSectionSaving('Disciplinary Inquiries');
+
+        try {
+            if (isEditing && editId) {
+                await officerService.updateDisciplinaryInquiries({
+                    systemUserId: parseInt(editId, 10),
+                    disciplinaryInquiries: [
+                        {
+                            orderlyRoomStatus: form.orderlyRoomStatus || '',
+                            orderlyRoomResult: form.orderlyRoomResult,
+                            preliminaryInquiryStatus: form.preliminaryInquiryStatus || '',
+                            preliminaryInquiryResult: form.preliminaryInquiryResult,
+                            disciplinaryInquiryStatus: form.disciplinaryInquiryStatus || '',
+                            disciplinaryInquiryResult: form.disciplinaryInquiryResult,
+                        },
+                    ],
+                });
+            }
+
+            alert('Disciplinary inquiries saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save disciplinary inquiries');
+            setError(apiError.message || 'An error occurred while saving disciplinary inquiries.');
+            console.error('Save disciplinary inquiries error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveSpecialIllnessesNotes = async () => {
+        setError(null);
+        setSectionSaving('Special Illnesses & Notes');
+
+        try {
+            if (isEditing && editId) {
+                await officerService.updateSpecialIllnessesNotes({
+                    systemUserId: parseInt(editId, 10),
+                    specialIllnesses: form.specialIllnesses.trim()
+                        ? [{ specialIllnessNote: form.specialIllnesses }]
+                        : [],
+                    specialNotes: form.specialNotes.trim()
+                        ? [{ specialNote: form.specialNotes }]
+                        : [],
+                });
+            }
+
+            alert('Special illnesses & notes saved.');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special illnesses & notes');
+            setError(apiError.message || 'An error occurred while saving special illnesses & notes.');
+            console.error('Save special illnesses & notes error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -903,10 +1433,22 @@ export default function AddOfficerPage() {
         try {
             // Check if regNo is already in use
             const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
-            if (!regiNoCheck.isAvailable) {
+            if (regiNoCheck.isAvailable) {
                 setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
                 setLoading(false);
                 return;
+            }
+
+            // Upload profile photo if a file was selected
+            let imageUrl = form.photoUrl;
+            if (photoFile) {
+                try {
+                    imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                } catch (uploadErr) {
+                    setError('Failed to upload profile image. Please try again.');
+                    setLoading(false);
+                    return;
+                }
             }
 
             // Build children data
@@ -914,8 +1456,8 @@ export default function AddOfficerPage() {
                 .filter((c) => c.name.trim()) // Only include non-empty children
                 .map((c) => ({
                     childName: c.name,
-                    childDob: c.birthday,
-                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                    childDob: toApiDate(c.birthday),
+                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                     childStatusId: 2, // Default status ID
                 }));
 
@@ -925,26 +1467,26 @@ export default function AddOfficerPage() {
                 userFullName: form.fullName,
                 userCallingName: form.fullName.split(' ')[0], // Use first name as calling name
                 locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
-                userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1, // Use mapped rank ID
-                userDob: form.dob,
+                userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
+                userDob: toApiDate(form.dob),
                 phoneMobile: form.telMobile,
                 phoneOffice: form.telOffice,
                 phoneHome: form.telResidence,
-                userImageUrl: form.photoUrl,
+                userImageUrl: imageUrl || '',
                 civilStatus: form.civilStatus,
                 userRegiNo: form.regNo,
-                currentRank: form.presentRank,
-                appointRank: form.appointedRank,
+                currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+                appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
                 courseNo: form.socoCourseNo,
-                socoJoinedDate: form.dateJoinedSoco,
+                socoJoinedDate: toApiDate(form.dateJoinedSoco),
                 ...(form.civilStatus === 'Married' && {
                     spouse: {
                         spouseName: form.spouseName,
                         spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                         spouseWorkAddress: form.spouseAddressOfInstitute,
                     },
+                    children: childrenData.length > 0 ? childrenData : [],
                 }),
-                ...(childrenData.length > 0 && { children: childrenData }),
             };
 
             // Submit to API
@@ -1619,114 +2161,95 @@ export default function AddOfficerPage() {
                                 </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
-                                <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
-                                    <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
-                                        <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications</h4>
-                                        <p className="text-xs text-violet-700 mt-0.5">
-                                            Record qualifications obtained before or after joining the Police Department
-                                        </p>
+                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
+                                        <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
+                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications Before Joining Police</h4>
+                                            <p className="text-xs text-violet-700 mt-0.5">Obtained prior to joining the Police Department</p>
+                                        </div>
+                                        <div className="p-4 space-y-3">
+                                            {form.degreesBefore.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
+                                                        {form.degreesBefore.length > 1 && (
+                                                            <RemoveRowButton onClick={() => removeDegree('degreesBefore', row.id)} size="sm" />
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        <div>
+                                                            <FieldLabel label="Degree / Qualification" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesBefore', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
+                                                        </div>
+                                                        <div>
+                                                            <FieldLabel label="University / Institute" />
+                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesBefore', row.id, { university: v })} placeholder="University or Institute name" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <div className="w-32">
+                                                            <FieldLabel label="From" />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesBefore', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                        <div className="w-32">
+                                                            <FieldLabel label="To" />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesBefore', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {form.degreesBefore.length < 6 && (
+                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesBefore')}>Add Qualification</AddRowButton></div>
+                                        )}
                                     </div>
-                                    <div className="p-4 space-y-3">
-                                        {form.degrees.map((row, idx) => (
-                                            <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-3">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                    {form.degrees.length > 1 && (
-                                                        <RemoveRowButton onClick={() => removeDegree(row.id)} size="sm" />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <FieldLabel label="University / Institute" />
-                                                    <GInput value={row.university} onChange={(v) => updateDegree(row.id, { university: v })} placeholder="University or Institute name" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {(['before', 'after'] as const).map((val) => {
-                                                            const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police';
-                                                            const isSelected = row.timing === val;
-                                                            return (
-                                                                <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
-                                                                    isSelected
-                                                                        ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
-                                                                        : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
-                                                                }`}>
-                                                                    <input
-                                                                        type="radio"
-                                                                        name={`degree-timing-${row.id}`}
-                                                                        value={val}
-                                                                        checked={isSelected}
-                                                                        onChange={() => updateDegree(row.id, { timing: val })}
-                                                                        className="accent-violet-600"
-                                                                    />
-                                                                    {label}
-                                                                </label>
-                                                            );
-                                                        })}
+
+                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
+                                        <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
+                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications After Joining Police (Sponsored)</h4>
+                                            <p className="text-xs text-violet-700 mt-0.5">Sponsored degrees obtained after joining the Police Department</p>
+                                        </div>
+                                        <div className="p-4 space-y-3">
+                                            {form.degreesAfter.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
+                                                        {form.degreesAfter.length > 1 && (
+                                                            <RemoveRowButton onClick={() => removeDegree('degreesAfter', row.id)} size="sm" />
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        <div>
+                                                            <FieldLabel label="Degree / Qualification" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesAfter', row.id, { degree: v })} placeholder="e.g. LLB" />
+                                                        </div>
+                                                        <div>
+                                                            <FieldLabel label="University / Institute" />
+                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <div className="w-32">
+                                                            <FieldLabel label="From" />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
+                                                        <div className="w-32">
+                                                            <FieldLabel label="To" />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                    <div>
-                                                        <FieldLabel label="Qualification Type" />
-                                                        <CustomSelect
-                                                            value={row.qualificationType}
-                                                            onChange={(v) => {
-                                                                updateDegree(row.id, {
-                                                                    qualificationType: v as QualificationType,
-                                                                    qualificationTypeOther: v === 'Other' ? row.qualificationTypeOther : '',
-                                                                });
-                                                            }}
-                                                            options={QUALIFICATION_TYPE_OPTIONS}
-                                                            placeholder="Select type"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <FieldLabel label="Degree / Qualification Name" />
-                                                        <GInput value={row.degree} onChange={(v) => updateDegree(row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
-                                                    </div>
-                                                </div>
-                                                {row.qualificationType === 'Other' && (
-                                                    <div>
-                                                        <FieldLabel label="Specify Qualification Type" />
-                                                        <GInput
-                                                            value={row.qualificationTypeOther}
-                                                            onChange={(v) => updateDegree(row.id, { qualificationTypeOther: v })}
-                                                            placeholder="Enter qualification type"
-                                                        />
-                                                    </div>
-                                                )}
-                                                <div className="flex flex-wrap items-end gap-3">
-                                                    <div className="w-32">
-                                                        <FieldLabel label="From" />
-                                                        <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
-                                                    </div>
-                                                    <div className="w-32">
-                                                        <FieldLabel label="To" />
-                                                        <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
-                                                    </div>
-                                                    <div className="flex items-center h-10">
-                                                        <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={row.sponsored || false}
-                                                                onChange={(e) => updateDegree(row.id, { sponsored: e.target.checked })}
-                                                                className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                                                            />
-                                                            Sponsored
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
+                                        {form.degreesAfter.length < 6 && (
+                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesAfter')}>Add Qualification</AddRowButton></div>
+                                        )}
                                     </div>
-                                    {form.degrees.length < 12 && (
-                                        <div className="px-4 pb-4"><AddRowButton onClick={addDegree}>Add Qualification</AddRowButton></div>
-                                    )}
                                 </div>
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Education')}
+                                    onSave={saveEducation}
                                     saving={sectionSaving === 'Education'}
                                 />
                             </div>}
@@ -1734,7 +2257,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
-                                    sectionNo={4}
+                                    sectionNo={5}
                                     title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
                                 />
                                 <p className="text-sm text-amber-900/80 mb-4">
@@ -1833,7 +2356,7 @@ export default function AddOfficerPage() {
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Courses Before SOCO')}
+                                    onSave={() => saveCourses('Courses Before SOCO', 1)}
                                     saving={sectionSaving === 'Courses Before SOCO'}
                                 />
                             </div>}
@@ -1841,7 +2364,7 @@ export default function AddOfficerPage() {
                             {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
                                 <SectionHeader
-                                    sectionNo={5}
+                                    sectionNo={6}
                                     title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
                                 />
                                 <p className="text-sm text-cyan-900/80 mb-4">
@@ -1936,14 +2459,14 @@ export default function AddOfficerPage() {
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Courses After SOCO')}
+                                    onSave={() => saveCourses('Courses After SOCO', 2)}
                                     saving={sectionSaving === 'Courses After SOCO'}
                                 />
                             </div>}
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70">
-                                <SectionHeader sectionNo={6} title="Driving License Details" />
+                                <SectionHeader sectionNo={7} title="Driving License Details" />
 
                                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
                                     <div className="rounded-xl border border-rose-100 bg-white shadow-sm p-4 xl:col-span-2">
@@ -2018,14 +2541,14 @@ export default function AddOfficerPage() {
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Driving License')}
+                                    onSave={saveDrivingLicense}
                                     saving={sectionSaving === 'Driving License'}
                                 />
                             </div>}
 
                             {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-fuchsia-200 bg-fuchsia-50/70">
-                                <SectionHeader sectionNo={7} title="Transfer" titleSi="මාරු" />
+                                <SectionHeader sectionNo={8} title="Transfer" titleSi="මාරු" />
 
                                 <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50/80 p-4 sm:p-5 shadow-sm">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2152,14 +2675,14 @@ export default function AddOfficerPage() {
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Transfer')}
+                                    onSave={saveTransfers}
                                     saving={sectionSaving === 'Transfer'}
                                 />
                             </div>}
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
-                                <SectionHeader sectionNo={8} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
+                                <SectionHeader sectionNo={9} title="Special Duty" titleSi="විශේෂ රාජකාරි" />
 
                                 <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-sm">
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -2286,14 +2809,14 @@ export default function AddOfficerPage() {
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Special Duty')}
+                                    onSave={saveSpecialDuty}
                                     saving={sectionSaving === 'Special Duty'}
                                 />
                             </div>}
 
                             {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70">
-                                <SectionHeader sectionNo={9} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
+                                <SectionHeader sectionNo={10} title="Disciplinary Inquiries" titleSi="විනය විමර්ශන" />
                                 <p className="text-sm text-emerald-900/80 mb-4">
                                     Record current inquiry status and any relevant findings for each disciplinary category.
                                 </p>
@@ -2350,7 +2873,7 @@ export default function AddOfficerPage() {
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Disciplinary Inquiries')}
+                                    onSave={saveDisciplinaryInquiries}
                                     saving={sectionSaving === 'Disciplinary Inquiries'}
                                 />
                             </div>}
@@ -2396,7 +2919,7 @@ export default function AddOfficerPage() {
 
                                 <SectionActions
                                     isEditingSection
-                                    onSave={() => saveGenericSection('Special Illnesses & Notes')}
+                                    onSave={saveSpecialIllnessesNotes}
                                     saving={sectionSaving === 'Special Illnesses & Notes'}
                                 />
                             </div>}

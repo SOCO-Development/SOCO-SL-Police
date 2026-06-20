@@ -26,6 +26,8 @@ type RequestOptions = {
   auth?: boolean;
   /** Internal flag to avoid infinite refresh loops. */
   _retried?: boolean;
+  /** Send body as FormData (skips JSON stringify and Content-Type header). */
+  formData?: boolean;
 };
 
 function buildUrl(path: string, params?: RequestOptions['params']): string {
@@ -91,11 +93,12 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { method = 'GET', body, params, auth = true, _retried = false } = options;
+  const { method = 'GET', body, params, auth = true, _retried = false, formData = false } = options;
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
+  if (!formData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (auth) {
     const token = getAccessToken();
@@ -105,7 +108,7 @@ export async function apiRequest<T>(
   const res = await fetch(buildUrl(path, params), {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: formData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   let json: ApiResponse<T>;
@@ -125,6 +128,7 @@ export async function apiRequest<T>(
   }
 
   if (!res.ok || !json.isSuccess) {
+    console.error(`API Error [${res.status}] ${path}:`, JSON.stringify(json, null, 2));
     throw new ApiError(getErrorMessage(json), res.status, json);
   }
 
