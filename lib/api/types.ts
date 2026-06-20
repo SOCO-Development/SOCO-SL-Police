@@ -115,8 +115,8 @@ export interface InsertNewOfficerRequest {
   userImageUrl: string;
   civilStatus: string;
   userRegiNo: string;
-  currentRank: string;
-  appointRank: string;
+  currentRank: number;
+  appointRank: number;
   courseNo: string;
   socoJoinedDate: string;
   spouse?: SpouseData;

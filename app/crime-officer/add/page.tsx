@@ -508,10 +508,20 @@ export default function AddOfficerPage() {
     const searchParams = useSearchParams();
     const editId = searchParams.get('edit');
     const isEditing = !!editId;
+
+    // Convert dd-mm-yyyy → yyyy-mm-dd for the API
+    const toApiDate = (d: string): string => {
+        if (!d) return '';
+        const parts = d.split('-');
+        if (parts.length !== 3) return d;
+        if (parts[0].length === 4) return d; // already yyyy-mm-dd
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    };
     const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
     const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -812,6 +822,7 @@ export default function AddOfficerPage() {
     const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setPhotoFile(file);
         const url = URL.createObjectURL(file);
         setPhotoPreview(url);
         set('photoUrl', url);
@@ -975,8 +986,8 @@ export default function AddOfficerPage() {
             .filter((c) => c.name.trim())
             .map((c) => ({
                 childName: c.name,
-                childDob: c.birthday,
-                childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                childDob: toApiDate(c.birthday),
+                childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                 childStatusId: 2,
             }));
 
@@ -987,26 +998,26 @@ export default function AddOfficerPage() {
             userFullName: form.fullName,
             userCallingName: form.fullName.split(' ')[0],
             locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
-            userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1,
-            userDob: form.dob,
+            userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
+            userDob: toApiDate(form.dob),
             phoneMobile: form.telMobile,
             phoneOffice: form.telOffice,
             phoneHome: form.telResidence,
-            userImageUrl: form.photoUrl,
+            userImageUrl: form.photoUrl || '',
             civilStatus: form.civilStatus,
             userRegiNo: form.regNo,
-            currentRank: form.presentRank,
-            appointRank: form.appointedRank,
+            currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+            appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
             courseNo: form.socoCourseNo,
-            socoJoinedDate: form.dateJoinedSoco,
+            socoJoinedDate: toApiDate(form.dateJoinedSoco),
             ...(form.civilStatus === 'Married' && {
                 spouse: {
                     spouseName: form.spouseName,
                     spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                     spouseWorkAddress: form.spouseAddressOfInstitute,
                 },
+                children: childrenData.length > 0 ? childrenData : [],
             }),
-            ...(childrenData.length > 0 && { children: childrenData }),
         };
     };
 
@@ -1022,12 +1033,26 @@ export default function AddOfficerPage() {
         try {
             if (!isEditing) {
                 const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
-                if (!regiNoCheck.isAvailable) {
+if (regiNoCheck.isAvailable) {
                     setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
                     return;
                 }
 
-                const result = await officerService.insertNewOfficer(buildPersonalFamilyPayload());
+                // Upload profile photo if a file was selected
+                let imageUrl = '';
+                if (photoFile) {
+                    try {
+                        imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                    } catch (uploadErr) {
+                        setError('Failed to upload profile image. Please try again.');
+                        return;
+                    }
+                }
+
+                const payload = buildPersonalFamilyPayload();
+                if (imageUrl) payload.userImageUrl = imageUrl;
+                console.log('InsertNewOfficer payload:', JSON.stringify(payload, null, 2));
+                const result = await officerService.insertNewOfficer(payload);
                 setSubmitted(true);
                 alert(`Officer ${result.message} (ID: ${result.systemUserId})`);
             } else {
@@ -1408,10 +1433,22 @@ export default function AddOfficerPage() {
         try {
             // Check if regNo is already in use
             const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
-            if (!regiNoCheck.isAvailable) {
+            if (regiNoCheck.isAvailable) {
                 setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
                 setLoading(false);
                 return;
+            }
+
+            // Upload profile photo if a file was selected
+            let imageUrl = form.photoUrl;
+            if (photoFile) {
+                try {
+                    imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                } catch (uploadErr) {
+                    setError('Failed to upload profile image. Please try again.');
+                    setLoading(false);
+                    return;
+                }
             }
 
             // Build children data
@@ -1419,8 +1456,8 @@ export default function AddOfficerPage() {
                 .filter((c) => c.name.trim()) // Only include non-empty children
                 .map((c) => ({
                     childName: c.name,
-                    childDob: c.birthday,
-                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                    childDob: toApiDate(c.birthday),
+                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                     childStatusId: 2, // Default status ID
                 }));
 
@@ -1430,26 +1467,26 @@ export default function AddOfficerPage() {
                 userFullName: form.fullName,
                 userCallingName: form.fullName.split(' ')[0], // Use first name as calling name
                 locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
-                userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1, // Use mapped rank ID
-                userDob: form.dob,
+                userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
+                userDob: toApiDate(form.dob),
                 phoneMobile: form.telMobile,
                 phoneOffice: form.telOffice,
                 phoneHome: form.telResidence,
-                userImageUrl: form.photoUrl,
+                userImageUrl: imageUrl || '',
                 civilStatus: form.civilStatus,
                 userRegiNo: form.regNo,
-                currentRank: form.presentRank,
-                appointRank: form.appointedRank,
+                currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+                appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
                 courseNo: form.socoCourseNo,
-                socoJoinedDate: form.dateJoinedSoco,
+                socoJoinedDate: toApiDate(form.dateJoinedSoco),
                 ...(form.civilStatus === 'Married' && {
                     spouse: {
                         spouseName: form.spouseName,
                         spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                         spouseWorkAddress: form.spouseAddressOfInstitute,
                     },
+                    children: childrenData.length > 0 ? childrenData : [],
                 }),
-                ...(childrenData.length > 0 && { children: childrenData }),
             };
 
             // Submit to API

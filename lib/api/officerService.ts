@@ -39,8 +39,8 @@ export async function insertNewOfficer(
 }
 
 /**
- * Check if a registration number is available (SOCO_U2)
- * isAvailable: true means the Regi No is FREE to use
+ * Check if a registration number already exists (SOCO_U2)
+ * isAvailable: true means the Regi No is ALREADY in use
  */
 export async function checkRegiNoAvailable(
   regiNo: string,
@@ -188,6 +188,25 @@ export async function grantLoginAccess(
   const res = await apiRequest<string>('UserPrivilege/GrantLoginAccess', {
     method: 'POST',
     body: payload,
+  });
+  return res;
+}
+
+/**
+ * Upload profile image (SOCO_UC3)
+ */
+export async function uploadProfileImage(
+  regiNo: string,
+  file: File,
+): Promise<string> {
+  const formData = new FormData();
+  formData.append('ImageFile', file);
+  formData.append('UserRegiNo', regiNo);
+
+  const res = await apiRequest<string>('User/UploadProfileImage', {
+    method: 'POST',
+    body: formData,
+    formData: true,
   });
   return res;
 }
