@@ -21,6 +21,8 @@ import type {
   UpdateDisciplinaryInquiriesData,
   UpdateSpecialIllnessesNotesRequest,
   UpdateSpecialIllnessesNotesData,
+  OfficerListItem,
+  OfficerDetailBundle,
 } from './types';
 
 /**
@@ -154,4 +156,24 @@ export async function updateSpecialIllnessesNotes(
     method: 'POST',
     body: payload,
   });
+}
+
+/**
+ * Get all officers (SOCO_U12)
+ */
+export async function getAllOfficers(): Promise<OfficerListItem[]> {
+  const res = await apiRequest<OfficerListItem[]>('User/GetAllOfficers');
+  return res;
+}
+
+/**
+ * Get officer by ID (SOCO_U13)
+ */
+export async function getOfficerById(
+  systemUserId: number,
+): Promise<OfficerDetailBundle> {
+  const res = await apiRequest<OfficerDetailBundle>('User/GetOfficerById', {
+    params: { systemUserId },
+  });
+  return res;
 }

@@ -1,34 +1,35 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import CustomSelect from '@/components/forms/CustomSelect';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import { PageHeader, PageLayout, Button, SearchInput, ActionChipButton, PaginationControls } from '@/components/ui';
 import { ANNEX_01_SOCO_LABS, ANNEX_12_RANK } from '@/lib/annexData';
+import { officerService, ApiError } from '@/lib/api';
+import { useLocationData } from '@/lib/hooks/useLocationData';
+import { useUserData } from '@/lib/hooks/useUserData';
 import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Shield } from 'lucide-react';
 
 const LAB_FILTER_OPTIONS = [{ value: '', label: 'All Labs' }, ...ANNEX_01_SOCO_LABS.map((l) => ({ value: l, label: l }))];
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK_OFFICERS = [
-    { id: 1, photo: null, name: 'K.M. Perera', rank: 'SI', regNo: 'P12345', socoLab: 'Kandy', mobile: '071-1234567', presentRank: 'IP' },
-    { id: 2, photo: null, name: 'R.P. Silva', rank: 'PC', regNo: 'P23456', socoLab: 'Colombo Central', mobile: '077-2345678', presentRank: 'PS' },
-    { id: 3, photo: null, name: 'S.A. Fernando', rank: 'IP', regNo: 'P34567', socoLab: 'Galle', mobile: '076-3456789', presentRank: 'CI' },
-    { id: 4, photo: null, name: 'N.D. Jayawardena', rank: 'PS', regNo: 'P45678', socoLab: 'Jaffna', mobile: '070-4567890', presentRank: 'SI' },
-    { id: 5, photo: null, name: 'C.B. Gunasekara', rank: 'SI', regNo: 'P56789', socoLab: 'Matara', mobile: '072-5678901', presentRank: 'IP' },
-    { id: 6, photo: null, name: 'A.T. Wickramasinghe', rank: 'PC', regNo: 'P67890', socoLab: 'Kurunegala', mobile: '075-6789012', presentRank: 'PS' },
-    { id: 7, photo: null, name: 'D.R. Dissanayake', rank: 'IP', regNo: 'P78901', socoLab: 'Trincomalee', mobile: '071-7890123', presentRank: 'CI' },
-];
-
-type SortKey = 'name' | 'rank' | 'regNo' | 'socoLab' | 'mobile' | 'presentRank';
+type SortKey = 'name' | 'regNo' | 'status' | 'socoLab' | 'mobile';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100].map((n) => ({ value: String(n), label: `${n} per page` }));
 
-// ─── Avatar placeholder ───────────────────────────────────────────────────────
+interface OfficerRow {
+    id: string;
+    name: string;
+    regNo: string;
+    status: string;
+    locationId: string;
+    rankId: string;
+    mobile: string;
+    socoLab: string;
+    rank: string;
+}
 
 function OfficerAvatar({ name }: { name: string }) {
     const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -39,11 +40,9 @@ function OfficerAvatar({ name }: { name: string }) {
     );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-type Officer = (typeof MOCK_OFFICERS)[number];
-
 export default function ViewOfficersPage() {
+    const { locations } = useLocationData();
+    const { rankIdToName } = useUserData();
     const [search, setSearch] = useState('');
     const [filterLab, setFilterLab] = useState('');
     const [filterRank, setFilterRank] = useState('');
@@ -52,7 +51,48 @@ export default function ViewOfficersPage() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [showFilters, setShowFilters] = useState(false);
-    const [viewingOfficer, setViewingOfficer] = useState<Officer | null>(null);
+    const [viewingOfficer, setViewingOfficer] = useState<OfficerRow | null>(null);
+    const [officers, setOfficers] = useState<OfficerRow[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const locationIdToName = useMemo(() => {
+        const map = new Map<string, string>();
+        locations.forEach((loc) => map.set(loc.id, loc.name));
+        return map;
+    }, [locations]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const fetch = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const raw = await officerService.getAllOfficers();
+                if (cancelled) return;
+                const rows: OfficerRow[] = raw.map((o) => ({
+                    id: o.SYSTEM_USER_ID,
+                    name: o.USER_FULL_NAME,
+                    regNo: o.USER_REGI_NO || '',
+                    status: o.STATUS,
+                    locationId: o.LOCATION_ID,
+                    rankId: o.RANK_ID || '',
+                    mobile: o.PHONE_MOBILE || '',
+                    socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
+                    rank: rankIdToName.get(o.RANK_ID || '') || '',
+                }));
+                setOfficers(rows);
+            } catch (err) {
+                if (cancelled) return;
+                const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
+                setError(apiError.message || 'Failed to load officers');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        fetch();
+        return () => { cancelled = true; };
+    }, [locationIdToName, rankIdToName]);
 
     const handleSort = (key: string) => {
         const k = key as SortKey;
@@ -64,7 +104,7 @@ export default function ViewOfficersPage() {
     };
 
     const filtered = useMemo(() => {
-        let data = [...MOCK_OFFICERS];
+        let data = [...officers];
         if (search.trim()) {
             const q = search.toLowerCase();
             data = data.filter((o) =>
@@ -82,20 +122,13 @@ export default function ViewOfficersPage() {
             return sortAsc ? cmp : -cmp;
         });
         return data;
-    }, [search, filterLab, filterRank, sortKey, sortAsc]);
+    }, [search, filterLab, filterRank, sortKey, sortAsc, officers]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const effectivePage = Math.min(page, totalPages);
-
     const paginated = filtered.slice((effectivePage - 1) * pageSize, effectivePage * pageSize);
 
-    const handleDelete = (id: number) => {
-        if (confirm('Are you sure you want to delete this officer record?')) {
-            alert(`Officer ${id} deleted (mock).`);
-        }
-    };
-
-    const columns: AppTableColumn<Officer>[] = useMemo(
+    const columns: AppTableColumn<OfficerRow>[] = useMemo(
         () => [
             {
                 key: 'photo',
@@ -115,7 +148,7 @@ export default function ViewOfficersPage() {
                 sortable: true,
                 render: (v) => (
                     <span className="inline-block px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded">
-                        {String(v)}
+                        {String(v) || '-'}
                     </span>
                 ),
             },
@@ -132,20 +165,27 @@ export default function ViewOfficersPage() {
                 render: (v) => <span className="text-gray-700">{String(v)}</span>,
             },
             {
+                key: 'status',
+                label: 'Status',
+                sortable: true,
+                render: (v) => {
+                    const active = String(v) === 'ACTIVE';
+                    return (
+                        <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded ${
+                            active
+                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                            {active ? 'Active' : 'Inactive'}
+                        </span>
+                    );
+                },
+            },
+            {
                 key: 'mobile',
                 label: 'Mobile',
                 sortable: true,
                 render: (v) => <span className="text-gray-700">{String(v)}</span>,
-            },
-            {
-                key: 'presentRank',
-                label: 'Present Rank',
-                sortable: true,
-                render: (v) => (
-                    <span className="inline-block px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 rounded">
-                        {String(v)}
-                    </span>
-                ),
             },
             {
                 key: 'actions',
@@ -154,7 +194,9 @@ export default function ViewOfficersPage() {
                 align: 'right' as const,
                 render: (_, row) => (
                     <div className="flex items-center justify-end gap-2 flex-wrap">
-                        <ActionChipButton variant="blue" title="View" onClick={() => setViewingOfficer(row)}><Eye className="w-3 h-3" /> View</ActionChipButton>
+                        <ActionChipButton variant="blue" title="View" onClick={() => setViewingOfficer(row)}>
+                            <Eye className="w-3 h-3" /> View
+                        </ActionChipButton>
                         <Link
                             href={`/crime-officer/add?edit=${row.id}`}
                             title="Edit"
@@ -163,7 +205,9 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="red" title="Delete" onClick={() => handleDelete(row.id)}><Trash2 className="w-3 h-3" /> Delete</ActionChipButton>
+                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => alert(`Privilege management for officer ${row.id} — coming soon`)}>
+                            <Shield className="w-3 h-3" /> Privilege
+                        </ActionChipButton>
                     </div>
                 ),
             },
@@ -187,104 +231,113 @@ export default function ViewOfficersPage() {
                 }
             />
 
-                        {/* Search & Filters */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
-                            <div className="flex gap-3 flex-wrap items-center">
-                                <SearchInput
-                                    value={search}
-                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                    placeholder="Search name, reg no, mobile..."
-                                    wrapperClassName="flex-1 min-w-[200px]"
-                                    icon={<MagnifyingGlass size={15} />}
-                                />
+            {error && (
+                <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    {error}
+                </div>
+            )}
 
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
+                <div className="flex gap-3 flex-wrap items-center">
+                    <SearchInput
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        placeholder="Search name, reg no, mobile..."
+                        wrapperClassName="flex-1 min-w-[200px]"
+                        icon={<MagnifyingGlass size={15} />}
+                    />
+
+                    <Button
+                        type="button"
+                        variant={showFilters ? 'primary' : 'secondary'}
+                        onClick={() => setShowFilters((f) => !f)}
+                        className={showFilters ? '!min-h-[38px] !py-2 !text-sm' : '!min-h-[38px] !py-2 !text-sm'}
+                    >
+                        <FunnelSimple size={15} />
+                        Filters
+                    </Button>
+                </div>
+
+                {showFilters && (
+                    <div className="mt-3 flex gap-3 flex-wrap pt-3 border-t border-gray-100">
+                        <div className="flex-1 min-w-[180px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Lab</label>
+                            <CustomSelect
+                                value={filterLab}
+                                onChange={(v) => { setFilterLab(v); setPage(1); }}
+                                options={LAB_FILTER_OPTIONS}
+                                placeholder="All Labs"
+                            />
+                        </div>
+                        <div className="flex-1 min-w-[140px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Rank</label>
+                            <CustomSelect
+                                value={filterRank}
+                                onChange={(v) => { setFilterRank(v); setPage(1); }}
+                                options={RANK_FILTER_OPTIONS}
+                                placeholder="All Ranks"
+                            />
+                        </div>
+                        <div className="flex-1 min-w-[140px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">View</label>
+                            <CustomSelect
+                                value={String(pageSize)}
+                                onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+                                options={PAGE_SIZE_OPTIONS}
+                                placeholder="Per page"
+                            />
+                        </div>
+                        {(filterLab || filterRank || search) && (
+                            <div className="flex items-end">
                                 <Button
                                     type="button"
-                                    variant={showFilters ? 'primary' : 'secondary'}
-                                    onClick={() => setShowFilters((f) => !f)}
-                                    className={showFilters ? '!min-h-[38px] !py-2 !text-sm' : '!min-h-[38px] !py-2 !text-sm'}
+                                    variant="ghost"
+                                    onClick={() => { setFilterLab(''); setFilterRank(''); setSearch(''); setPage(1); }}
+                                    className="!min-h-9 !px-3 !text-xs !text-red-500 hover:!text-red-700"
                                 >
-                                    <FunnelSimple size={15} />
-                                    Filters
+                                    Clear filters
                                 </Button>
                             </div>
+                        )}
+                    </div>
+                )}
+            </div>
 
-                            {showFilters && (
-                                <div className="mt-3 flex gap-3 flex-wrap pt-3 border-t border-gray-100">
-                                    <div className="flex-1 min-w-[180px]">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Lab</label>
-                                        <CustomSelect
-                                            value={filterLab}
-                                            onChange={(v) => { setFilterLab(v); setPage(1); }}
-                                            options={LAB_FILTER_OPTIONS}
-                                            placeholder="All Labs"
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-[140px]">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Rank</label>
-                                        <CustomSelect
-                                            value={filterRank}
-                                            onChange={(v) => { setFilterRank(v); setPage(1); }}
-                                            options={RANK_FILTER_OPTIONS}
-                                            placeholder="All Ranks"
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-[140px]">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">View</label>
-                                        <CustomSelect
-                                            value={String(pageSize)}
-                                            onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
-                                            options={PAGE_SIZE_OPTIONS}
-                                            placeholder="Per page"
-                                        />
-                                    </div>
-                                    {(filterLab || filterRank || search) && (
-                                        <div className="flex items-end">
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                onClick={() => { setFilterLab(''); setFilterRank(''); setSearch(''); setPage(1); }}
-                                                className="!min-h-9 !px-3 !text-xs !text-red-500 hover:!text-red-700"
-                                            >
-                                                Clear filters
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+            <div className="animate-fade-in">
+                {loading ? (
+                    <div className="text-center py-12 text-gray-400">Loading officers...</div>
+                ) : (
+                    <>
+                        <AppTable<OfficerRow>
+                            columns={columns}
+                            data={paginated}
+                            keyField="id"
+                            sortKey={sortKey}
+                            sortAsc={sortAsc}
+                            onSort={handleSort}
+                            emptyMessage="No officers found matching your search criteria."
+                            variant="card"
+                        />
 
-                        {/* Table — same AppTable card style as Crime Visits */}
-                        <div className="animate-fade-in">
-                            <AppTable<Officer>
-                                columns={columns}
-                                data={paginated}
-                                keyField="id"
-                                sortKey={sortKey}
-                                sortAsc={sortAsc}
-                                onSort={handleSort}
-                                emptyMessage="No officers found matching your search criteria."
-                                variant="card"
-                            />
-
-                            {filtered.length > 0 && (
-                                <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
-                                    <p className="text-sm text-gray-600">
-                                        Showing {filtered.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1} to{' '}
-                                        {Math.min(effectivePage * pageSize, filtered.length)} of {filtered.length} officers
-                                    </p>
-                                    <PaginationControls
-                                        page={effectivePage}
-                                        totalPages={totalPages}
-                                        onPageChange={setPage}
-                                    />
-                                </div>
-                            )}
-                        </div>
+                        {filtered.length > 0 && (
+                            <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
+                                <p className="text-sm text-gray-600">
+                                    Showing {filtered.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1} to{' '}
+                                    {Math.min(effectivePage * pageSize, filtered.length)} of {filtered.length} officers
+                                </p>
+                                <PaginationControls
+                                    page={effectivePage}
+                                    totalPages={totalPages}
+                                    onPageChange={setPage}
+                                />
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
 
         </PageLayout>
 
-            {/* View Officer Modal */}
             {viewingOfficer && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
@@ -317,11 +370,17 @@ export default function ViewOfficersPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Rank</p>
-                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.rank}</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.rank || '-'}</p>
                                 </div>
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Present Rank</p>
-                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.presentRank}</p>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                                    <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded ${
+                                        viewingOfficer.status === 'ACTIVE'
+                                            ? 'bg-green-50 text-green-700 border border-green-200'
+                                            : 'bg-red-50 text-red-700 border border-red-200'
+                                    }`}>
+                                        {viewingOfficer.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                                    </span>
                                 </div>
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">SOCO Lab</p>
@@ -329,7 +388,7 @@ export default function ViewOfficersPage() {
                                 </div>
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mobile</p>
-                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.mobile}</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.mobile || '-'}</p>
                                 </div>
                             </div>
                         </div>
