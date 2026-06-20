@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useId, useEffect } from 'react';
+import { useState, useRef, useCallback, useId, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
@@ -556,6 +556,207 @@ export default function AddOfficerPage() {
         'J',
         'H',
     ].map((s) => ({ value: s, label: s }));
+
+    const locationIdToName = useMemo(() => {
+        const map = new Map<string, string>();
+        locations.forEach((loc) => map.set(loc.id, loc.name));
+        return map;
+    }, [locations]);
+
+    // Load officer data when editing
+    useEffect(() => {
+        if (!isEditing || !editId) return;
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const data = await officerService.getOfficerById(parseInt(editId, 10));
+                if (cancelled || !data.personalInfo?.length) return;
+                const p = data.personalInfo[0];
+
+                setForm({
+                    ...defaultForm(),
+                    // Section 1
+                    socoLab: locationIdToName.get(p.LOCATION_ID) || '',
+                    socoLabId: p.LOCATION_ID,
+                    rankDropdown: rankNameToId.get(p.RANK_ID || '') || '',
+                    rankDesignationId: p.RANK_ID || '',
+                    regNo: p.USER_REGI_NO || '',
+                    fullName: p.USER_FULL_NAME || '',
+                    reportedDate: '',
+                    dob: p.USER_DOB || '',
+                    dateJoinedSoco: p.SOCO_JOINED_DATE || '',
+                    socoCourseNo: p.COURSE_NO || '',
+                    socoService: '',
+                    telOffice: p.PHONE_OFFICE || '',
+                    telResidence: p.PHONE_HOME || '',
+                    telMobile: p.PHONE_MOBILE || '',
+                    photoUrl: p.USER_IMAGE_URL || '',
+                    // Section 2
+                    civilStatus: p.CIVIL_STATUS || '',
+                    spouseName: data.spouse?.[0]?.SPOUSE_NAME || '',
+                    spouseDesignation: data.spouse?.[0]?.SPOUSE_DESIGNATION || '',
+                    spouseAddressOfInstitute: data.spouse?.[0]?.SPOUSE_WORK_ADDRESS || '',
+                    children: (data.children?.length
+                        ? data.children.map((c) => ({
+                            id: newId(),
+                            name: c.CHILD_NAME || '',
+                            birthday: c.CHILD_DOB || '',
+                            status: '',
+                        }))
+                        : [{ id: newId(), name: '', birthday: '', status: '' }]
+                    ),
+                    // Section 3
+                    dateJoinedPolice: '',
+                    appointedRank: p.APPOINT_RANK || '',
+                    presentRank: p.CURRENT_RANK || '',
+                    promotions: (data.promotions?.length
+                        ? data.promotions.map((pr) => ({
+                            id: newId(),
+                            rank: rankNameToId.get(pr.PROMOTED_RANK_ID) || '',
+                            date: pr.PROMOTED_DATE || '',
+                        }))
+                        : [{ id: newId(), rank: '', date: '' }]
+                    ),
+                    // Section 4 – Education
+                    olMandatorySubjects: [
+                        { subject: 'First Language (Sinhala / Tamil)', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Sinhala' || r.SUBJECT_NAME === 'Tamil')?.SUBJECT_RESULT || '' },
+                        { subject: 'English (Second Language)', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'English')?.SUBJECT_RESULT || '' },
+                        { subject: 'Mathematics', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Mathematics')?.SUBJECT_RESULT || '' },
+                        { subject: 'Science', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Science')?.SUBJECT_RESULT || '' },
+                        { subject: 'History', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'History')?.SUBJECT_RESULT || '' },
+                        { subject: 'Religion', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Religion')?.SUBJECT_RESULT || '' },
+                    ].filter(Boolean) as OLSubjectResult[],
+                    olOptionalSubjects: (data.olResults || [])
+                        .filter((r) => !['Sinhala', 'Tamil', 'English', 'Mathematics', 'Science', 'History', 'Religion'].includes(r.SUBJECT_NAME))
+                        .map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT as OLGrade })),
+                    alStream: (data.alResults?.[0]?.STREAM || '') as ALStream,
+                    alSubjects: (data.alResults?.length
+                        ? data.alResults.map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT }))
+                        : [
+                            { id: newId(), subject: '', grade: '' },
+                            { id: newId(), subject: '', grade: '' },
+                            { id: newId(), subject: '', grade: '' },
+                        ]
+                    ),
+                    alGeneralEnglish: '',
+                    alGeneralKnowledge: '',
+                    degreesBefore: (data.higherEducation || [])
+                        .filter((h) => h.DONE_BEFORE_JOIN === 'Yes')
+                        .map((h) => ({
+                            id: newId(),
+                            degree: h.QUALIFICATION_NAME || '',
+                            university: h.INSTITUTE_NAME || '',
+                            yearFrom: h.FROM_YEAR || '',
+                            yearTo: h.TO_YEAR || '',
+                        })),
+                    degreesAfter: (data.higherEducation || [])
+                        .filter((h) => h.DONE_BEFORE_JOIN === 'No' || !h.DONE_BEFORE_JOIN)
+                        .map((h) => ({
+                            id: newId(),
+                            degree: h.QUALIFICATION_NAME || '',
+                            university: h.INSTITUTE_NAME || '',
+                            yearFrom: h.FROM_YEAR || '',
+                            yearTo: h.TO_YEAR || '',
+                        })),
+                    // Sections 5/6 – Courses
+                    localBeforeCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '1')
+                        .map((c) => ({
+                            id: newId(),
+                            conNo: c.CON_NO || '',
+                            policeStation: c.POLICE_STATION || '',
+                            branch: c.BRANCH || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            institute: c.INSTITUTE || '',
+                        })),
+                    foreignBeforeCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '2')
+                        .map((c) => ({
+                            id: newId(),
+                            conNo: c.CON_NO || '',
+                            policeStation: c.POLICE_STATION || '',
+                            branch: c.BRANCH || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            institute: c.COUNTRY || c.INSTITUTE || '',
+                        })),
+                    localAfterCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '1')
+                        .map((c) => ({
+                            id: newId(),
+                            courseName: c.CON_NO || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            time: c.DURATION || '',
+                            institute: c.INSTITUTE || '',
+                        })),
+                    foreignAfterCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '2')
+                        .map((c) => ({
+                            id: newId(),
+                            courseName: c.CON_NO || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            time: c.DURATION || '',
+                            institute: c.COUNTRY || c.INSTITUTE || '',
+                        })),
+                    // Section 7 – Driving License
+                    drivingLicenseNo: data.drivingCategoryDetails?.[0]?.DRIVING_LICENSE_NO || '',
+                    vehicleCategories: (data.drivingCategoryDetails || []).map((d) =>
+                        Object.entries(CATEGORY_NAME_TO_ID).find(([, id]) => id === parseInt(d.LICENCE_CATEGORY_ID))?.[0] || ''
+                    ).filter(Boolean),
+                    heavyVehicleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '1') ? 'Yes' : '',
+                    lightVehicleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '2') ? 'Yes' : '',
+                    motorcycleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '3') ? 'Yes' : '',
+                    // Section 8 – Transfer
+                    transferDraft: createAssignmentRow(),
+                    transferHistory: (data.transfers || []).map((t) => ({
+                        id: newId(),
+                        socoLab: locationIdToName.get(t.LOCATION_ID) || '',
+                        from: t.FROM_DATE || '',
+                        to: t.TO_DATE || '',
+                        duration: t.DURATION || '',
+                        oic: '',
+                        reason: t.REASON || '',
+                        reasonOther: '',
+                    })),
+                    // Section 9 – Special Duty
+                    specialDutyDraft: createAssignmentRow(),
+                    specialDutyHistory: (data.specialDuty || []).map((d) => ({
+                        id: newId(),
+                        socoLab: locationIdToName.get(d.LOCATION_ID) || '',
+                        from: d.FROM_DATE || '',
+                        to: d.TO_DATE || '',
+                        duration: d.DURATION || '',
+                        oic: '',
+                        reason: d.REASON || '',
+                        reasonOther: '',
+                    })),
+                    // Section 10 – Disciplinary Inquiries
+                    orderlyRoomStatus: (data.disciplinaryInquiries?.[0]?.ORDERLY_ROOM_STATUS || '') as ToggleChoice,
+                    orderlyRoomResult: data.disciplinaryInquiries?.[0]?.ORDERLY_ROOM_RESULT || '',
+                    preliminaryInquiryStatus: (data.disciplinaryInquiries?.[0]?.PRELIMINARY_INQUIRY_STATUS || '') as ToggleChoice,
+                    preliminaryInquiryResult: data.disciplinaryInquiries?.[0]?.PRELIMINARY_INQUIRY_RESULT || '',
+                    disciplinaryInquiryStatus: (data.disciplinaryInquiries?.[0]?.DISCIPLINARY_INQUIRY_STATUS || '') as ToggleChoice,
+                    disciplinaryInquiryResult: data.disciplinaryInquiries?.[0]?.DISCIPLINARY_INQUIRY_RESULT || '',
+                    // Section 11 – Special Illnesses & Notes
+                    specialIllnesses: data.specialIllnesses?.map((s) => s.SPECIAL_ILLNESS_NOTE).join('\n') || '',
+                    specialNotes: data.specialNotes?.map((s) => s.SPECIAL_NOTE).join('\n') || '',
+                });
+
+                if (p.USER_IMAGE_URL && (p.USER_IMAGE_URL.startsWith('http://') || p.USER_IMAGE_URL.startsWith('https://') || p.USER_IMAGE_URL.startsWith('/'))) {
+                    setPhotoPreview(p.USER_IMAGE_URL);
+                }
+            } catch (err) {
+                const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officer data');
+                setError(apiError.message || 'An error occurred while loading officer data.');
+                console.error('Load officer data error:', err);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
+    }, [isEditing, editId, locationIdToName, rankNameToId]);
 
     const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
         setForm((f) => ({ ...f, [key]: val }));
