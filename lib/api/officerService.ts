@@ -23,6 +23,7 @@ import type {
   UpdateSpecialIllnessesNotesData,
   OfficerListItem,
   OfficerDetailBundle,
+  GrantLoginAccessRequest,
 } from './types';
 
 /**
@@ -174,6 +175,19 @@ export async function getOfficerById(
 ): Promise<OfficerDetailBundle> {
   const res = await apiRequest<OfficerDetailBundle>('User/GetOfficerById', {
     params: { systemUserId },
+  });
+  return res;
+}
+
+/**
+ * Grant login access / change password (SOCO_UP1)
+ */
+export async function grantLoginAccess(
+  payload: GrantLoginAccessRequest,
+): Promise<string> {
+  const res = await apiRequest<string>('UserPrivilege/GrantLoginAccess', {
+    method: 'POST',
+    body: payload,
   });
   return res;
 }

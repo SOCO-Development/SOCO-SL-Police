@@ -9,7 +9,7 @@ import { ANNEX_01_SOCO_LABS, ANNEX_12_RANK } from '@/lib/annexData';
 import { officerService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
-import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
+import { MagnifyingGlass, FunnelSimple, Key } from 'phosphor-react';
 import { Plus, Eye, Pencil, Shield } from 'lucide-react';
 
 const LAB_FILTER_OPTIONS = [{ value: '', label: 'All Labs' }, ...ANNEX_01_SOCO_LABS.map((l) => ({ value: l, label: l }))];
@@ -52,6 +52,12 @@ export default function ViewOfficersPage() {
     const [pageSize, setPageSize] = useState(10);
     const [showFilters, setShowFilters] = useState(false);
     const [viewingOfficer, setViewingOfficer] = useState<OfficerRow | null>(null);
+    const [privilegeOfficer, setPrivilegeOfficer] = useState<OfficerRow | null>(null);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [privilegeLoading, setPrivilegeLoading] = useState(false);
+    const [privilegeError, setPrivilegeError] = useState<string | null>(null);
+    const [privilegeSuccess, setPrivilegeSuccess] = useState<string | null>(null);
     const [officers, setOfficers] = useState<OfficerRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -100,6 +106,31 @@ export default function ViewOfficersPage() {
         else {
             setSortKey(k);
             setSortAsc(true);
+        }
+    };
+
+    const handleGrantPrivilege = async () => {
+        if (!privilegeOfficer || !newPassword.trim()) return;
+        if (newPassword !== confirmPassword) {
+            setPrivilegeError('Passwords do not match.');
+            return;
+        }
+        setPrivilegeLoading(true);
+        setPrivilegeError(null);
+        setPrivilegeSuccess(null);
+        try {
+            await officerService.grantLoginAccess({
+                systemUserId: parseInt(privilegeOfficer.id, 10),
+                userKey: newPassword.trim(),
+            });
+            setPrivilegeSuccess('Login access granted successfully. Password updated.');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
+            setPrivilegeError(apiError.message || 'An error occurred.');
+        } finally {
+            setPrivilegeLoading(false);
         }
     };
 
@@ -205,7 +236,7 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => alert(`Privilege management for officer ${row.id} — coming soon`)}>
+                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}>
                             <Shield className="w-3 h-3" /> Privilege
                         </ActionChipButton>
                     </div>
@@ -401,6 +432,104 @@ export default function ViewOfficersPage() {
                             </Link>
                             <Button type="button" variant="secondary" onClick={() => setViewingOfficer(null)}>
                                 Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Privilege / Change Password Modal */}
+            {privilegeOfficer && (
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+                    onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-200 animate-fade-in"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-fuchsia-50/80">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-fuchsia-600" />
+                                Grant Login Access
+                            </h3>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                                className="!min-h-9 !w-9 !p-2"
+                                aria-label="Close"
+                            >
+                                <span className="text-xl leading-none">×</span>
+                            </Button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                                <OfficerAvatar name={privilegeOfficer.name} />
+                                <div>
+                                    <p className="font-semibold text-gray-900">{privilegeOfficer.name}</p>
+                                    <p className="text-sm text-gray-500 font-mono">{privilegeOfficer.regNo}</p>
+                                </div>
+                            </div>
+
+                            {privilegeSuccess && (
+                                <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                    {privilegeSuccess}
+                                </div>
+                            )}
+
+                            {privilegeError && (
+                                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                    {privilegeError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                    New Password / User Key
+                                </label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => {
+                                        setNewPassword(e.target.value);
+                                        setPrivilegeError(null);
+                                    }}
+                                    placeholder="Enter new password"
+                                    className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                    Confirm New Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => {
+                                        setConfirmPassword(e.target.value);
+                                        setPrivilegeError(null);
+                                    }}
+                                    placeholder="Re-enter new password"
+                                    className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors"
+                                />
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-end gap-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="primary"
+                                onClick={handleGrantPrivilege}
+                                disabled={privilegeLoading || !newPassword.trim() || !confirmPassword.trim() || newPassword !== confirmPassword}
+                            >
+                                {privilegeLoading ? 'Granting...' : 'Grant Access'}
                             </Button>
                         </div>
                     </div>

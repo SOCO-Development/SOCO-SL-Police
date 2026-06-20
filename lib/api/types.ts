@@ -515,3 +515,10 @@ export interface OfficerDetailBundle {
   specialNotes: SpecialNoteInfo[];
 }
 
+// ─── Grant Login Access (SOCO_UP1) ───────────────────────────────────
+
+export interface GrantLoginAccessRequest {
+  systemUserId: number;
+  userKey: string;
+}
+
