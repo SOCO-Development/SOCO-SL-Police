@@ -522,3 +522,25 @@ export interface GrantLoginAccessRequest {
   userKey: string;
 }
 
+// ─── Update Personal Info (SOCO_U14) ────────────────────────────────
+
+export interface UpdatePersonalInfoRequest {
+  systemUserId: number;
+  userFullName: string;
+  userCallingName: string;
+  locationId: number;
+  userDesignationId: number;
+  userDob: string;
+  phoneMobile: string;
+  phoneOffice: string;
+  phoneHome: string;
+  userImageUrl: string;
+  civilStatus: string;
+  currentRank: number;
+  appointRank: number;
+  courseNo: string;
+  socoJoinedDate: string;
+  spouse?: SpouseData;
+  children?: ChildData[];
+}
+

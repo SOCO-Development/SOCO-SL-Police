@@ -518,7 +518,7 @@ export default function AddOfficerPage() {
         return `${parts[2]}-${parts[1]}-${parts[0]}`;
     };
     const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
-    const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
+    const { ranks, loading: ranksLoading, error: ranksError, rankNameToId, rankIdToName } = useUserData();
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -588,7 +588,7 @@ export default function AddOfficerPage() {
                     // Section 1
                     socoLab: locationIdToName.get(p.LOCATION_ID) || '',
                     socoLabId: p.LOCATION_ID,
-                    rankDropdown: rankNameToId.get(p.RANK_ID || '') || '',
+                    rankDropdown: rankIdToName.get(p.RANK_ID || '') || '',
                     rankDesignationId: p.RANK_ID || '',
                     regNo: p.USER_REGI_NO || '',
                     fullName: p.USER_FULL_NAME || '',
@@ -605,6 +605,7 @@ export default function AddOfficerPage() {
                     civilStatus: p.CIVIL_STATUS || '',
                     spouseName: data.spouse?.[0]?.SPOUSE_NAME || '',
                     spouseDesignation: data.spouse?.[0]?.SPOUSE_DESIGNATION || '',
+                    spouseDesignationOther: '',
                     spouseAddressOfInstitute: data.spouse?.[0]?.SPOUSE_WORK_ADDRESS || '',
                     children: (data.children?.length
                         ? data.children.map((c) => ({
@@ -617,12 +618,14 @@ export default function AddOfficerPage() {
                     ),
                     // Section 3
                     dateJoinedPolice: '',
-                    appointedRank: p.APPOINT_RANK || '',
-                    presentRank: p.CURRENT_RANK || '',
+                    appointedRank: rankIdToName.get(p.APPOINT_RANK || '') || '',
+                    appointedRankId: p.APPOINT_RANK || '',
+                    presentRank: rankIdToName.get(p.CURRENT_RANK || '') || '',
+                    presentRankId: p.CURRENT_RANK || '',
                     promotions: (data.promotions?.length
                         ? data.promotions.map((pr) => ({
                             id: newId(),
-                            rank: rankNameToId.get(pr.PROMOTED_RANK_ID) || '',
+                            rank: rankIdToName.get(pr.PROMOTED_RANK_ID) || '',
                             date: pr.PROMOTED_DATE || '',
                         }))
                         : [{ id: newId(), rank: '', date: '' }]
@@ -766,7 +769,7 @@ export default function AddOfficerPage() {
         };
         load();
         return () => { cancelled = true; };
-    }, [isEditing, editId, locationIdToName, rankNameToId]);
+    }, [isEditing, editId, locationIdToName, rankNameToId, rankIdToName]);
 
     const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
         setForm((f) => ({ ...f, [key]: val }));
@@ -1054,9 +1057,44 @@ if (regiNoCheck.isAvailable) {
                 console.log('InsertNewOfficer payload:', JSON.stringify(payload, null, 2));
                 const result = await officerService.insertNewOfficer(payload);
                 setSubmitted(true);
-                alert(`Officer ${result.message} (ID: ${result.systemUserId})`);
+                router.push(`/crime-officer/add?edit=${result.systemUserId}`);
             } else {
-                alert('Personal and family details saved.');
+                let imageUrl = form.photoUrl || '';
+                if (photoFile) {
+                    try {
+                        imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                    } catch (uploadErr) {
+                        setError('Failed to upload profile image. Please try again.');
+                        return;
+                    }
+                }
+
+                const childrenData = buildChildrenData();
+                await officerService.updatePersonalInfo({
+                    systemUserId: parseInt(editId!, 10),
+                    userFullName: form.fullName,
+                    userCallingName: form.fullName.split(' ')[0],
+                    locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
+                    userDesignationId: 1,
+                    userDob: toApiDate(form.dob),
+                    phoneMobile: form.telMobile,
+                    phoneOffice: form.telOffice,
+                    phoneHome: form.telResidence,
+                    userImageUrl: imageUrl,
+                    civilStatus: form.civilStatus,
+                    currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+                    appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
+                    courseNo: form.socoCourseNo,
+                    socoJoinedDate: toApiDate(form.dateJoinedSoco),
+                    ...(form.civilStatus === 'Married' && {
+                        spouse: {
+                            spouseName: form.spouseName,
+                            spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
+                            spouseWorkAddress: form.spouseAddressOfInstitute,
+                        },
+                        children: childrenData.length > 0 ? childrenData : [],
+                    }),
+                });
             }
 
             setPersonalFamilyEditing(false);
@@ -1078,19 +1116,18 @@ if (regiNoCheck.isAvailable) {
                 const promotions = form.promotions
                     .filter((p) => p.rank.trim() && p.date.trim())
                     .map((p) => ({
-                        promotedDate: p.date,
+                        promotedDate: toApiDate(p.date),
                         promotedRankId: rankNameToId.get(p.rank) ? parseInt(rankNameToId.get(p.rank)!, 10) : 1,
                     }));
 
                 if (promotions.length > 0) {
-                    await officerService.insertPromotions({
+                    await officerService.updatePromotions({
                         systemUserId: parseInt(editId, 10),
                         promotions,
                     });
                 }
             }
 
-            alert('Promotions saved.');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save promotions');
             setError(apiError.message || 'An error occurred while saving promotions.');
@@ -1154,7 +1191,6 @@ if (regiNoCheck.isAvailable) {
                 });
             }
 
-            alert('Education saved.');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save education');
             setError(apiError.message || 'An error occurred while saving education.');
@@ -1191,8 +1227,8 @@ if (regiNoCheck.isAvailable) {
                             conNo: c.conNo || '',
                             policeStation: c.policeStation || '',
                             branch: c.branch || '',
-                            fromDate: c.from,
-                            toDate: c.to,
+                            fromDate: toApiDate(c.from),
+                            toDate: toApiDate(c.to),
                             duration: '',
                             institute: c.institute || '',
                             country: '',
@@ -1203,8 +1239,8 @@ if (regiNoCheck.isAvailable) {
                             conNo: c.conNo || '',
                             policeStation: c.policeStation || '',
                             branch: c.branch || '',
-                            fromDate: c.from,
-                            toDate: c.to,
+                            fromDate: toApiDate(c.from),
+                            toDate: toApiDate(c.to),
                             duration: '',
                             institute: c.institute || '',
                             country: c.institute || '',
@@ -1215,11 +1251,11 @@ if (regiNoCheck.isAvailable) {
                         ...form.localAfterCourses.map((c) => ({
                             courseTypeId: 1,
                             courseDoneId,
-                            conNo: '',
+                            conNo: c.courseName || '',
                             policeStation: '',
                             branch: '',
-                            fromDate: c.from,
-                            toDate: c.to,
+                            fromDate: toApiDate(c.from),
+                            toDate: toApiDate(c.to),
                             duration: c.time || '',
                             institute: c.institute || '',
                             country: '',
@@ -1227,11 +1263,11 @@ if (regiNoCheck.isAvailable) {
                         ...form.foreignAfterCourses.map((c) => ({
                             courseTypeId: 2,
                             courseDoneId,
-                            conNo: '',
+                            conNo: c.courseName || '',
                             policeStation: '',
                             branch: '',
-                            fromDate: c.from,
-                            toDate: c.to,
+                            fromDate: toApiDate(c.from),
+                            toDate: toApiDate(c.to),
                             duration: c.time || '',
                             institute: c.institute || '',
                             country: c.institute || '',
@@ -1245,7 +1281,6 @@ if (regiNoCheck.isAvailable) {
                 });
             }
 
-            alert(`${sectionLabel} saved.`);
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError(`Failed to save ${sectionLabel}`);
             setError(apiError.message || `An error occurred while saving ${sectionLabel}.`);
@@ -1280,7 +1315,6 @@ if (regiNoCheck.isAvailable) {
                 });
             }
 
-            alert('Driving license saved.');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save driving license');
             setError(apiError.message || 'An error occurred while saving driving license.');
@@ -1302,8 +1336,8 @@ if (regiNoCheck.isAvailable) {
                         const locId = locationNameToId.get(t.socoLab);
                         return {
                             locationId: locId ? parseInt(locId, 10) : 1,
-                            fromDate: t.from,
-                            toDate: t.to,
+                            fromDate: toApiDate(t.from),
+                            toDate: toApiDate(t.to),
                             duration: t.duration || '',
                             officerInchargeUserId: 1,
                             reason: t.reason === 'Other' ? t.reasonOther : (t.reason || ''),
@@ -1316,7 +1350,6 @@ if (regiNoCheck.isAvailable) {
                 });
             }
 
-            alert('Transfers saved.');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save transfers');
             setError(apiError.message || 'An error occurred while saving transfers.');
@@ -1338,8 +1371,8 @@ if (regiNoCheck.isAvailable) {
                         const locId = locationNameToId.get(d.socoLab);
                         return {
                             locationId: locId ? parseInt(locId, 10) : 1,
-                            fromDate: d.from,
-                            toDate: d.to,
+                            fromDate: toApiDate(d.from),
+                            toDate: toApiDate(d.to),
                             duration: d.duration || '',
                             officerInchargeUserId: 1,
                             reason: d.reason === 'Other' ? d.reasonOther : (d.reason || ''),
@@ -1352,7 +1385,6 @@ if (regiNoCheck.isAvailable) {
                 });
             }
 
-            alert('Special duty saved.');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special duty');
             setError(apiError.message || 'An error occurred while saving special duty.');
@@ -1383,7 +1415,6 @@ if (regiNoCheck.isAvailable) {
                 });
             }
 
-            alert('Disciplinary inquiries saved.');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save disciplinary inquiries');
             setError(apiError.message || 'An error occurred while saving disciplinary inquiries.');
@@ -1410,7 +1441,6 @@ if (regiNoCheck.isAvailable) {
                 });
             }
 
-            alert('Special illnesses & notes saved.');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special illnesses & notes');
             setError(apiError.message || 'An error occurred while saving special illnesses & notes.');
