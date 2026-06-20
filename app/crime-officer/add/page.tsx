@@ -7,6 +7,7 @@ import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUplo
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import { officerService, ApiError } from '@/lib/api';
+import { getUserRanks } from '@/lib/api/userService';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
 import type { InsertNewOfficerRequest, ChildData } from '@/lib/api/types';
@@ -18,7 +19,6 @@ import {
 } from '@/lib/annexData';
 
 // Constants that don't depend on API data
-const RANK_OPTIONS = ANNEX_12_RANK.map((s) => ({ value: s, label: s }));
 const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
 const CHILD_STATUS_OPTIONS = [
     'Toddler',
@@ -503,7 +503,13 @@ export default function AddOfficerPage() {
     const editId = searchParams.get('edit');
     const isEditing = !!editId;
     const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
-    const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
+    
+    // Fetch ranks from API
+    const [ranks, setRanks] = useState<Array<{ RANK_ID: string; RANK_NAME: string }>>([]);
+    const [rankNameToId, setRankNameToId] = useState<Map<string, string>>(new Map());
+    const [ranksLoading, setRanksLoading] = useState(true);
+    const [ranksError, setRanksError] = useState<string | null>(null);
+    
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
@@ -514,15 +520,38 @@ export default function AddOfficerPage() {
     const [sectionSaving, setSectionSaving] = useState<string | null>(null);
     const civilStatusRadioName = useId();
     const showSpouseAndChildren = form.civilStatus === 'Married';
+    
+    // Fetch user ranks on component mount
+    useEffect(() => {
+        const fetchRanks = async () => {
+            setRanksLoading(true);
+            try {
+                const ranksData = await getUserRanks();
+                setRanks(ranksData);
+                // Create a map of rank name to ID for quick lookup
+                const nameToIdMap = new Map(ranksData.map((rank) => [rank.RANK_NAME, rank.RANK_ID]));
+                setRankNameToId(nameToIdMap);
+                setRanksError(null);
+            } catch (err) {
+                setRanksError('Failed to load ranks');
+                // Fallback to hardcoded ranks
+                const fallbackRanks = ANNEX_12_RANK.map((name) => ({ RANK_ID: '', RANK_NAME: name }));
+                setRanks(fallbackRanks);
+            } finally {
+                setRanksLoading(false);
+            }
+        };
+        fetchRanks();
+    }, []);
 
     // Create dynamic SOCO Lab options from API data
     const SOCO_LABS_OPTIONS = locations.length > 0
         ? locations.map((loc) => ({ value: loc.name, label: loc.name }))
         : ANNEX_01_SOCO_LABS.map((s) => ({ value: s, label: s })); // Fallback to hardcoded data
     
-    // Create dynamic Rank options from API data
+    // Create dynamic Rank options from fetched API data
     const RANK_OPTIONS = ranks.length > 0
-        ? ranks.map((rank) => ({ value: rank.name, label: rank.name }))
+        ? ranks.map((rank) => ({ value: rank.RANK_NAME, label: rank.RANK_NAME }))
         : ANNEX_12_RANK.map((s) => ({ value: s, label: s })); // Fallback to hardcoded data
     
     const SPOUSE_DESIGNATION_OPTIONS = ANNEX_07_SPOUSE_DESIGNATION.map((s) => ({ value: s, label: s }));
