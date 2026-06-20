@@ -21,6 +21,7 @@ import type {
   UpdateDisciplinaryInquiriesData,
   UpdateSpecialIllnessesNotesRequest,
   UpdateSpecialIllnessesNotesData,
+  UpdatePersonalInfoRequest,
   OfficerListItem,
   OfficerDetailBundle,
   GrantLoginAccessRequest,
@@ -209,4 +210,16 @@ export async function uploadProfileImage(
     formData: true,
   });
   return res;
+}
+
+/**
+ * Update personal & family info (SOCO_U14)
+ */
+export async function updatePersonalInfo(
+  payload: UpdatePersonalInfoRequest,
+): Promise<string> {
+  return apiRequest<string>('User/UpdatePersonalInfo', {
+    method: 'POST',
+    body: payload,
+  });
 }
