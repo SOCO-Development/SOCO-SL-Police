@@ -58,6 +58,7 @@ export default function ViewOfficersPage() {
     const [privilegeOfficer, setPrivilegeOfficer] = useState<OfficerRow | null>(null);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [privilegeDesignationId, setPrivilegeDesignationId] = useState('');
     const [privilegeLoading, setPrivilegeLoading] = useState(false);
     const [privilegeError, setPrivilegeError] = useState<string | null>(null);
     const [privilegeSuccess, setPrivilegeSuccess] = useState<string | null>(null);
@@ -89,7 +90,7 @@ export default function ViewOfficersPage() {
     }, [designations]);
 
     const designationOptions = useMemo(() => {
-        return designations.map((d) => ({ value: d.name, label: d.name }));
+        return designations.map((d) => ({ value: d.id, label: d.name }));
     }, [designations]);
 
     useEffect(() => {
@@ -97,7 +98,7 @@ export default function ViewOfficersPage() {
             try {
                 const apiRes = await userService.getAllDesignations();
                 if (apiRes && apiRes.length > 0) {
-                    setDesignations(apiRes.map(d => ({ id: d.DESIGNATION_ID, name: d.DESIGNATION_NAME })));
+                    setDesignations(apiRes.map(d => ({ id: d.USER_DESIGNATION_ID, name: d.USER_DESIGNATION_NAME })));
                 }
             } catch (err) {
                 console.error("Failed to load designations:", err);
@@ -117,17 +118,8 @@ export default function ViewOfficersPage() {
                     .filter((id) => !isNaN(id));
 
                 const designationIds = filterDesignations
-                    .map((val) => {
-                        const num = parseInt(val, 10);
-                        if (!isNaN(num)) return num;
-                        const found = designations.find((d) => {
-                            const name = d.name.toLowerCase();
-                            const query = val.toLowerCase();
-                            return name === query || name.replace('soco', '').trim() === query.replace('soco', '').trim();
-                        });
-                        return found ? parseInt(found.id, 10) : null;
-                    })
-                    .filter((id): id is number => id !== null && !isNaN(id));
+                    .map((val) => parseInt(val, 10))
+                    .filter((id) => !isNaN(id));
 
                 const raw = await officerService.getAllOfficers({
                     locationIds,
@@ -183,9 +175,21 @@ export default function ViewOfficersPage() {
                 systemUserId: parseInt(privilegeOfficer.id, 10),
                 userKey: newPassword.trim(),
             });
+
+            if (privilegeDesignationId) {
+                await officerService.updateUserDesignation({
+                    systemUserId: parseInt(privilegeOfficer.id, 10),
+                    designationId: parseInt(privilegeDesignationId, 10),
+                });
+            }
+
             setPrivilegeSuccess('Login access granted successfully. Password updated.');
+            if (privilegeDesignationId) {
+                setPrivilegeSuccess(prev => prev + ' Designation updated.');
+            }
             setNewPassword('');
             setConfirmPassword('');
+            setPrivilegeDesignationId('');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
             setPrivilegeError(apiError.message || 'An error occurred.');
@@ -208,16 +212,7 @@ export default function ViewOfficersPage() {
             data = data.filter((o) => filterLocations.includes(o.locationId));
         }
         if (filterDesignations.length > 0) {
-            data = data.filter((o) => {
-                const selectedNamesAndIds = [...filterDesignations];
-                filterDesignations.forEach((val) => {
-                    const found = designations.find(d => d.name === val);
-                    if (found) {
-                        selectedNamesAndIds.push(found.id);
-                    }
-                });
-                return selectedNamesAndIds.includes(o.designationId) || selectedNamesAndIds.includes(o.designation);
-            });
+            data = data.filter((o) => filterDesignations.includes(o.designationId));
         }
         if (filterRank) data = data.filter((o) => o.rank === filterRank);
         data.sort((a, b) => {
@@ -310,7 +305,7 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}>
+                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); }}>
                             <Shield className="w-3 h-3" /> Privilege
                         </ActionChipButton>
                     </div>
@@ -529,7 +524,7 @@ export default function ViewOfficersPage() {
             {privilegeOfficer && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-                    onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                    onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                 >
                     <div
                         className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-200 animate-fade-in"
@@ -543,7 +538,7 @@ export default function ViewOfficersPage() {
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                                 className="!min-h-9 !w-9 !p-2"
                                 aria-label="Close"
                             >
@@ -601,12 +596,24 @@ export default function ViewOfficersPage() {
                                     className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors"
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                    Designation
+                                </label>
+                                <CustomSelect
+                                    value={privilegeDesignationId}
+                                    onChange={(val) => setPrivilegeDesignationId(val)}
+                                    options={[{ value: '', label: 'No change' }, ...designations.map((d) => ({ value: d.id, label: d.name }))]}
+                                    placeholder="No change"
+                                />
+                            </div>
                         </div>
                         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-end gap-2">
                             <Button
                                 type="button"
                                 variant="secondary"
-                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                             >
                                 Cancel
                             </Button>

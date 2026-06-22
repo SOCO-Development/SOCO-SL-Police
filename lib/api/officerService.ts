@@ -22,6 +22,7 @@ import type {
   UpdateSpecialIllnessesNotesRequest,
   UpdateSpecialIllnessesNotesData,
   UpdatePersonalInfoRequest,
+  UpdateUserDesignationRequest,
   OfficerListItem,
   OfficerDetailBundle,
   GrantLoginAccessRequest,
@@ -225,6 +226,18 @@ export async function updatePersonalInfo(
   payload: UpdatePersonalInfoRequest,
 ): Promise<string> {
   return apiRequest<string>('User/UpdatePersonalInfo', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Update user designation (Privilege)
+ */
+export async function updateUserDesignation(
+  payload: UpdateUserDesignationRequest,
+): Promise<string> {
+  return apiRequest<string>('UserPrivilege/UpdateDesignation', {
     method: 'POST',
     body: payload,
   });

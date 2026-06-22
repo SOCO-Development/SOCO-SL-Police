@@ -24,11 +24,11 @@ export async function getAllDesignations(): Promise<UserDesignation[]> {
   } catch {
     // Return standard fallback designations if the API fails
     return [
-      { DESIGNATION_ID: '1', DESIGNATION_NAME: 'OIC' },
-      { DESIGNATION_ID: '5', DESIGNATION_NAME: 'Acting OIC' },
-      { DESIGNATION_ID: '6', DESIGNATION_NAME: 'Soco Officer' },
-      { DESIGNATION_ID: '7', DESIGNATION_NAME: 'Soco Admin' },
-      { DESIGNATION_ID: '8', DESIGNATION_NAME: 'System Admin' },
+      { USER_DESIGNATION_ID: '1', USER_DESIGNATION_NAME: 'OIC' },
+      { USER_DESIGNATION_ID: '5', USER_DESIGNATION_NAME: 'Acting OIC' },
+      { USER_DESIGNATION_ID: '6', USER_DESIGNATION_NAME: 'Soco Officer' },
+      { USER_DESIGNATION_ID: '7', USER_DESIGNATION_NAME: 'Soco Admin' },
+      { USER_DESIGNATION_ID: '8', USER_DESIGNATION_NAME: 'System Admin' },
     ];
   }
 }
