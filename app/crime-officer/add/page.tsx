@@ -1217,6 +1217,7 @@ if (regiNoCheck.isAvailable) {
                     courseTypeId: number;
                     courseDoneId: number;
                     conNo: string;
+                    courseName: string;
                     policeStation: string;
                     branch: string;
                     fromDate: string;
@@ -1232,6 +1233,7 @@ if (regiNoCheck.isAvailable) {
                             courseTypeId: 1,
                             courseDoneId,
                             conNo: c.conNo || '',
+                            courseName: c.conNo || '',
                             policeStation: c.policeStation || '',
                             branch: c.branch || '',
                             fromDate: toApiDate(c.from),
@@ -1244,6 +1246,7 @@ if (regiNoCheck.isAvailable) {
                             courseTypeId: 2,
                             courseDoneId,
                             conNo: c.conNo || '',
+                            courseName: c.conNo || '',
                             policeStation: c.policeStation || '',
                             branch: c.branch || '',
                             fromDate: toApiDate(c.from),
@@ -1259,6 +1262,7 @@ if (regiNoCheck.isAvailable) {
                             courseTypeId: 1,
                             courseDoneId,
                             conNo: c.courseName || '',
+                            courseName: c.courseName || '',
                             policeStation: '',
                             branch: '',
                             fromDate: toApiDate(c.from),
@@ -1271,6 +1275,7 @@ if (regiNoCheck.isAvailable) {
                             courseTypeId: 2,
                             courseDoneId,
                             conNo: c.courseName || '',
+                            courseName: c.courseName || '',
                             policeStation: '',
                             branch: '',
                             fromDate: toApiDate(c.from),

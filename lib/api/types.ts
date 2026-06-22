@@ -217,6 +217,7 @@ export interface CourseUpdateData {
   courseTypeId: number; // 1=Local, 2=Foreign
   courseDoneId: number; // 1=Before, 2=After
   conNo: string;
+  courseName: string;
   policeStation: string;
   branch: string;
   fromDate: string;
