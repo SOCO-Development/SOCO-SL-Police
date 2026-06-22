@@ -40,3 +40,33 @@ export async function getAllDesignations(): Promise<UserDesignation[]> {
 export async function getCurrentUserInfo(): Promise<CurrentUserInfo> {
   return apiRequest<CurrentUserInfo>('User/GetCurrentUserInfo');
 }
+
+/**
+ * Fetch profile image for a given registration number (File/GetProfileImage)
+ * Returns a data URL (e.g. data:image/png;base64,...) or null if no image.
+ */
+export async function getProfileImage(regiNo: string): Promise<string | null> {
+  try {
+    const token = (await import('./authStorage')).getAccessToken();
+    const base = (await import('./config')).API_BASE_URL;
+    const url = `${base.replace(/\/+$/, '')}/File/GetProfileImage?userRegiNo=${encodeURIComponent(regiNo)}`;
+
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    if (!blob.type.startsWith('image/')) return null;
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}

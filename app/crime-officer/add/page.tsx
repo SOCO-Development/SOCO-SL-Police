@@ -6,7 +6,7 @@ import { Trash2 } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
-import { officerService, ApiError } from '@/lib/api';
+import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
 import type { InsertNewOfficerRequest, ChildData } from '@/lib/api/types';
@@ -760,6 +760,13 @@ export default function AddOfficerPage() {
 
                 if (p.USER_IMAGE_URL && (p.USER_IMAGE_URL.startsWith('http://') || p.USER_IMAGE_URL.startsWith('https://') || p.USER_IMAGE_URL.startsWith('/'))) {
                     setPhotoPreview(p.USER_IMAGE_URL);
+                } else if (p.USER_REGI_NO) {
+                    userService.getProfileImage(p.USER_REGI_NO).then((dataUrl) => {
+                        if (dataUrl && !cancelled) {
+                            setPhotoPreview(dataUrl);
+                            setForm((f) => ({ ...f, photoUrl: dataUrl }));
+                        }
+                    });
                 }
             } catch (err) {
                 const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officer data');

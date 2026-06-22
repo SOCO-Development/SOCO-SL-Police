@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { publicAssetSrc } from '@/lib/publicAsset';
 import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { usePathname, useRouter } from 'next/navigation';
-import { authService } from '@/lib/api';
+import { authService, userService } from '@/lib/api';
 import { getUsername } from '@/lib/api/authStorage';
 import { getErrorMessage, showErrorAlert } from '@/lib/alerts';
 import {
@@ -44,6 +44,7 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
   const router = useRouter();
   const [storedUserName, setStoredUserName] = useState(userNameProp ?? 'User');
   const userName = userNameProp ?? storedUserName;
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -97,6 +98,16 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
     if (username) setStoredUserName(username);
   }, []);
 
+  useEffect(() => {
+    const username = getUsername();
+    if (!username) return;
+    let cancelled = false;
+    userService.getProfileImage(username).then((dataUrl) => {
+      if (!cancelled && dataUrl) setProfileImage(dataUrl);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   async function handleLogoutConfirm() {
     setIsLoggingOut(true);
     const username = getUsername() ?? '';
@@ -127,10 +138,14 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
           }`}
           style={{ top: dropdownPos.top, right: dropdownPos.right }}
         >
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-              {userName.charAt(0).toUpperCase()}
-            </div>
+            <div className="flex items-center gap-3 px-4 py-3">
+              {profileImage ? (
+                <img src={profileImage} alt={userName} className="w-9 h-9 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              )}
             <div className="min-w-0">
               <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userName}</p>
               <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>SOCO Officer</p>
@@ -276,9 +291,13 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
                     Officer
                   </span>
                 </div>
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
+                {profileImage ? (
+                  <img src={profileImage} alt={userName} className="w-8 h-8 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${isDark ? 'text-gray-400' : 'text-gray-400'} ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 

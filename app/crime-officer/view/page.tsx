@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
@@ -33,8 +34,33 @@ interface OfficerRow {
     designation: string;
 }
 
-function OfficerAvatar({ name }: { name: string }) {
+function OfficerAvatar({ name, regNo }: { name: string; regNo?: string }) {
+    const [imgSrc, setImgSrc] = useState<string | null>(null);
+    const [loaded, setLoaded] = useState(false);
     const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+
+    useEffect(() => {
+        if (!regNo) return;
+        let cancelled = false;
+        userService.getProfileImage(regNo).then((dataUrl) => {
+            if (!cancelled && dataUrl) {
+                setImgSrc(dataUrl);
+                setLoaded(true);
+            }
+        });
+        return () => { cancelled = true; };
+    }, [regNo]);
+
+    if (imgSrc) {
+        return (
+            <img
+                src={imgSrc}
+                alt={name}
+                className="w-10 h-12 rounded border border-gray-200 object-cover shadow-sm"
+            />
+        );
+    }
+
     return (
         <div className="w-10 h-12 rounded border border-gray-200 bg-blue-50 flex items-center justify-center text-blue-700 font-bold text-xs shadow-sm">
             {initials}
@@ -234,7 +260,7 @@ export default function ViewOfficersPage() {
                 key: 'photo',
                 label: 'Photo',
                 sortable: false,
-                render: (_, row) => <OfficerAvatar name={row.name} />,
+                render: (_, row) => <OfficerAvatar name={row.name} regNo={row.regNo} />,
             },
             {
                 key: 'name',
@@ -470,7 +496,7 @@ export default function ViewOfficersPage() {
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             <div className="flex items-center gap-4">
-                                <OfficerAvatar name={viewingOfficer.name} />
+                                <OfficerAvatar name={viewingOfficer.name} regNo={viewingOfficer.regNo} />
                                 <div>
                                     <h4 className="text-xl font-bold text-gray-900">{viewingOfficer.name}</h4>
                                     <p className="text-sm text-gray-500 font-mono">{viewingOfficer.regNo}</p>
@@ -547,7 +573,7 @@ export default function ViewOfficersPage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                                <OfficerAvatar name={privilegeOfficer.name} />
+                                <OfficerAvatar name={privilegeOfficer.name} regNo={privilegeOfficer.regNo} />
                                 <div>
                                     <p className="font-semibold text-gray-900">{privilegeOfficer.name}</p>
                                     <p className="text-sm text-gray-500 font-mono">{privilegeOfficer.regNo}</p>
