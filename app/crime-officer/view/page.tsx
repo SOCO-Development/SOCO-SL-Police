@@ -3,17 +3,33 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import CustomSelect from '@/components/forms/CustomSelect';
+import MultiSelect from '@/components/forms/MultiSelect';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import { PageHeader, PageLayout, Button, SearchInput, ActionChipButton, PaginationControls } from '@/components/ui';
-import { ANNEX_01_SOCO_LABS, ANNEX_12_RANK } from '@/lib/annexData';
+import { ANNEX_12_RANK } from '@/lib/annexData';
 import { officerService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
-import { MagnifyingGlass, FunnelSimple, Key } from 'phosphor-react';
+import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
 import { Plus, Eye, Pencil, Shield } from 'lucide-react';
 
-const LAB_FILTER_OPTIONS = [{ value: '', label: 'All Labs' }, ...ANNEX_01_SOCO_LABS.map((l) => ({ value: l, label: l }))];
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
+
+const DESIGNATION_MAP: Record<string, string> = {
+    '1': 'OIC',
+    '2': 'Acting OIC',
+    '3': 'SOCO Officer',
+    '4': 'SOCO Admin',
+    '5': 'System Admin',
+};
+
+const DESIGNATION_FILTER_OPTIONS = [
+    { value: 'OIC', label: 'OIC' },
+    { value: 'Acting OIC', label: 'Acting OIC' },
+    { value: 'SOCO Officer', label: 'SOCO Officer' },
+    { value: 'SOCO Admin', label: 'SOCO Admin' },
+    { value: 'System Admin', label: 'System Admin' },
+];
 
 type SortKey = 'name' | 'regNo' | 'status' | 'socoLab' | 'mobile';
 
@@ -29,6 +45,8 @@ interface OfficerRow {
     mobile: string;
     socoLab: string;
     rank: string;
+    designationId: string;
+    designation: string;
 }
 
 function OfficerAvatar({ name }: { name: string }) {
@@ -44,7 +62,8 @@ export default function ViewOfficersPage() {
     const { locations } = useLocationData();
     const { rankIdToName } = useUserData();
     const [search, setSearch] = useState('');
-    const [filterLab, setFilterLab] = useState('');
+    const [filterLocations, setFilterLocations] = useState<string[]>([]);
+    const [filterDesignations, setFilterDesignations] = useState<string[]>([]);
     const [filterRank, setFilterRank] = useState('');
     const [sortKey, setSortKey] = useState<SortKey>('name');
     const [sortAsc, setSortAsc] = useState(true);
@@ -68,6 +87,10 @@ export default function ViewOfficersPage() {
         return map;
     }, [locations]);
 
+    const locationOptions = useMemo(() => {
+        return locations.map((loc) => ({ value: loc.id, label: loc.name }));
+    }, [locations]);
+
     useEffect(() => {
         let cancelled = false;
         const fetch = async () => {
@@ -86,6 +109,8 @@ export default function ViewOfficersPage() {
                     mobile: o.PHONE_MOBILE || '',
                     socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
                     rank: rankIdToName.get(o.RANK_ID || '') || '',
+                    designationId: o.USER_DESIGNATION_ID || '',
+                    designation: o.USER_DESIGNATION_ID ? (DESIGNATION_MAP[o.USER_DESIGNATION_ID] || o.USER_DESIGNATION_ID) : '',
                 }));
                 setOfficers(rows);
             } catch (err) {
@@ -144,7 +169,21 @@ export default function ViewOfficersPage() {
                 o.mobile.includes(q)
             );
         }
-        if (filterLab) data = data.filter((o) => o.socoLab === filterLab);
+        if (filterLocations.length > 0) {
+            data = data.filter((o) => filterLocations.includes(o.locationId));
+        }
+        if (filterDesignations.length > 0) {
+            data = data.filter((o) => {
+                const selectedNamesAndIds = [...filterDesignations];
+                filterDesignations.forEach((val) => {
+                    const foundId = Object.keys(DESIGNATION_MAP).find(key => DESIGNATION_MAP[key] === val);
+                    if (foundId) {
+                        selectedNamesAndIds.push(foundId);
+                    }
+                });
+                return selectedNamesAndIds.includes(o.designationId) || selectedNamesAndIds.includes(o.designation);
+            });
+        }
         if (filterRank) data = data.filter((o) => o.rank === filterRank);
         data.sort((a, b) => {
             const av = String(a[sortKey] ?? '');
@@ -153,7 +192,7 @@ export default function ViewOfficersPage() {
             return sortAsc ? cmp : -cmp;
         });
         return data;
-    }, [search, filterLab, filterRank, sortKey, sortAsc, officers]);
+    }, [search, filterLocations, filterDesignations, filterRank, sortKey, sortAsc, officers]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const effectivePage = Math.min(page, totalPages);
@@ -269,15 +308,7 @@ export default function ViewOfficersPage() {
             )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
-                <div className="flex gap-3 flex-wrap items-center">
-                    <SearchInput
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        placeholder="Search name, reg no, mobile..."
-                        wrapperClassName="flex-1 min-w-[200px]"
-                        icon={<MagnifyingGlass size={15} />}
-                    />
-
+                <div className="flex gap-3 flex-wrap items-center justify-between">
                     <Button
                         type="button"
                         variant={showFilters ? 'primary' : 'secondary'}
@@ -287,17 +318,34 @@ export default function ViewOfficersPage() {
                         <FunnelSimple size={15} />
                         Filters
                     </Button>
+
+                    <SearchInput
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        placeholder="Search name, reg no, mobile..."
+                        wrapperClassName="max-w-md w-full"
+                        icon={<MagnifyingGlass size={15} />}
+                    />
                 </div>
 
                 {showFilters && (
                     <div className="mt-3 flex gap-3 flex-wrap pt-3 border-t border-gray-100">
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Location</label>
+                            <MultiSelect
+                                value={filterLocations}
+                                onChange={(v) => { setFilterLocations(v); setPage(1); }}
+                                options={locationOptions}
+                                placeholder="All Locations"
+                            />
+                        </div>
                         <div className="flex-1 min-w-[180px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Lab</label>
-                            <CustomSelect
-                                value={filterLab}
-                                onChange={(v) => { setFilterLab(v); setPage(1); }}
-                                options={LAB_FILTER_OPTIONS}
-                                placeholder="All Labs"
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Designation</label>
+                            <MultiSelect
+                                value={filterDesignations}
+                                onChange={(v) => { setFilterDesignations(v); setPage(1); }}
+                                options={DESIGNATION_FILTER_OPTIONS}
+                                placeholder="All Designations"
                             />
                         </div>
                         <div className="flex-1 min-w-[140px]">
@@ -318,12 +366,12 @@ export default function ViewOfficersPage() {
                                 placeholder="Per page"
                             />
                         </div>
-                        {(filterLab || filterRank || search) && (
+                        {(filterLocations.length > 0 || filterDesignations.length > 0 || filterRank || search) && (
                             <div className="flex items-end">
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    onClick={() => { setFilterLab(''); setFilterRank(''); setSearch(''); setPage(1); }}
+                                    onClick={() => { setFilterLocations([]); setFilterDesignations([]); setFilterRank(''); setSearch(''); setPage(1); }}
                                     className="!min-h-9 !px-3 !text-xs !text-red-500 hover:!text-red-700"
                                 >
                                     Clear filters
@@ -404,6 +452,10 @@ export default function ViewOfficersPage() {
                                     <p className="text-sm font-medium text-gray-900">{viewingOfficer.rank || '-'}</p>
                                 </div>
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Designation</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.designation || '-'}</p>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</p>
                                     <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded ${
                                         viewingOfficer.status === 'ACTIVE'
@@ -413,13 +465,13 @@ export default function ViewOfficersPage() {
                                         {viewingOfficer.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                                     </span>
                                 </div>
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mobile</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.mobile || '-'}</p>
+                                </div>
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">SOCO Lab</p>
                                     <p className="text-sm font-medium text-gray-900">{viewingOfficer.socoLab}</p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mobile</p>
-                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.mobile || '-'}</p>
                                 </div>
                             </div>
                         </div>
