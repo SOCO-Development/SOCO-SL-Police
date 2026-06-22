@@ -139,6 +139,11 @@ export interface UserRank {
   RANK_NAME: string;
 }
 
+export interface UserDesignation {
+  DESIGNATION_ID: string;
+  DESIGNATION_NAME: string;
+}
+
 export interface PromotionRecord {
   promotedDate: string; // Format: YYYY-MM-DD
   promotedRankId: number;

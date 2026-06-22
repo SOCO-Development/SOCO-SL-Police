@@ -7,29 +7,13 @@ import MultiSelect from '@/components/forms/MultiSelect';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import { PageHeader, PageLayout, Button, SearchInput, ActionChipButton, PaginationControls } from '@/components/ui';
 import { ANNEX_12_RANK } from '@/lib/annexData';
-import { officerService, ApiError } from '@/lib/api';
+import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
 import { Plus, Eye, Pencil, Shield } from 'lucide-react';
 
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
-
-const DESIGNATION_MAP: Record<string, string> = {
-    '1': 'OIC',
-    '5': 'Acting OIC',
-    '6': 'SOCO Officer',
-    '7': 'SOCO Admin',
-    '8': 'System Admin',
-};
-
-const DESIGNATION_FILTER_OPTIONS = [
-    { value: 'OIC', label: 'OIC' },
-    { value: 'Acting OIC', label: 'Acting OIC' },
-    { value: 'SOCO Officer', label: 'SOCO Officer' },
-    { value: 'SOCO Admin', label: 'SOCO Admin' },
-    { value: 'System Admin', label: 'System Admin' },
-];
 
 type SortKey = 'name' | 'regNo' | 'status' | 'socoLab' | 'mobile';
 
@@ -80,6 +64,13 @@ export default function ViewOfficersPage() {
     const [officers, setOfficers] = useState<OfficerRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [designations, setDesignations] = useState<{ id: string; name: string }[]>([
+        { id: '1', name: 'OIC' },
+        { id: '5', name: 'Acting OIC' },
+        { id: '6', name: 'SOCO Officer' },
+        { id: '7', name: 'SOCO Admin' },
+        { id: '8', name: 'System Admin' },
+    ]);
 
     const locationIdToName = useMemo(() => {
         const map = new Map<string, string>();
@@ -90,6 +81,30 @@ export default function ViewOfficersPage() {
     const locationOptions = useMemo(() => {
         return locations.map((loc) => ({ value: loc.id, label: loc.name }));
     }, [locations]);
+
+    const designationMap = useMemo(() => {
+        const map = new Map<string, string>();
+        designations.forEach((d) => map.set(d.id, d.name));
+        return map;
+    }, [designations]);
+
+    const designationOptions = useMemo(() => {
+        return designations.map((d) => ({ value: d.name, label: d.name }));
+    }, [designations]);
+
+    useEffect(() => {
+        const loadDesignations = async () => {
+            try {
+                const apiRes = await userService.getAllDesignations();
+                if (apiRes && apiRes.length > 0) {
+                    setDesignations(apiRes.map(d => ({ id: d.DESIGNATION_ID, name: d.DESIGNATION_NAME })));
+                }
+            } catch (err) {
+                console.error("Failed to load designations:", err);
+            }
+        };
+        loadDesignations();
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -105,12 +120,12 @@ export default function ViewOfficersPage() {
                     .map((val) => {
                         const num = parseInt(val, 10);
                         if (!isNaN(num)) return num;
-                        const foundId = Object.keys(DESIGNATION_MAP).find((key) => {
-                            const name = DESIGNATION_MAP[key].toLowerCase();
+                        const found = designations.find((d) => {
+                            const name = d.name.toLowerCase();
                             const query = val.toLowerCase();
                             return name === query || name.replace('soco', '').trim() === query.replace('soco', '').trim();
                         });
-                        return foundId ? parseInt(foundId, 10) : null;
+                        return found ? parseInt(found.id, 10) : null;
                     })
                     .filter((id): id is number => id !== null && !isNaN(id));
 
@@ -130,7 +145,7 @@ export default function ViewOfficersPage() {
                     socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
                     rank: rankIdToName.get(o.RANK_ID || '') || '',
                     designationId: o.USER_DESIGNATION_ID || '',
-                    designation: o.USER_DESIGNATION_ID ? (DESIGNATION_MAP[o.USER_DESIGNATION_ID] || o.USER_DESIGNATION_ID) : '',
+                    designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
                 }));
                 setOfficers(rows);
             } catch (err) {
@@ -143,7 +158,7 @@ export default function ViewOfficersPage() {
         };
         fetch();
         return () => { cancelled = true; };
-    }, [locationIdToName, rankIdToName, filterLocations, filterDesignations]);
+    }, [locationIdToName, rankIdToName, filterLocations, filterDesignations, designations, designationMap]);
 
     const handleSort = (key: string) => {
         const k = key as SortKey;
@@ -196,9 +211,9 @@ export default function ViewOfficersPage() {
             data = data.filter((o) => {
                 const selectedNamesAndIds = [...filterDesignations];
                 filterDesignations.forEach((val) => {
-                    const foundId = Object.keys(DESIGNATION_MAP).find(key => DESIGNATION_MAP[key] === val);
-                    if (foundId) {
-                        selectedNamesAndIds.push(foundId);
+                    const found = designations.find(d => d.name === val);
+                    if (found) {
+                        selectedNamesAndIds.push(found.id);
                     }
                 });
                 return selectedNamesAndIds.includes(o.designationId) || selectedNamesAndIds.includes(o.designation);
@@ -212,7 +227,7 @@ export default function ViewOfficersPage() {
             return sortAsc ? cmp : -cmp;
         });
         return data;
-    }, [search, filterLocations, filterDesignations, filterRank, sortKey, sortAsc, officers]);
+    }, [search, filterLocations, filterDesignations, filterRank, sortKey, sortAsc, officers, designations]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const effectivePage = Math.min(page, totalPages);
@@ -364,7 +379,7 @@ export default function ViewOfficersPage() {
                             <MultiSelect
                                 value={filterDesignations}
                                 onChange={(v) => { setFilterDesignations(v); setPage(1); }}
-                                options={DESIGNATION_FILTER_OPTIONS}
+                                options={designationOptions}
                                 placeholder="All Designations"
                             />
                         </div>
