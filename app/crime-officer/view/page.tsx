@@ -3,16 +3,16 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import CustomSelect from '@/components/forms/CustomSelect';
+import MultiSelect from '@/components/forms/MultiSelect';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import { PageHeader, PageLayout, Button, SearchInput, ActionChipButton, PaginationControls } from '@/components/ui';
-import { ANNEX_01_SOCO_LABS, ANNEX_12_RANK } from '@/lib/annexData';
-import { officerService, ApiError } from '@/lib/api';
+import { ANNEX_12_RANK } from '@/lib/annexData';
+import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
-import { MagnifyingGlass, FunnelSimple, Key } from 'phosphor-react';
+import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
 import { Plus, Eye, Pencil, Shield } from 'lucide-react';
 
-const LAB_FILTER_OPTIONS = [{ value: '', label: 'All Labs' }, ...ANNEX_01_SOCO_LABS.map((l) => ({ value: l, label: l }))];
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
 
 type SortKey = 'name' | 'regNo' | 'status' | 'socoLab' | 'mobile';
@@ -29,6 +29,8 @@ interface OfficerRow {
     mobile: string;
     socoLab: string;
     rank: string;
+    designationId: string;
+    designation: string;
 }
 
 function OfficerAvatar({ name }: { name: string }) {
@@ -44,7 +46,8 @@ export default function ViewOfficersPage() {
     const { locations } = useLocationData();
     const { rankIdToName } = useUserData();
     const [search, setSearch] = useState('');
-    const [filterLab, setFilterLab] = useState('');
+    const [filterLocations, setFilterLocations] = useState<string[]>([]);
+    const [filterDesignations, setFilterDesignations] = useState<string[]>([]);
     const [filterRank, setFilterRank] = useState('');
     const [sortKey, setSortKey] = useState<SortKey>('name');
     const [sortAsc, setSortAsc] = useState(true);
@@ -55,12 +58,20 @@ export default function ViewOfficersPage() {
     const [privilegeOfficer, setPrivilegeOfficer] = useState<OfficerRow | null>(null);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [privilegeDesignationId, setPrivilegeDesignationId] = useState('');
     const [privilegeLoading, setPrivilegeLoading] = useState(false);
     const [privilegeError, setPrivilegeError] = useState<string | null>(null);
     const [privilegeSuccess, setPrivilegeSuccess] = useState<string | null>(null);
     const [officers, setOfficers] = useState<OfficerRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [designations, setDesignations] = useState<{ id: string; name: string }[]>([
+        { id: '1', name: 'OIC' },
+        { id: '5', name: 'Acting OIC' },
+        { id: '6', name: 'SOCO Officer' },
+        { id: '7', name: 'SOCO Admin' },
+        { id: '8', name: 'System Admin' },
+    ]);
 
     const locationIdToName = useMemo(() => {
         const map = new Map<string, string>();
@@ -68,13 +79,52 @@ export default function ViewOfficersPage() {
         return map;
     }, [locations]);
 
+    const locationOptions = useMemo(() => {
+        return locations.map((loc) => ({ value: loc.id, label: loc.name }));
+    }, [locations]);
+
+    const designationMap = useMemo(() => {
+        const map = new Map<string, string>();
+        designations.forEach((d) => map.set(d.id, d.name));
+        return map;
+    }, [designations]);
+
+    const designationOptions = useMemo(() => {
+        return designations.map((d) => ({ value: d.id, label: d.name }));
+    }, [designations]);
+
+    useEffect(() => {
+        const loadDesignations = async () => {
+            try {
+                const apiRes = await userService.getAllDesignations();
+                if (apiRes && apiRes.length > 0) {
+                    setDesignations(apiRes.map(d => ({ id: d.USER_DESIGNATION_ID, name: d.USER_DESIGNATION_NAME })));
+                }
+            } catch (err) {
+                console.error("Failed to load designations:", err);
+            }
+        };
+        loadDesignations();
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
         const fetch = async () => {
             setLoading(true);
             setError(null);
             try {
-                const raw = await officerService.getAllOfficers();
+                const locationIds = filterLocations
+                    .map((id) => parseInt(id, 10))
+                    .filter((id) => !isNaN(id));
+
+                const designationIds = filterDesignations
+                    .map((val) => parseInt(val, 10))
+                    .filter((id) => !isNaN(id));
+
+                const raw = await officerService.getAllOfficers({
+                    locationIds,
+                    designationIds,
+                });
                 if (cancelled) return;
                 const rows: OfficerRow[] = raw.map((o) => ({
                     id: o.SYSTEM_USER_ID,
@@ -86,6 +136,8 @@ export default function ViewOfficersPage() {
                     mobile: o.PHONE_MOBILE || '',
                     socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
                     rank: rankIdToName.get(o.RANK_ID || '') || '',
+                    designationId: o.USER_DESIGNATION_ID || '',
+                    designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
                 }));
                 setOfficers(rows);
             } catch (err) {
@@ -98,7 +150,7 @@ export default function ViewOfficersPage() {
         };
         fetch();
         return () => { cancelled = true; };
-    }, [locationIdToName, rankIdToName]);
+    }, [locationIdToName, rankIdToName, filterLocations, filterDesignations, designations, designationMap]);
 
     const handleSort = (key: string) => {
         const k = key as SortKey;
@@ -123,9 +175,21 @@ export default function ViewOfficersPage() {
                 systemUserId: parseInt(privilegeOfficer.id, 10),
                 userKey: newPassword.trim(),
             });
+
+            if (privilegeDesignationId) {
+                await officerService.updateUserDesignation({
+                    systemUserId: parseInt(privilegeOfficer.id, 10),
+                    designationId: parseInt(privilegeDesignationId, 10),
+                });
+            }
+
             setPrivilegeSuccess('Login access granted successfully. Password updated.');
+            if (privilegeDesignationId) {
+                setPrivilegeSuccess(prev => prev + ' Designation updated.');
+            }
             setNewPassword('');
             setConfirmPassword('');
+            setPrivilegeDesignationId('');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
             setPrivilegeError(apiError.message || 'An error occurred.');
@@ -144,7 +208,12 @@ export default function ViewOfficersPage() {
                 o.mobile.includes(q)
             );
         }
-        if (filterLab) data = data.filter((o) => o.socoLab === filterLab);
+        if (filterLocations.length > 0) {
+            data = data.filter((o) => filterLocations.includes(o.locationId));
+        }
+        if (filterDesignations.length > 0) {
+            data = data.filter((o) => filterDesignations.includes(o.designationId));
+        }
         if (filterRank) data = data.filter((o) => o.rank === filterRank);
         data.sort((a, b) => {
             const av = String(a[sortKey] ?? '');
@@ -153,7 +222,7 @@ export default function ViewOfficersPage() {
             return sortAsc ? cmp : -cmp;
         });
         return data;
-    }, [search, filterLab, filterRank, sortKey, sortAsc, officers]);
+    }, [search, filterLocations, filterDesignations, filterRank, sortKey, sortAsc, officers, designations]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const effectivePage = Math.min(page, totalPages);
@@ -236,7 +305,7 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}>
+                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); }}>
                             <Shield className="w-3 h-3" /> Privilege
                         </ActionChipButton>
                     </div>
@@ -269,15 +338,7 @@ export default function ViewOfficersPage() {
             )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
-                <div className="flex gap-3 flex-wrap items-center">
-                    <SearchInput
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        placeholder="Search name, reg no, mobile..."
-                        wrapperClassName="flex-1 min-w-[200px]"
-                        icon={<MagnifyingGlass size={15} />}
-                    />
-
+                <div className="flex gap-3 flex-wrap items-center justify-between">
                     <Button
                         type="button"
                         variant={showFilters ? 'primary' : 'secondary'}
@@ -287,17 +348,34 @@ export default function ViewOfficersPage() {
                         <FunnelSimple size={15} />
                         Filters
                     </Button>
+
+                    <SearchInput
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        placeholder="Search name, reg no, mobile..."
+                        wrapperClassName="max-w-md w-full"
+                        icon={<MagnifyingGlass size={15} />}
+                    />
                 </div>
 
                 {showFilters && (
                     <div className="mt-3 flex gap-3 flex-wrap pt-3 border-t border-gray-100">
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Location</label>
+                            <MultiSelect
+                                value={filterLocations}
+                                onChange={(v) => { setFilterLocations(v); setPage(1); }}
+                                options={locationOptions}
+                                placeholder="All Locations"
+                            />
+                        </div>
                         <div className="flex-1 min-w-[180px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Lab</label>
-                            <CustomSelect
-                                value={filterLab}
-                                onChange={(v) => { setFilterLab(v); setPage(1); }}
-                                options={LAB_FILTER_OPTIONS}
-                                placeholder="All Labs"
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Designation</label>
+                            <MultiSelect
+                                value={filterDesignations}
+                                onChange={(v) => { setFilterDesignations(v); setPage(1); }}
+                                options={designationOptions}
+                                placeholder="All Designations"
                             />
                         </div>
                         <div className="flex-1 min-w-[140px]">
@@ -318,12 +396,12 @@ export default function ViewOfficersPage() {
                                 placeholder="Per page"
                             />
                         </div>
-                        {(filterLab || filterRank || search) && (
+                        {(filterLocations.length > 0 || filterDesignations.length > 0 || filterRank || search) && (
                             <div className="flex items-end">
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    onClick={() => { setFilterLab(''); setFilterRank(''); setSearch(''); setPage(1); }}
+                                    onClick={() => { setFilterLocations([]); setFilterDesignations([]); setFilterRank(''); setSearch(''); setPage(1); }}
                                     className="!min-h-9 !px-3 !text-xs !text-red-500 hover:!text-red-700"
                                 >
                                     Clear filters
@@ -404,6 +482,10 @@ export default function ViewOfficersPage() {
                                     <p className="text-sm font-medium text-gray-900">{viewingOfficer.rank || '-'}</p>
                                 </div>
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Designation</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.designation || '-'}</p>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</p>
                                     <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded ${
                                         viewingOfficer.status === 'ACTIVE'
@@ -413,13 +495,13 @@ export default function ViewOfficersPage() {
                                         {viewingOfficer.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                                     </span>
                                 </div>
+                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mobile</p>
+                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.mobile || '-'}</p>
+                                </div>
                                 <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">SOCO Lab</p>
                                     <p className="text-sm font-medium text-gray-900">{viewingOfficer.socoLab}</p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 sm:col-span-2">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mobile</p>
-                                    <p className="text-sm font-medium text-gray-900">{viewingOfficer.mobile || '-'}</p>
                                 </div>
                             </div>
                         </div>
@@ -442,7 +524,7 @@ export default function ViewOfficersPage() {
             {privilegeOfficer && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-                    onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                    onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                 >
                     <div
                         className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-200 animate-fade-in"
@@ -456,7 +538,7 @@ export default function ViewOfficersPage() {
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                                 className="!min-h-9 !w-9 !p-2"
                                 aria-label="Close"
                             >
@@ -514,12 +596,24 @@ export default function ViewOfficersPage() {
                                     className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors"
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                    Designation
+                                </label>
+                                <CustomSelect
+                                    value={privilegeDesignationId}
+                                    onChange={(val) => setPrivilegeDesignationId(val)}
+                                    options={[{ value: '', label: 'No change' }, ...designations.map((d) => ({ value: d.id, label: d.name }))]}
+                                    placeholder="No change"
+                                />
+                            </div>
                         </div>
                         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-end gap-2">
                             <Button
                                 type="button"
                                 variant="secondary"
-                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                             >
                                 Cancel
                             </Button>

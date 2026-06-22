@@ -1,5 +1,5 @@
 import { apiRequest } from './client';
-import type { UserRank, CurrentUserInfo } from './types';
+import type { UserRank, UserDesignation, CurrentUserInfo } from './types';
 
 /**
  * Fetch all user ranks from the system (SOCO_UC1)
@@ -11,6 +11,25 @@ export async function getUserRanks(): Promise<UserRank[]> {
   } catch {
     // Endpoint may not exist on backend — return empty array
     return [];
+  }
+}
+
+/**
+ * Fetch all user designations from the system (SOCO_UC2)
+ * Returns array of designation IDs and names
+ */
+export async function getAllDesignations(): Promise<UserDesignation[]> {
+  try {
+    return await apiRequest<UserDesignation[]>('User/GetAllDesignations');
+  } catch {
+    // Return standard fallback designations if the API fails
+    return [
+      { USER_DESIGNATION_ID: '1', USER_DESIGNATION_NAME: 'OIC' },
+      { USER_DESIGNATION_ID: '5', USER_DESIGNATION_NAME: 'Acting OIC' },
+      { USER_DESIGNATION_ID: '6', USER_DESIGNATION_NAME: 'Soco Officer' },
+      { USER_DESIGNATION_ID: '7', USER_DESIGNATION_NAME: 'Soco Admin' },
+      { USER_DESIGNATION_ID: '8', USER_DESIGNATION_NAME: 'System Admin' },
+    ];
   }
 }
 
