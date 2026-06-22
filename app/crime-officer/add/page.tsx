@@ -68,6 +68,7 @@ interface PromotionRow {
 
 interface CourseBeforeRow {
     id: number;
+    recordId?: string;
     conNo: string;
     policeStation: string;
     branch: string;
@@ -78,6 +79,7 @@ interface CourseBeforeRow {
 
 interface CourseAfterRow {
     id: number;
+    recordId?: string;
     courseName: string;
     from: string;
     to: string;
@@ -676,6 +678,7 @@ export default function AddOfficerPage() {
                         .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '1')
                         .map((c) => ({
                             id: newId(),
+                            recordId: c.RECORD_ID,
                             conNo: c.CON_NO || '',
                             policeStation: c.POLICE_STATION || '',
                             branch: c.BRANCH || '',
@@ -687,6 +690,7 @@ export default function AddOfficerPage() {
                         .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '2')
                         .map((c) => ({
                             id: newId(),
+                            recordId: c.RECORD_ID,
                             conNo: c.CON_NO || '',
                             policeStation: c.POLICE_STATION || '',
                             branch: c.BRANCH || '',
@@ -698,6 +702,7 @@ export default function AddOfficerPage() {
                         .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '1')
                         .map((c) => ({
                             id: newId(),
+                            recordId: c.RECORD_ID,
                             courseName: c.CON_NO || '',
                             from: c.FROM_DATE || '',
                             to: c.TO_DATE || '',
@@ -708,6 +713,7 @@ export default function AddOfficerPage() {
                         .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '2')
                         .map((c) => ({
                             id: newId(),
+                            recordId: c.RECORD_ID,
                             courseName: c.CON_NO || '',
                             from: c.FROM_DATE || '',
                             to: c.TO_DATE || '',
@@ -1217,6 +1223,7 @@ if (regiNoCheck.isAvailable) {
                     courseTypeId: number;
                     courseDoneId: number;
                     conNo: string;
+                    courseName: string;
                     policeStation: string;
                     branch: string;
                     fromDate: string;
@@ -1228,57 +1235,69 @@ if (regiNoCheck.isAvailable) {
 
                 if (courseDoneId === 1) {
                     courses = [
-                        ...form.localBeforeCourses.map((c) => ({
-                            courseTypeId: 1,
-                            courseDoneId,
-                            conNo: c.conNo || '',
-                            policeStation: c.policeStation || '',
-                            branch: c.branch || '',
-                            fromDate: toApiDate(c.from),
-                            toDate: toApiDate(c.to),
-                            duration: '',
-                            institute: c.institute || '',
-                            country: '',
-                        })),
-                        ...form.foreignBeforeCourses.map((c) => ({
-                            courseTypeId: 2,
-                            courseDoneId,
-                            conNo: c.conNo || '',
-                            policeStation: c.policeStation || '',
-                            branch: c.branch || '',
-                            fromDate: toApiDate(c.from),
-                            toDate: toApiDate(c.to),
-                            duration: '',
-                            institute: c.institute || '',
-                            country: c.institute || '',
-                        })),
+                        ...form.localBeforeCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 1,
+                                courseDoneId,
+                                conNo: c.conNo || '',
+                                courseName: c.conNo || '',
+                                policeStation: c.policeStation || '',
+                                branch: c.branch || '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: '',
+                                institute: c.institute || '',
+                                country: '',
+                            })),
+                        ...form.foreignBeforeCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 2,
+                                courseDoneId,
+                                conNo: c.conNo || '',
+                                courseName: c.conNo || '',
+                                policeStation: c.policeStation || '',
+                                branch: c.branch || '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: '',
+                                institute: c.institute || '',
+                                country: c.institute || '',
+                            })),
                     ];
                 } else {
                     courses = [
-                        ...form.localAfterCourses.map((c) => ({
-                            courseTypeId: 1,
-                            courseDoneId,
-                            conNo: c.courseName || '',
-                            policeStation: '',
-                            branch: '',
-                            fromDate: toApiDate(c.from),
-                            toDate: toApiDate(c.to),
-                            duration: c.time || '',
-                            institute: c.institute || '',
-                            country: '',
-                        })),
-                        ...form.foreignAfterCourses.map((c) => ({
-                            courseTypeId: 2,
-                            courseDoneId,
-                            conNo: c.courseName || '',
-                            policeStation: '',
-                            branch: '',
-                            fromDate: toApiDate(c.from),
-                            toDate: toApiDate(c.to),
-                            duration: c.time || '',
-                            institute: c.institute || '',
-                            country: c.institute || '',
-                        })),
+                        ...form.localAfterCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 1,
+                                courseDoneId,
+                                conNo: c.courseName || '',
+                                courseName: c.courseName || '',
+                                policeStation: '',
+                                branch: '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: c.time || '',
+                                institute: c.institute || '',
+                                country: '',
+                            })),
+                        ...form.foreignAfterCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 2,
+                                courseDoneId,
+                                conNo: c.courseName || '',
+                                courseName: c.courseName || '',
+                                policeStation: '',
+                                branch: '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: c.time || '',
+                                institute: c.institute || '',
+                                country: c.institute || '',
+                            })),
                     ];
                 }
 
