@@ -17,10 +17,10 @@ const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK
 
 const DESIGNATION_MAP: Record<string, string> = {
     '1': 'OIC',
-    '2': 'Acting OIC',
-    '3': 'SOCO Officer',
-    '4': 'SOCO Admin',
-    '5': 'System Admin',
+    '5': 'Acting OIC',
+    '6': 'SOCO Officer',
+    '7': 'SOCO Admin',
+    '8': 'System Admin',
 };
 
 const DESIGNATION_FILTER_OPTIONS = [
@@ -97,7 +97,27 @@ export default function ViewOfficersPage() {
             setLoading(true);
             setError(null);
             try {
-                const raw = await officerService.getAllOfficers();
+                const locationIds = filterLocations
+                    .map((id) => parseInt(id, 10))
+                    .filter((id) => !isNaN(id));
+
+                const designationIds = filterDesignations
+                    .map((val) => {
+                        const num = parseInt(val, 10);
+                        if (!isNaN(num)) return num;
+                        const foundId = Object.keys(DESIGNATION_MAP).find((key) => {
+                            const name = DESIGNATION_MAP[key].toLowerCase();
+                            const query = val.toLowerCase();
+                            return name === query || name.replace('soco', '').trim() === query.replace('soco', '').trim();
+                        });
+                        return foundId ? parseInt(foundId, 10) : null;
+                    })
+                    .filter((id): id is number => id !== null && !isNaN(id));
+
+                const raw = await officerService.getAllOfficers({
+                    locationIds,
+                    designationIds,
+                });
                 if (cancelled) return;
                 const rows: OfficerRow[] = raw.map((o) => ({
                     id: o.SYSTEM_USER_ID,
@@ -123,7 +143,7 @@ export default function ViewOfficersPage() {
         };
         fetch();
         return () => { cancelled = true; };
-    }, [locationIdToName, rankIdToName]);
+    }, [locationIdToName, rankIdToName, filterLocations, filterDesignations]);
 
     const handleSort = (key: string) => {
         const k = key as SortKey;

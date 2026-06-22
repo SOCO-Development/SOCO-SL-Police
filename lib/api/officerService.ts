@@ -163,8 +163,14 @@ export async function updateSpecialIllnessesNotes(
 /**
  * Get all officers (SOCO_U12)
  */
-export async function getAllOfficers(): Promise<OfficerListItem[]> {
-  const res = await apiRequest<OfficerListItem[]>('User/GetAllOfficers');
+export async function getAllOfficers(payload?: {
+  locationIds?: number[];
+  designationIds?: number[];
+}): Promise<OfficerListItem[]> {
+  const res = await apiRequest<OfficerListItem[]>('User/GetAllOfficers', {
+    method: 'POST',
+    body: payload || { locationIds: [], designationIds: [] },
+  });
   return res;
 }
 
