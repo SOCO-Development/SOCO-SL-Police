@@ -22,6 +22,7 @@ import type {
   UpdateSpecialIllnessesNotesRequest,
   UpdateSpecialIllnessesNotesData,
   UpdatePersonalInfoRequest,
+  UpdateUserDesignationRequest,
   OfficerListItem,
   OfficerDetailBundle,
   GrantLoginAccessRequest,
@@ -163,8 +164,14 @@ export async function updateSpecialIllnessesNotes(
 /**
  * Get all officers (SOCO_U12)
  */
-export async function getAllOfficers(): Promise<OfficerListItem[]> {
-  const res = await apiRequest<OfficerListItem[]>('User/GetAllOfficers');
+export async function getAllOfficers(payload?: {
+  locationIds?: number[];
+  designationIds?: number[];
+}): Promise<OfficerListItem[]> {
+  const res = await apiRequest<OfficerListItem[]>('User/GetAllOfficers', {
+    method: 'POST',
+    body: payload || { locationIds: [], designationIds: [] },
+  });
   return res;
 }
 
@@ -219,6 +226,18 @@ export async function updatePersonalInfo(
   payload: UpdatePersonalInfoRequest,
 ): Promise<string> {
   return apiRequest<string>('User/UpdatePersonalInfo', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Update user designation (Privilege)
+ */
+export async function updateUserDesignation(
+  payload: UpdateUserDesignationRequest,
+): Promise<string> {
+  return apiRequest<string>('UserPrivilege/UpdateDesignation', {
     method: 'POST',
     body: payload,
   });

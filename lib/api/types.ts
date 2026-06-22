@@ -139,6 +139,11 @@ export interface UserRank {
   RANK_NAME: string;
 }
 
+export interface UserDesignation {
+  USER_DESIGNATION_ID: string;
+  USER_DESIGNATION_NAME: string;
+}
+
 export interface PromotionRecord {
   promotedDate: string; // Format: YYYY-MM-DD
   promotedRankId: number;
@@ -542,5 +547,12 @@ export interface UpdatePersonalInfoRequest {
   socoJoinedDate: string;
   spouse?: SpouseData;
   children?: ChildData[];
+}
+
+// ─── Update User Designation ───────────────────────────────────────
+
+export interface UpdateUserDesignationRequest {
+  systemUserId: number;
+  designationId: number;
 }
 
