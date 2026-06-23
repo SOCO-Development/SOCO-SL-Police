@@ -110,12 +110,26 @@ interface ALSubjectRow {
     grade: string;
 }
 
+type QualificationType = 'Degree' | 'Diploma' | 'Certificate' | 'Postgraduate' | 'Doctorate' | 'Other' | '';
+
+const QUALIFICATION_TYPE_OPTIONS = [
+    { value: 'Degree', label: 'Degree' },
+    { value: 'Diploma', label: 'Diploma' },
+    { value: 'Certificate', label: 'Certificate' },
+    { value: 'Postgraduate', label: 'Postgraduate' },
+    { value: 'Doctorate', label: 'Doctorate' },
+    { value: 'Other', label: 'Other' },
+];
+
 interface DegreeRow {
     id: number;
     degree: string;
     university: string;
     yearFrom: string;
     yearTo: string;
+    timing: 'before' | 'after' | '';
+    qualificationType: QualificationType;
+    qualificationTypeOther: string;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -169,8 +183,7 @@ interface FormData {
     alSubjects: ALSubjectRow[];
     alGeneralEnglish: string;
     alGeneralKnowledge: string;
-    degreesBefore: DegreeRow[];
-    degreesAfter: DegreeRow[];
+    degrees: DegreeRow[];
     // Section 5
     localBeforeCourses: CourseBeforeRow[];
     foreignBeforeCourses: CourseBeforeRow[];
@@ -297,8 +310,7 @@ function defaultForm(): FormData {
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degreesBefore: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
-        degreesAfter: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
+        degrees: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '', timing: '' as const, qualificationType: '' as QualificationType, qualificationTypeOther: '' }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -676,24 +688,18 @@ export default function AddOfficerPage() {
                         const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
                         return ['general knowledge', 'general knowledge test', 'knowledge'].includes(n);
                     })?.SUBJECT_RESULT || '',
-                    degreesBefore: (data.higherEducation || [])
-                        .filter((h) => h.DONE_BEFORE_JOIN === 'Yes')
-                        .map((h) => ({
+                    degrees: (data.higherEducation || []).length > 0
+                        ? (data.higherEducation || []).map((h) => ({
                             id: newId(),
                             degree: h.QUALIFICATION_NAME || '',
                             university: h.INSTITUTE_NAME || '',
                             yearFrom: h.FROM_YEAR || '',
                             yearTo: h.TO_YEAR || '',
-                        })),
-                    degreesAfter: (data.higherEducation || [])
-                        .filter((h) => h.DONE_BEFORE_JOIN === 'No' || !h.DONE_BEFORE_JOIN)
-                        .map((h) => ({
-                            id: newId(),
-                            degree: h.QUALIFICATION_NAME || '',
-                            university: h.INSTITUTE_NAME || '',
-                            yearFrom: h.FROM_YEAR || '',
-                            yearTo: h.TO_YEAR || '',
-                        })),
+                            timing: (h.DONE_BEFORE_JOIN === 'Yes' ? 'before' : 'after') as 'before' | 'after',
+                            qualificationType: (h.EDUCATION_TYPE || '') as QualificationType,
+                            qualificationTypeOther: '',
+                        }))
+                        : [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '', timing: '' as const, qualificationType: '' as QualificationType, qualificationTypeOther: '' }],
                     // Sections 5/6 – Courses
                     localBeforeCourses: (data.courses || [])
                         .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '1')
@@ -1017,18 +1023,18 @@ export default function AddOfficerPage() {
         set('alSubjects', form.alSubjects.filter((s) => s.id !== id));
     };
 
-    const updateDegree = (section: 'degreesBefore' | 'degreesAfter', id: number, patch: Partial<DegreeRow>) => {
-        set(section, form[section].map((d) => d.id === id ? { ...d, ...patch } : d));
+    const updateDegree = (id: number, patch: Partial<DegreeRow>) => {
+        set('degrees', form.degrees.map((d) => d.id === id ? { ...d, ...patch } : d));
     };
 
-    const addDegree = (section: 'degreesBefore' | 'degreesAfter') => {
-        if (form[section].length >= 6) return;
-        set(section, [...form[section], { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }]);
+    const addDegree = () => {
+        if (form.degrees.length >= 12) return;
+        set('degrees', [...form.degrees, { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '', timing: '' as const, qualificationType: '' as QualificationType, qualificationTypeOther: '' }]);
     };
 
-    const removeDegree = (section: 'degreesBefore' | 'degreesAfter', id: number) => {
-        if (form[section].length <= 1) return;
-        set(section, form[section].filter((d) => d.id !== id));
+    const removeDegree = (id: number) => {
+        if (form.degrees.length <= 1) return;
+        set('degrees', form.degrees.filter((d) => d.id !== id));
     };
 
     const buildChildrenData = (): ChildData[] =>
@@ -1221,26 +1227,17 @@ if (regiNoCheck.isAvailable) {
                     }] : []),
                 ];
 
-                const higherEducations = [
-                    ...form.degreesBefore.map((d) => ({
-                        doneBeforeJoin: 'Yes' as const,
-                        sponsored: 'No' as const,
-                        educationType: 'Degree',
+                const higherEducations = form.degrees
+                    .filter((d) => d.degree.trim() || d.university.trim())
+                    .map((d) => ({
+                        doneBeforeJoin: (d.timing === 'before' ? 'Yes' : 'No') as 'Yes' | 'No',
+                        sponsored: (d.timing === 'after' ? 'Yes' : 'No') as 'Yes' | 'No',
+                        educationType: d.qualificationType === 'Other' ? d.qualificationTypeOther : (d.qualificationType || 'Degree'),
                         qualificationName: d.degree,
                         instituteName: d.university,
                         fromYear: parseInt(d.yearFrom) || 0,
                         toYear: parseInt(d.yearTo) || 0,
-                    })),
-                    ...form.degreesAfter.map((d) => ({
-                        doneBeforeJoin: 'No' as const,
-                        sponsored: 'Yes' as const,
-                        educationType: 'Degree',
-                        qualificationName: d.degree,
-                        instituteName: d.university,
-                        fromYear: parseInt(d.yearFrom) || 0,
-                        toYear: parseInt(d.yearTo) || 0,
-                    })),
-                ];
+                    }));
 
                 await officerService.updateEducation({
                     systemUserId: parseInt(editId, 10),
@@ -2259,88 +2256,100 @@ if (regiNoCheck.isAvailable) {
                                 </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
-                                <div className="grid grid-cols-1 gap-5">
+                                <div className="mb-5">
                                     <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
-                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications Before Joining Police</h4>
-                                            <p className="text-xs text-violet-700 mt-0.5">Obtained prior to joining the Police Department</p>
+                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">
+                                                Degrees / Qualifications
+                                            </h4>
+                                            <p className="text-xs text-violet-700 mt-0.5">
+                                                Record qualifications obtained before or after joining the Police Department
+                                            </p>
                                         </div>
                                         <div className="p-4 space-y-3">
-                                            {form.degreesBefore.map((row, idx) => (
-                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
-                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                            {form.degrees.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-3">
+                                                    <div className="flex items-center justify-between gap-2">
                                                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {form.degreesBefore.length > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree('degreesBefore', row.id)} size="sm" />
+                                                        {form.degrees.length > 1 && (
+                                                            <RemoveRowButton onClick={() => removeDegree(row.id)} size="sm" />
                                                         )}
+                                                    </div>
+                                                    <div>
+                                                        <FieldLabel label="University / Institute" />
+                                                        <GInput value={row.university} onChange={(v) => updateDegree(row.id, { university: v })} placeholder="University or Institute name" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(['before', 'after'] as const).map((val) => {
+                                                                const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                                const isSelected = row.timing === val;
+                                                                return (
+                                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                                        isSelected
+                                                                            ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
+                                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                                    }`}>
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={`degree-timing-${row.id}`}
+                                                                            value={val}
+                                                                            checked={isSelected}
+                                                                            onChange={() => updateDegree(row.id, { timing: val })}
+                                                                            className="accent-violet-600"
+                                                                        />
+                                                                        {label}
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         <div>
-                                                            <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesBefore', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
+                                                            <FieldLabel label="Qualification Type" />
+                                                            <CustomSelect
+                                                                value={row.qualificationType}
+                                                                onChange={(v) => {
+                                                                    updateDegree(row.id, {
+                                                                        qualificationType: v as QualificationType,
+                                                                        qualificationTypeOther: v === 'Other' ? row.qualificationTypeOther : '',
+                                                                    });
+                                                                }}
+                                                                options={QUALIFICATION_TYPE_OPTIONS}
+                                                                placeholder="Select type"
+                                                            />
                                                         </div>
                                                         <div>
-                                                            <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesBefore', row.id, { university: v })} placeholder="University or Institute name" />
+                                                            <FieldLabel label="Degree / Qualification Name" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree(row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
                                                         </div>
                                                     </div>
+                                                    {row.qualificationType === 'Other' && (
+                                                        <div>
+                                                            <FieldLabel label="Specify Qualification Type" />
+                                                            <GInput
+                                                                value={row.qualificationTypeOther}
+                                                                onChange={(v) => updateDegree(row.id, { qualificationTypeOther: v })}
+                                                                placeholder="Enter qualification type"
+                                                            />
+                                                        </div>
+                                                    )}
                                                     <div className="flex gap-2">
                                                         <div className="w-32">
                                                             <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesBefore', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                         <div className="w-32">
                                                             <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesBefore', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
-                                        {form.degreesBefore.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesBefore')}>Add Qualification</AddRowButton></div>
-                                        )}
-                                    </div>
-
-                                    <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
-                                        <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
-                                            <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">Degrees / Qualifications After Joining Police (Sponsored)</h4>
-                                            <p className="text-xs text-violet-700 mt-0.5">Sponsored degrees obtained after joining the Police Department</p>
-                                        </div>
-                                        <div className="p-4 space-y-3">
-                                            {form.degreesAfter.map((row, idx) => (
-                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
-                                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {form.degreesAfter.length > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree('degreesAfter', row.id)} size="sm" />
-                                                        )}
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                        <div>
-                                                            <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree('degreesAfter', row.id, { degree: v })} placeholder="e.g. LLB" />
-                                                        </div>
-                                                        <div>
-                                                            <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree('degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <div className="w-32">
-                                                            <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree('degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
-                                                        <div className="w-32">
-                                                            <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree('degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {form.degreesAfter.length < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree('degreesAfter')}>Add Qualification</AddRowButton></div>
+                                        {form.degrees.length < 12 && (
+                                            <div className="px-4 pb-4"><AddRowButton onClick={addDegree}>Add Qualification</AddRowButton></div>
                                         )}
                                     </div>
                                 </div>
