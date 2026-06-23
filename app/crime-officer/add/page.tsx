@@ -11,6 +11,15 @@ import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
 import type { InsertNewOfficerRequest, ChildData } from '@/lib/api/types';
 import {
+    validateRegNo,
+    validateFullName,
+    validatePhone,
+    validateDateNotFuture,
+    validateYear,
+    validateRequired,
+    validateDateRange,
+} from '@/lib/validation';
+import {
     ANNEX_01_SOCO_LABS,
     ANNEX_06_CIVIL_STATUS,
     ANNEX_07_SPOUSE_DESIGNATION,
@@ -153,6 +162,7 @@ interface FormData {
     rankDesignationId: string; // Store the designation ID for API submission (NEW)
     regNo: string;
     fullName: string;
+    callingName: string;
     reportedDate: string;
     dob: string;
     dateJoinedSoco: string;
@@ -280,7 +290,7 @@ function formatAssignmentDuration(from: string, to: string): string {
 
 function defaultForm(): FormData {
     return {
-        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '',
+        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '', callingName: '',
         reportedDate: '', dob: '', dateJoinedSoco: '',
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
@@ -428,7 +438,7 @@ function FieldLabel({ label, si }: { label: string; si?: string }) {
 }
 
 function GInput({
-    value, onChange, placeholder, maxLength, readOnly, disabled, type = 'text', min, max
+    value, onChange, placeholder, maxLength, readOnly, disabled, type = 'text', min, max, inputMode
 }: {
     value: string;
     onChange: (v: string) => void;
@@ -439,6 +449,7 @@ function GInput({
     type?: string;
     min?: number;
     max?: number;
+    inputMode?: 'text' | 'numeric' | 'tel' | 'email' | 'url' | 'decimal' | 'search' | 'none';
 }) {
     return (
         <input
@@ -449,6 +460,7 @@ function GInput({
             maxLength={maxLength}
             min={min}
             max={max}
+            inputMode={inputMode}
             readOnly={readOnly}
             disabled={disabled}
             className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800
@@ -605,6 +617,7 @@ export default function AddOfficerPage() {
                     rankDesignationId: p.RANK_ID || '',
                     regNo: p.USER_REGI_NO || '',
                     fullName: p.USER_FULL_NAME || '',
+                    callingName: p.USER_CALLING_NAME || '',
                     reportedDate: '',
                     dob: p.USER_DOB || '',
                     dateJoinedSoco: p.SOCO_JOINED_DATE || '',
@@ -1052,7 +1065,7 @@ export default function AddOfficerPage() {
         return {
             username: form.regNo,
             userFullName: form.fullName,
-            userCallingName: form.fullName.split(' ')[0],
+            userCallingName: form.callingName || form.fullName.split(' ')[0],
             locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
             userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
             userDob: toApiDate(form.dob),
@@ -1078,12 +1091,20 @@ export default function AddOfficerPage() {
     };
 
     const savePersonalFamilySection = async () => {
-        if (!form.regNo.trim() || !form.fullName.trim()) {
-            setError('Registration number and full name are required.');
+        setError(null);
+
+        const regNoErr = validateRegNo(form.regNo);
+        const nameErr = validateFullName(form.fullName);
+        const dobErr = validateDateNotFuture(form.dob, 'Date of birth');
+        const mobileErr = validatePhone(form.telMobile);
+        const officeErr = form.telOffice.trim() ? validatePhone(form.telOffice) : null;
+        const residenceErr = form.telResidence.trim() ? validatePhone(form.telResidence) : null;
+
+        const firstErr = regNoErr || nameErr || dobErr || mobileErr || officeErr || residenceErr;
+        if (firstErr) {
+            setError(firstErr);
             return;
         }
-
-        setError(null);
         setSectionSaving('personal-family');
 
         try {
@@ -1126,7 +1147,7 @@ if (regiNoCheck.isAvailable) {
                 await officerService.updatePersonalInfo({
                     systemUserId: parseInt(editId!, 10),
                     userFullName: form.fullName,
-                    userCallingName: form.fullName.split(' ')[0],
+                    userCallingName: form.callingName || form.fullName.split(' ')[0],
                     locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
                     userDesignationId: 1,
                     userDob: toApiDate(form.dob),
@@ -1196,6 +1217,16 @@ if (regiNoCheck.isAvailable) {
 
         try {
             if (isEditing && editId) {
+                for (const d of form.degrees.filter((d) => d.degree.trim() || d.university.trim())) {
+                    const fromErr = validateYear(d.yearFrom, 'From year', 1950, new Date().getFullYear() + 10);
+                    if (fromErr) { setError(`${d.degree || 'Degree'}: ${fromErr}`); setSectionSaving(null); return; }
+                    const toErr = validateYear(d.yearTo, 'To year', 1950, new Date().getFullYear() + 10);
+                    if (toErr) { setError(`${d.degree || 'Degree'}: ${toErr}`); setSectionSaving(null); return; }
+                    if (d.yearFrom && d.yearTo && parseInt(d.yearFrom) > parseInt(d.yearTo)) {
+                        setError(`${d.degree || 'Degree'}: From year cannot be after To year`);
+                        setSectionSaving(null); return;
+                    }
+                }
                 const olResults = [
                     ...form.olMandatorySubjects.filter((s) => s.grade).map((s) => ({
                         subjectName: s.subject,
@@ -1365,6 +1396,14 @@ if (regiNoCheck.isAvailable) {
 
         try {
             if (isEditing && editId) {
+                if (form.vehicleCategories.length > 0 && !form.drivingLicenseNo.trim()) {
+                    setError('Driving license number is required when selecting vehicle categories');
+                    setSectionSaving(null); return;
+                }
+                if (form.drivingLicenseNo.trim() && form.drivingLicenseNo.trim().length < 5) {
+                    setError('Driving license number is too short');
+                    setSectionSaving(null); return;
+                }
                 const categoryDetails = form.vehicleCategories
                     .filter((cat) => CATEGORY_NAME_TO_ID[cat])
                     .map((cat) => ({
@@ -1399,8 +1438,12 @@ if (regiNoCheck.isAvailable) {
 
         try {
             if (isEditing && editId) {
-                const transfers = form.transferHistory
-                    .filter((t) => t.socoLab && t.from && t.to)
+                const validTransfers = form.transferHistory.filter((t) => t.socoLab && t.from && t.to);
+                for (const t of validTransfers) {
+                    const rangeErr = validateDateRange(t.from, t.to, 'Transfer');
+                    if (rangeErr) { setError(rangeErr); setSectionSaving(null); return; }
+                }
+                const transfers = validTransfers
                     .map((t) => {
                         const locId = locationNameToId.get(t.socoLab);
                         return {
@@ -1434,8 +1477,12 @@ if (regiNoCheck.isAvailable) {
 
         try {
             if (isEditing && editId) {
-                const specialDuties = form.specialDutyHistory
-                    .filter((d) => d.socoLab && d.from && d.to)
+                const validDuties = form.specialDutyHistory.filter((d) => d.socoLab && d.from && d.to);
+                for (const d of validDuties) {
+                    const rangeErr = validateDateRange(d.from, d.to, 'Special duty');
+                    if (rangeErr) { setError(rangeErr); setSectionSaving(null); return; }
+                }
+                const specialDuties = validDuties
                     .map((d) => {
                         const locId = locationNameToId.get(d.socoLab);
                         return {
@@ -1521,12 +1568,14 @@ if (regiNoCheck.isAvailable) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (form.alSubjects.length < 3) {
-            alert('Please keep at least 3 A/L subject rows.');
-            return;
-        }
-
         setError(null);
+
+        const regNoErr = validateRegNo(form.regNo);
+        const nameErr = validateFullName(form.fullName);
+        const dobErr = validateDateNotFuture(form.dob, 'Date of birth');
+        const mobileErr = form.telMobile.trim() ? validatePhone(form.telMobile) : null;
+        const firstErr = regNoErr || nameErr || dobErr || mobileErr;
+        if (firstErr) { setError(firstErr); return; }
         setLoading(true);
 
         try {
@@ -1564,7 +1613,7 @@ if (regiNoCheck.isAvailable) {
             const payload: InsertNewOfficerRequest = {
                 username: form.regNo, // Using regNo as username
                 userFullName: form.fullName,
-                userCallingName: form.fullName.split(' ')[0], // Use first name as calling name
+                userCallingName: form.callingName || form.fullName.split(' ')[0], // Use first name as calling name
                 locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
                 userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
                 userDob: toApiDate(form.dob),
@@ -1691,26 +1740,24 @@ if (regiNoCheck.isAvailable) {
                                                  )}
                                              </div>
 
-                                            {/* Rank & Reg No */}
-                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:col-span-2">
-                                                 <div>
-                                                     <FieldLabel label="Rank" si="තනතුර" />
-                                                     <CustomSelect 
-                                                         value={form.rankDropdown} 
-                                                         onChange={(v) => handleRankChange(v, 'rankDesignationId')}
-                                                         options={RANK_OPTIONS} 
-                                                         placeholder={ranksLoading ? "Loading..." : "Rank"}
-                                                         disabled={ranksLoading || !personalFamilyEditing}
-                                                     />
-                                                     {ranksError && (
-                                                         <p className="text-xs text-red-600 mt-1">{ranksError}</p>
-                                                     )}
-                                                 </div>
-                                                 <div>
-                                                     <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
-                                                     <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
-                                                 </div>
-                                            </div>
+                                            {/* Present Rank & Reg No */}
+                                             <div>
+                                                 <FieldLabel label="Present Rank / වත්මන් තනතුර" />
+                                                 <CustomSelect 
+                                                     value={form.rankDropdown} 
+                                                     onChange={(v) => handleRankChange(v, 'rankDesignationId')}
+                                                     options={RANK_OPTIONS} 
+                                                     placeholder={ranksLoading ? "Loading..." : "Rank"}
+                                                     disabled={ranksLoading || !personalFamilyEditing}
+                                                 />
+                                                 {ranksError && (
+                                                     <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                                 )}
+                                             </div>
+                                             <div>
+                                                 <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
+                                                 <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
+                                             </div>
 
                                             {/* Full Name */}
                                             <div className="md:col-span-2 xl:col-span-3">
@@ -1720,14 +1767,21 @@ if (regiNoCheck.isAvailable) {
                                                 <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
                                             </div>
 
-                                            {/* Dates */}
-                                            <div>
-                                                <FieldLabel label="Reported Date / වාර්තා දිනය" />
-                                                <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
+                                            {/* Calling Name */}
+                                            <div className="md:col-span-2 xl:col-span-3">
+                                                <FieldLabel label="Calling Name" si="ඇමතුම් නම" />
+                                                <GInput value={form.callingName} onChange={(v) => set('callingName', v)}
+                                                    placeholder="Calling name" maxLength={50} />
                                             </div>
+
+                                            {/* Dates Row 1 */}
                                             <div>
                                                 <FieldLabel label="Date of Birth / උපන් දිනය" />
                                                 <DatePicker value={form.dob} onChange={(v) => set('dob', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Reported Date / වාර්තා දිනය" />
+                                                <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
                                             </div>
                                             <div>
                                                 <FieldLabel label="Date Joined SOCO Project / ව්‍යාපෘතියට එකතු වූ දිනය" />
@@ -1744,35 +1798,30 @@ if (regiNoCheck.isAvailable) {
                                                 <GInput value={form.socoService} onChange={(v) => set('socoService', v)} placeholder="Service details" />
                                             </div>
 
+                                            {/* Date Joined Police & Appointed Rank */}
+                                            <div>
+                                                <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
+                                                <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
+                                                <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
+                                                    options={RANK_OPTIONS} placeholder="Select" />
+                                            </div>
+
                                             {/* Telephone */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3" style={{ padding: 0, margin: 0 }}>
                                                 <div>
                                                     <FieldLabel label="Office Tel. / කාර්යාල දුරකථන අංකය" />
-                                                    <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                    <GInput value={form.telOffice} onChange={(v) => set('telOffice', v.replace(/\D/g, ''))} placeholder="0XX-XXXXXXX" type="tel" inputMode="numeric" />
                                                 </div>
                                                 <div>
                                                     <FieldLabel label="Residence Tel. / නිවාස දුරකථනය අංකය" />
-                                                    <GInput value={form.telResidence} onChange={(v) => set('telResidence', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                    <GInput value={form.telResidence} onChange={(v) => set('telResidence', v.replace(/\D/g, ''))} placeholder="0XX-XXXXXXX" type="tel" inputMode="numeric" />
                                                 </div>
                                                 <div>
                                                     <FieldLabel label="Mobile / ජංගම දුරකථනය අංකය" />
-                                                    <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
-                                                <div>
-                                                    <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
-                                                    <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
-                                                </div>
-                                                <div>
-                                                    <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
-                                                    <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
-                                                        options={RANK_OPTIONS} placeholder="Select" />
-                                                </div>
-                                                <div>
-                                                    <FieldLabel label="Present Rank / වත්මන් තනතුර" />
-                                                    <CustomSelect value={form.presentRank} onChange={(v) => set('presentRank', v)}
-                                                        options={RANK_OPTIONS} placeholder="Select" />
+                                                    <GInput value={form.telMobile} onChange={(v) => set('telMobile', v.replace(/\D/g, ''))} placeholder="07X-XXXXXXX" type="tel" inputMode="numeric" />
                                                 </div>
                                             </div>
                                         </div>
