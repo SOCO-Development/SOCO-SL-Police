@@ -294,7 +294,6 @@ function defaultForm(): FormData {
         alSubjects: [
             { id: newId(), subject: '', grade: '' },
             { id: newId(), subject: '', grade: '' },
-            { id: newId(), subject: '', grade: '' },
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
@@ -634,27 +633,49 @@ export default function AddOfficerPage() {
                     ),
                     // Section 4 – Education
                     olMandatorySubjects: [
-                        { subject: 'First Language (Sinhala / Tamil)', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Sinhala' || r.SUBJECT_NAME === 'Tamil')?.SUBJECT_RESULT || '' },
-                        { subject: 'English (Second Language)', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'English')?.SUBJECT_RESULT || '' },
-                        { subject: 'Mathematics', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Mathematics')?.SUBJECT_RESULT || '' },
-                        { subject: 'Science', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Science')?.SUBJECT_RESULT || '' },
-                        { subject: 'History', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'History')?.SUBJECT_RESULT || '' },
-                        { subject: 'Religion', grade: (data.olResults || []).find((r) => r.SUBJECT_NAME === 'Religion')?.SUBJECT_RESULT || '' },
+                        { subject: 'First Language (Sinhala / Tamil)', grade: (data.olResults || []).find((r) => {
+                            const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                            return ['sinhala', 'tamil', 'first language (sinhala / tamil)'].includes(n);
+                        })?.SUBJECT_RESULT || '' },
+                        { subject: 'English (Second Language)', grade: (data.olResults || []).find((r) => {
+                            const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                            return ['english', 'english (second language)'].includes(n);
+                        })?.SUBJECT_RESULT || '' },
+                        { subject: 'Mathematics', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'mathematics')?.SUBJECT_RESULT || '' },
+                        { subject: 'Science', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'science')?.SUBJECT_RESULT || '' },
+                        { subject: 'History', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'history')?.SUBJECT_RESULT || '' },
+                        { subject: 'Religion', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'religion')?.SUBJECT_RESULT || '' },
                     ].filter(Boolean) as OLSubjectResult[],
                     olOptionalSubjects: (data.olResults || [])
-                        .filter((r) => !['Sinhala', 'Tamil', 'English', 'Mathematics', 'Science', 'History', 'Religion'].includes(r.SUBJECT_NAME))
+                        .filter((r) => {
+                            const name = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                            const excluded = ['sinhala', 'tamil', 'english', 'mathematics', 'science', 'history', 'religion',
+                                'first language (sinhala / tamil)', 'english (second language)'];
+                            return !excluded.includes(name);
+                        })
                         .map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT as OLGrade })),
                     alStream: (data.alResults?.[0]?.STREAM || '') as ALStream,
-                    alSubjects: (data.alResults?.length
-                        ? data.alResults.map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT }))
-                        : [
-                            { id: newId(), subject: '', grade: '' },
-                            { id: newId(), subject: '', grade: '' },
-                            { id: newId(), subject: '', grade: '' },
-                        ]
-                    ),
-                    alGeneralEnglish: '',
-                    alGeneralKnowledge: '',
+                    alSubjects: (() => {
+                        const fromApi = (data.alResults || [])
+                            .filter((r) => {
+                                const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                                return !['general english', 'general english language', 'general knowledge', 'general knowledge test'].includes(n);
+                            })
+                            .map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT }));
+                        const fixed = fromApi.slice(0, 2);
+                        while (fixed.length < 2) {
+                            fixed.push({ id: newId(), subject: '', grade: '' });
+                        }
+                        return fixed;
+                    })(),
+                    alGeneralEnglish: (data.alResults || []).find((r) => {
+                        const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                        return ['general english', 'general english language', 'english'].includes(n);
+                    })?.SUBJECT_RESULT || '',
+                    alGeneralKnowledge: (data.alResults || []).find((r) => {
+                        const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                        return ['general knowledge', 'general knowledge test', 'knowledge'].includes(n);
+                    })?.SUBJECT_RESULT || '',
                     degreesBefore: (data.higherEducation || [])
                         .filter((h) => h.DONE_BEFORE_JOIN === 'Yes')
                         .map((h) => ({
@@ -965,8 +986,21 @@ export default function AddOfficerPage() {
         set('olMandatorySubjects', updated);
     };
 
+    const updateOLMandatorySubject = (index: number, subject: string) => {
+        const updated = form.olMandatorySubjects.map((s, i) => i === index ? { ...s, subject } : s);
+        set('olMandatorySubjects', updated);
+    };
+
     const updateOLOptional = (id: number, patch: Partial<OLOptionalSubject>) => {
         set('olOptionalSubjects', form.olOptionalSubjects.map((s) => s.id === id ? { ...s, ...patch } : s));
+    };
+
+    const addOLOptional = () => {
+        set('olOptionalSubjects', [...form.olOptionalSubjects, { id: newId(), subject: '', grade: '' }]);
+    };
+
+    const removeOLOptional = (id: number) => {
+        set('olOptionalSubjects', form.olOptionalSubjects.filter((s) => s.id !== id));
     };
 
     const updateALSubject = (id: number, patch: Partial<ALSubjectRow>) => {
@@ -1167,13 +1201,25 @@ if (regiNoCheck.isAvailable) {
                     })),
                 ];
 
-                const alResults = form.alSubjects
-                    .filter((s) => s.subject.trim() && s.grade)
-                    .map((s) => ({
+                const alResults = [
+                    ...form.alSubjects
+                        .filter((s) => s.subject.trim() && s.grade)
+                        .map((s) => ({
+                            stream: form.alStream || '',
+                            subjectName: s.subject,
+                            subjectResult: s.grade,
+                        })),
+                    ...(form.alGeneralEnglish.trim() ? [{
                         stream: form.alStream || '',
-                        subjectName: s.subject,
-                        subjectResult: s.grade,
-                    }));
+                        subjectName: 'General English',
+                        subjectResult: form.alGeneralEnglish,
+                    }] : []),
+                    ...(form.alGeneralKnowledge.trim() ? [{
+                        stream: form.alStream || '',
+                        subjectName: 'General Knowledge',
+                        subjectResult: form.alGeneralKnowledge,
+                    }] : []),
+                ];
 
                 const higherEducations = [
                     ...form.degreesBefore.map((d) => ({
@@ -2057,8 +2103,14 @@ if (regiNoCheck.isAvailable) {
                                             </thead>
                                             <tbody>
                                                 {form.olMandatorySubjects.map((row, idx) => (
-                                                    <tr key={row.subject} className="border-b border-violet-50 last:border-0 odd:bg-white even:bg-violet-50/20">
-                                                        <td className="px-3 py-2 text-sm text-gray-800 font-medium">{row.subject}</td>
+                                                    <tr key={idx} className="border-b border-violet-50 last:border-0 odd:bg-white even:bg-violet-50/20">
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={row.subject}
+                                                                onChange={(v) => updateOLMandatorySubject(idx, v)}
+                                                                placeholder="Subject name"
+                                                            />
+                                                        </td>
                                                         <td className="px-2 py-1.5">
                                                             <div className="flex gap-1.5 flex-wrap">
                                                                 {OL_GRADES.map((g) => (
@@ -2081,6 +2133,7 @@ if (regiNoCheck.isAvailable) {
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-8">#</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-56">Grade</th>
+                                                    <th className="w-10"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -2101,12 +2154,18 @@ if (regiNoCheck.isAvailable) {
                                                                 ))}
                                                             </div>
                                                         </td>
+                                                        <td className="px-1 py-1.5">
+                                                            <RemoveRowButton onClick={() => removeOLOptional(row.id)} size="sm" />
+                                                        </td>
                                                     </tr>
                                                 ))}
-                                            </tbody>
-                                        </table>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <AddRowButton onClick={addOLOptional}>Add Subject</AddRowButton>
+                                        </div>
                                     </div>
-                                </div>
 
                                 {/* ── A/L Results ─────────────────────────────────────────── */}
                                 <div className="mb-6">
@@ -2138,7 +2197,6 @@ if (regiNoCheck.isAvailable) {
                                                         <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
                                                         <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject Name</th>
                                                         <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Grade</th>
-                                                        <th className="px-2 py-2.5 w-px whitespace-nowrap"><span className="sr-only">Actions</span></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -2161,14 +2219,6 @@ if (regiNoCheck.isAvailable) {
                                                                     maxLength={3}
                                                                     disabled={!form.alStream}
                                                                 />
-                                                            </td>
-                                                            <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
-                                                                {form.alSubjects.length > 3 && (
-                                                                    <RemoveRowButton 
-                                                                        onClick={() => removeALSubject(row.id)} 
-                                                                        disabled={!form.alStream}
-                                                                    />
-                                                                )}
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -2205,14 +2255,6 @@ if (regiNoCheck.isAvailable) {
                                                 </tbody>
                                             </table>
                                         </div>
-                                        {form.alSubjects.length < 5 && (
-                                            <div className="px-4 pb-3">
-                                                <AddRowButton onClick={addALSubject} disabled={!form.alStream}>Add Subject</AddRowButton>
-                                            </div>
-                                        )}
-                                        {form.alSubjects.length >= 5 && (
-                                            <p className="px-4 pb-3 text-xs text-gray-400">Maximum 5 subjects reached.</p>
-                                        )}
                                     </div>
                                 </div>
 
