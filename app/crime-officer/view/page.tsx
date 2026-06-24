@@ -11,7 +11,7 @@ import { ANNEX_12_RANK } from '@/lib/annexData';
 import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
-import { MagnifyingGlass, FunnelSimple } from 'phosphor-react';
+import { MagnifyingGlass } from 'phosphor-react';
 import { Plus, Eye, EyeOff, Pencil, Shield } from 'lucide-react';
 
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
@@ -74,12 +74,12 @@ export default function ViewOfficersPage() {
     const [search, setSearch] = useState('');
     const [filterLocations, setFilterLocations] = useState<string[]>([]);
     const [filterDesignations, setFilterDesignations] = useState<string[]>([]);
-    const [filterRank, setFilterRank] = useState('');
+    const [appliedLocations, setAppliedLocations] = useState<string[]>([]);
+    const [appliedDesignations, setAppliedDesignations] = useState<string[]>([]);
     const [sortKey, setSortKey] = useState<SortKey>('name');
     const [sortAsc, setSortAsc] = useState(true);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [showFilters, setShowFilters] = useState(false);
     const [viewingOfficer, setViewingOfficer] = useState<OfficerRow | null>(null);
     const [privilegeOfficer, setPrivilegeOfficer] = useState<OfficerRow | null>(null);
     const [newPassword, setNewPassword] = useState('');
@@ -141,11 +141,11 @@ export default function ViewOfficersPage() {
             setLoading(true);
             setError(null);
             try {
-                const locationIds = filterLocations
+                const locationIds = appliedLocations
                     .map((id) => parseInt(id, 10))
                     .filter((id) => !isNaN(id));
 
-                const designationIds = filterDesignations
+                const designationIds = appliedDesignations
                     .map((val) => parseInt(val, 10))
                     .filter((id) => !isNaN(id));
 
@@ -178,7 +178,7 @@ export default function ViewOfficersPage() {
         };
         fetch();
         return () => { cancelled = true; };
-    }, [locationIdToName, rankIdToName, filterLocations, filterDesignations, designations, designationMap]);
+    }, [locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
 
     const handleSort = (key: string) => {
         const k = key as SortKey;
@@ -226,6 +226,21 @@ export default function ViewOfficersPage() {
         }
     };
 
+    const handleView = () => {
+        setAppliedLocations(filterLocations);
+        setAppliedDesignations(filterDesignations);
+        setPage(1);
+    };
+
+    const handleClearFilters = () => {
+        setFilterLocations([]);
+        setFilterDesignations([]);
+        setAppliedLocations([]);
+        setAppliedDesignations([]);
+        setSearch('');
+        setPage(1);
+    };
+
     const filtered = useMemo(() => {
         let data = [...officers];
         if (search.trim()) {
@@ -236,13 +251,12 @@ export default function ViewOfficersPage() {
                 o.mobile.includes(q)
             );
         }
-        if (filterLocations.length > 0) {
-            data = data.filter((o) => filterLocations.includes(o.locationId));
+        if (appliedLocations.length > 0) {
+            data = data.filter((o) => appliedLocations.includes(o.locationId));
         }
-        if (filterDesignations.length > 0) {
-            data = data.filter((o) => filterDesignations.includes(o.designationId));
+        if (appliedDesignations.length > 0) {
+            data = data.filter((o) => appliedDesignations.includes(o.designationId));
         }
-        if (filterRank) data = data.filter((o) => o.rank === filterRank);
         data.sort((a, b) => {
             const av = String(a[sortKey] ?? '');
             const bv = String(b[sortKey] ?? '');
@@ -250,7 +264,7 @@ export default function ViewOfficersPage() {
             return sortAsc ? cmp : -cmp;
         });
         return data;
-    }, [search, filterLocations, filterDesignations, filterRank, sortKey, sortAsc, officers, designations]);
+    }, [search, appliedLocations, appliedDesignations, sortKey, sortAsc, officers]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     const effectivePage = Math.min(page, totalPages);
@@ -367,77 +381,57 @@ export default function ViewOfficersPage() {
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
                 <div className="flex gap-3 flex-wrap items-center justify-between">
-                    <Button
-                        type="button"
-                        variant={showFilters ? 'primary' : 'secondary'}
-                        onClick={() => setShowFilters((f) => !f)}
-                        className={showFilters ? '!min-h-[38px] !py-2 !text-sm' : '!min-h-[38px] !py-2 !text-sm'}
-                    >
-                        <FunnelSimple size={15} />
-                        Filters
-                    </Button>
-
-                    <SearchInput
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        placeholder="Search name, reg no, mobile..."
-                        wrapperClassName="max-w-md w-full"
-                        icon={<MagnifyingGlass size={15} />}
-                    />
-                </div>
-
-                {showFilters && (
-                    <div className="mt-3 flex gap-3 flex-wrap pt-3 border-t border-gray-100">
-                        <div className="flex-1 min-w-[200px]">
+                    <div className="flex gap-3 flex-wrap items-end flex-1 min-w-[200px]">
+                        <div className="min-w-[200px] flex-1 max-w-xs">
                             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Location</label>
                             <MultiSelect
                                 value={filterLocations}
-                                onChange={(v) => { setFilterLocations(v); setPage(1); }}
+                                onChange={setFilterLocations}
                                 options={locationOptions}
                                 placeholder="All Locations"
                             />
                         </div>
-                        <div className="flex-1 min-w-[180px]">
+                        <div className="min-w-[180px] flex-1 max-w-xs">
                             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Designation</label>
                             <MultiSelect
                                 value={filterDesignations}
-                                onChange={(v) => { setFilterDesignations(v); setPage(1); }}
+                                onChange={setFilterDesignations}
                                 options={designationOptions}
                                 placeholder="All Designations"
                             />
                         </div>
-                        <div className="flex-1 min-w-[140px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Rank</label>
-                            <CustomSelect
-                                value={filterRank}
-                                onChange={(v) => { setFilterRank(v); setPage(1); }}
-                                options={RANK_FILTER_OPTIONS}
-                                placeholder="All Ranks"
-                            />
-                        </div>
-                        <div className="flex-1 min-w-[140px]">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">View</label>
-                            <CustomSelect
-                                value={String(pageSize)}
-                                onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
-                                options={PAGE_SIZE_OPTIONS}
-                                placeholder="Per page"
-                            />
-                        </div>
-                        {(filterLocations.length > 0 || filterDesignations.length > 0 || filterRank || search) && (
-                            <div className="flex items-end">
+                        <div className="shrink-0 flex gap-2">
+                            <Button
+                                type="button"
+                                variant="primary"
+                                onClick={handleView}
+                                className="!min-h-[38px] !py-2 !text-sm px-4"
+                            >
+                                View
+                            </Button>
+                            {(filterLocations.length > 0 || filterDesignations.length > 0 || appliedLocations.length > 0 || appliedDesignations.length > 0 || search) && (
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    onClick={() => { setFilterLocations([]); setFilterDesignations([]); setFilterRank(''); setSearch(''); setPage(1); }}
-                                    className="!min-h-9 !px-3 !text-xs !text-red-500 hover:!text-red-700"
+                                    onClick={handleClearFilters}
+                                    className="!min-h-[38px] !px-3 !text-sm !text-red-500 hover:!text-red-700"
                                 >
                                     Clear filters
                                 </Button>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                )}
+
+                    <div className="max-w-md w-full">
+                        <SearchInput
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            placeholder="Search name, reg no, mobile..."
+                            wrapperClassName="w-full"
+                            icon={<MagnifyingGlass size={15} />}
+                        />
+                    </div>
+                </div>
             </div>
 
             <div className="animate-fade-in">
@@ -462,11 +456,21 @@ export default function ViewOfficersPage() {
                                     Showing {filtered.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1} to{' '}
                                     {Math.min(effectivePage * pageSize, filtered.length)} of {filtered.length} officers
                                 </p>
-                                <PaginationControls
-                                    page={effectivePage}
-                                    totalPages={totalPages}
-                                    onPageChange={setPage}
-                                />
+                                <div className="flex items-center gap-4">
+                                    <div className="w-36">
+                                        <CustomSelect
+                                            value={String(pageSize)}
+                                            onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+                                            options={PAGE_SIZE_OPTIONS}
+                                            placeholder="Per page"
+                                        />
+                                    </div>
+                                    <PaginationControls
+                                        page={effectivePage}
+                                        totalPages={totalPages}
+                                        onPageChange={setPage}
+                                    />
+                                </div>
                             </div>
                         )}
                     </>
