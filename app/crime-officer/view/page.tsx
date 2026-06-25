@@ -137,60 +137,52 @@ export default function ViewOfficersPage() {
         loadDesignations();
     }, []);
 
-    useEffect(() => {
-        if (!hasSearched) {
-            setLoading(false);
-            return;
-        }
-        let cancelled = false;
-        const fetch = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const locationIds = appliedLocations
-                    .map((id) => parseInt(id, 10))
-                    .filter((id) => !isNaN(id));
-              
+    const fetchOfficers = useCallback(async (signal?: { cancelled: boolean }) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const locationIds = appliedLocations
+                .map((id) => parseInt(id, 10))
+                .filter((id) => !isNaN(id));
+
             const designationIds = appliedDesignations
                 .map((val) => parseInt(val, 10))
                 .filter((id) => !isNaN(id));
 
-                const raw = await officerService.getAllOfficers({
-                    locationIds,
-                    designationIds,
-                });
-                if (cancelled) return;
-                const rows: OfficerRow[] = raw.map((o) => ({
-                    id: o.SYSTEM_USER_ID,
-                    name: o.USER_FULL_NAME,
-                    regNo: o.USER_REGI_NO || '',
-                    status: o.STATUS,
-                    locationId: o.LOCATION_ID,
-                    rankId: o.RANK_ID || '',
-                    mobile: o.PHONE_MOBILE || '',
-                    socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
-                    rank: rankIdToName.get(o.RANK_ID || '') || '',
-                    designationId: o.USER_DESIGNATION_ID || '',
-                    designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
-                }));
-                setOfficers(rows);
-            } catch (err) {
-                if (cancelled) return;
-                const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
-                setError(apiError.message || 'Failed to load officers');
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-        fetch();
-        return () => { cancelled = true; };
-    }, [hasSearched, locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
+            const raw = await officerService.getAllOfficers({
+                locationIds,
+                designationIds,
+            });
+            if (signal?.cancelled) return;
+            const rows: OfficerRow[] = raw.map((o) => ({
+                id: o.SYSTEM_USER_ID,
+                name: o.USER_FULL_NAME,
+                regNo: o.USER_REGI_NO || '',
+                status: o.STATUS,
+                locationId: o.LOCATION_ID,
+                rankId: o.RANK_ID || '',
+                mobile: o.PHONE_MOBILE || '',
+                socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
+                rank: rankIdToName.get(o.RANK_ID || '') || '',
+                designationId: o.USER_DESIGNATION_ID || '',
+                designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
+            }));
+            setOfficers(rows);
+        } catch (err) {
+            if (signal?.cancelled) return;
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
+            setError(apiError.message || 'Failed to load officers');
+        } finally {
+            if (!signal?.cancelled) setLoading(false);
+        }
+    }, [locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
 
     useEffect(() => {
+        if (!hasSearched) { setLoading(false); return; }
         let cancelled = false;
         fetchOfficers({ cancelled });
         return () => { cancelled = true; };
-    }, [fetchOfficers]);
+    }, [fetchOfficers, hasSearched]);
 
     const handleSort = (key: string) => {
         const k = key as SortKey;
@@ -238,8 +230,8 @@ export default function ViewOfficersPage() {
                         phoneHome: p.PHONE_HOME || '',
                         userImageUrl: p.USER_IMAGE_URL || '',
                         civilStatus: p.CIVIL_STATUS || '',
-                        currentRank: parseInt(p.CURRENT_RANK, 10) || 1,
-                        appointRank: parseInt(p.APPOINT_RANK, 10) || 1,
+                        currentRank: parseInt(p.CURRENT_RANK || '', 10) || 1,
+                        appointRank: parseInt(p.APPOINT_RANK || '', 10) || 1,
                         courseNo: p.COURSE_NO || '',
                         socoJoinedDate: p.SOCO_JOINED_DATE || '',
                     });
