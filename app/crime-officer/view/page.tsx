@@ -91,8 +91,10 @@ export default function ViewOfficersPage() {
     const [showPrivilegePassword, setShowPrivilegePassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [officers, setOfficers] = useState<OfficerRow[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [hasSearched, setHasSearched] = useState(false);
+    const [validationError, setValidationError] = useState<string | null>(null);
     const [designations, setDesignations] = useState<{ id: string; name: string }[]>([
         { id: '1', name: 'OIC' },
         { id: '5', name: 'Acting OIC' },
@@ -135,45 +137,54 @@ export default function ViewOfficersPage() {
         loadDesignations();
     }, []);
 
-    const fetchOfficers = useCallback(async (signal?: { cancelled: boolean }) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const locationIds = appliedLocations
-                .map((id) => parseInt(id, 10))
-                .filter((id) => !isNaN(id));
-
+    useEffect(() => {
+        if (!hasSearched) {
+            setLoading(false);
+            return;
+        }
+        let cancelled = false;
+        const fetch = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const locationIds = appliedLocations
+                    .map((id) => parseInt(id, 10))
+                    .filter((id) => !isNaN(id));
+              
             const designationIds = appliedDesignations
                 .map((val) => parseInt(val, 10))
                 .filter((id) => !isNaN(id));
 
-            const raw = await officerService.getAllOfficers({
-                locationIds,
-                designationIds,
-            });
-            if (signal?.cancelled) return;
-            const rows: OfficerRow[] = raw.map((o) => ({
-                id: o.SYSTEM_USER_ID,
-                name: o.USER_FULL_NAME,
-                regNo: o.USER_REGI_NO || '',
-                status: o.STATUS,
-                locationId: o.LOCATION_ID,
-                rankId: o.RANK_ID || '',
-                mobile: o.PHONE_MOBILE || '',
-                socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
-                rank: rankIdToName.get(o.RANK_ID || '') || '',
-                designationId: o.USER_DESIGNATION_ID || '',
-                designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
-            }));
-            setOfficers(rows);
-        } catch (err) {
-            if (signal?.cancelled) return;
-            const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
-            setError(apiError.message || 'Failed to load officers');
-        } finally {
-            if (!signal?.cancelled) setLoading(false);
-        }
-    }, [locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
+                const raw = await officerService.getAllOfficers({
+                    locationIds,
+                    designationIds,
+                });
+                if (cancelled) return;
+                const rows: OfficerRow[] = raw.map((o) => ({
+                    id: o.SYSTEM_USER_ID,
+                    name: o.USER_FULL_NAME,
+                    regNo: o.USER_REGI_NO || '',
+                    status: o.STATUS,
+                    locationId: o.LOCATION_ID,
+                    rankId: o.RANK_ID || '',
+                    mobile: o.PHONE_MOBILE || '',
+                    socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
+                    rank: rankIdToName.get(o.RANK_ID || '') || '',
+                    designationId: o.USER_DESIGNATION_ID || '',
+                    designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
+                }));
+                setOfficers(rows);
+            } catch (err) {
+                if (cancelled) return;
+                const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
+                setError(apiError.message || 'Failed to load officers');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        fetch();
+        return () => { cancelled = true; };
+    }, [hasSearched, locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
 
     useEffect(() => {
         let cancelled = false;
@@ -250,8 +261,14 @@ export default function ViewOfficersPage() {
     };
 
     const handleView = () => {
+        if (filterLocations.length === 0 || filterDesignations.length === 0) {
+            setValidationError('Please select both SOCO Location and Designation to view the records.');
+            return;
+        }
+        setValidationError(null);
         setAppliedLocations(filterLocations);
         setAppliedDesignations(filterDesignations);
+        setHasSearched(true);
         setPage(1);
     };
 
@@ -261,6 +278,8 @@ export default function ViewOfficersPage() {
         setAppliedLocations([]);
         setAppliedDesignations([]);
         setSearch('');
+        setHasSearched(false);
+        setValidationError(null);
         setPage(1);
     };
 
@@ -386,7 +405,7 @@ export default function ViewOfficersPage() {
             <PageHeader
                 backHref="/crime-officer"
                 title="View SOCO Officers"
-                description={`SOCO නිලධාරීන් — ${filtered.length} records found`}
+                description={hasSearched ? `SOCO නිලධාරීන් — ${filtered.length} records found` : `SOCO නිලධාරීන්`}
                 actions={
                     <Button variant="primary" asChild>
                         <Link href="/crime-officer/add">
@@ -402,25 +421,31 @@ export default function ViewOfficersPage() {
                 </div>
             )}
 
+            {validationError && (
+                <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 animate-fade-in flex items-center gap-2">
+                    <span className="font-semibold">Error:</span> {validationError}
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
                 <div className="flex gap-3 flex-wrap items-center justify-between">
                     <div className="flex gap-3 flex-wrap items-end flex-1 min-w-[200px]">
                         <div className="min-w-[200px] flex-1 max-w-xs">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by SOCO Location</label>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Select SOCO Location</label>
                             <MultiSelect
                                 value={filterLocations}
                                 onChange={setFilterLocations}
                                 options={locationOptions}
-                                placeholder="All Locations"
+                                placeholder="Select SOCO Location"
                             />
                         </div>
                         <div className="min-w-[180px] flex-1 max-w-xs">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Filter by Designation</label>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Select Designation</label>
                             <MultiSelect
                                 value={filterDesignations}
                                 onChange={setFilterDesignations}
                                 options={designationOptions}
-                                placeholder="All Designations"
+                                placeholder="Select Designation"
                             />
                         </div>
                         <div className="shrink-0 flex gap-2">
@@ -452,13 +477,24 @@ export default function ViewOfficersPage() {
                             placeholder="Search name, reg no, mobile..."
                             wrapperClassName="w-full"
                             icon={<MagnifyingGlass size={15} />}
+                            disabled={!hasSearched}
                         />
                     </div>
                 </div>
             </div>
 
             <div className="animate-fade-in">
-                {loading ? (
+                {!hasSearched ? (
+                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-white border border-gray-200 rounded-xl shadow-sm animate-fade-in">
+                        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-4 ring-8 ring-blue-50/50">
+                            <MagnifyingGlass size={32} className="text-blue-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">View SOCO Officers</h3>
+                        <p className="text-sm text-gray-500 text-center max-w-md">
+                            Please select a <span className="font-semibold text-gray-700">SOCO Location</span> and a <span className="font-semibold text-gray-700">Designation</span> using the filters above, then click the <span className="font-semibold text-gray-700">View</span> button to display records.
+                        </p>
+                    </div>
+                ) : loading ? (
                     <div className="text-center py-12 text-gray-400">Loading officers...</div>
                 ) : (
                     <>
