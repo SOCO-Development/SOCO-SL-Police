@@ -7,7 +7,7 @@ import { publicAssetSrc } from '@/lib/publicAsset';
 import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { usePathname, useRouter } from 'next/navigation';
 import { authService, userService } from '@/lib/api';
-import { getUsername } from '@/lib/api/authStorage';
+import { getUsername, getUserDisplayName, getUserDesignation, saveUserDisplayInfo } from '@/lib/api/authStorage';
 import { getErrorMessage, showErrorAlert } from '@/lib/alerts';
 import {
   Home,
@@ -37,12 +37,14 @@ const NAV_LINKS = [
   { href: '/system-config', label: 'Configuration', icon: Settings, isActive: (p: string) => p === '/system-config' || p.startsWith('/system-config/') },
 ] as const;
 
-export default function Header({ userName: userNameProp, homeTheme, onToggleHomeTheme }: HeaderProps) {
+export default function Header({ userName: _userNameProp, homeTheme, onToggleHomeTheme }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [storedUserName, setStoredUserName] = useState(userNameProp ?? 'User');
-  const userName = userNameProp ?? storedUserName;
-  const [userInfo, setUserInfo] = useState<{ callingName: string; designationName: string } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ callingName: string; designationName: string } | null>(() => {
+    const name = getUserDisplayName();
+    const des = getUserDesignation();
+    return name ? { callingName: name, designationName: des || '' } : null;
+  });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -94,15 +96,13 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
 
   useEffect(() => {
     const username = getUsername();
-    if (username) setStoredUserName(username);
-  }, []);
-
-  useEffect(() => {
-    const username = getUsername();
     if (!username) return;
     let cancelled = false;
     userService.getCurrentUserInfo().then((info) => {
-      if (!cancelled) setUserInfo(info);
+      if (!cancelled) {
+        setUserInfo(info);
+        saveUserDisplayInfo(info.callingName, info.designationName);
+      }
     }).catch(() => {});
     userService.getProfileImage(username).then((dataUrl) => {
       if (!cancelled && dataUrl) setProfileImage(dataUrl);
@@ -142,15 +142,15 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
         >
             <div className="flex items-center gap-3 px-4 py-3">
               {profileImage ? (
-                <img src={profileImage} alt={userInfo?.callingName || userName} className="w-9 h-9 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+                <img src={profileImage} alt={userInfo?.callingName || 'Officer'} className="w-9 h-9 rounded-xl object-cover flex-shrink-0 shadow-sm" />
               ) : (
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-                  {(userInfo?.callingName || userName).charAt(0).toUpperCase()}
+                  {(userInfo?.callingName || 'Officer').charAt(0).toUpperCase()}
                 </div>
               )}
             <div className="min-w-0">
-              <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userInfo?.callingName || userName}</p>
-              <p className={`text-[11px] truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{userInfo?.designationName || 'SOCO Officer'}</p>
+              <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userInfo?.callingName || 'Officer'}</p>
+              <p className={`text-[11px] truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{userInfo?.designationName || ''}</p>
             </div>
           </div>
 
@@ -264,17 +264,17 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
               >
                 <div className="hidden sm:flex flex-col items-end min-w-0">
                   <span className={`text-sm font-semibold leading-tight truncate max-w-[140px] transition-colors duration-300 ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
-                    {userInfo?.callingName || userName}
+                    {userInfo?.callingName || 'Officer'}
                   </span>
                   <span className={`text-[10px] leading-tight truncate max-w-[140px] transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                    {userInfo?.designationName || 'Officer'}
+                    {userInfo?.designationName || ''}
                   </span>
                 </div>
                 {profileImage ? (
-                  <img src={profileImage} alt={userName} className="w-8 h-8 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+                  <img src={profileImage} alt={userInfo?.callingName || 'Officer'} className="w-8 h-8 rounded-xl object-cover flex-shrink-0 shadow-sm" />
                 ) : (
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-                    {userName.charAt(0).toUpperCase()}
+                    {(userInfo?.callingName || 'O').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${isDark ? 'text-gray-400' : 'text-gray-400'} ${userMenuOpen ? 'rotate-180' : ''}`} />
