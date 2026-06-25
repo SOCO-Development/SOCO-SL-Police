@@ -11,6 +11,7 @@ import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/li
 import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
 import { COURT_REWARD_CATEGORY_LABELS, getCourtRewardTypesForCategory } from '@/lib/courtRewardUtils';
 import { registryWorkflowDisplayEntries } from '@/lib/registryWorkflowDisplay';
+import LinkedCrimeVisitPanel from './LinkedCrimeVisitPanel';
 
 interface CrimeSceneDetailViewProps {
   scene: CrimeScene;
@@ -88,9 +89,6 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             }
           />
           <DisplayField label="CVR No" value={readValue(scene.cvrNo)} />
-          {scene.visitType === 'NEW_VISIT' && scene.visitId?.trim() ? (
-            <DisplayField label="Initiated visit ID" value={readValue(scene.visitId)} />
-          ) : null}
           {crimeSceneUsesRevisitFields(scene.visitType) && scene.revisitCvrNo?.trim() ? (
             <DisplayField label="Existing CVR" value={readValue(scene.revisitCvrNo)} />
           ) : null}
@@ -112,6 +110,8 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
           </div>
         ) : null}
       </div>
+
+      <LinkedCrimeVisitPanel visitId={scene.visitId} />
 
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
         <SectionTitle stripeClass="bg-indigo-500">Location</SectionTitle>

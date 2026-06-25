@@ -44,7 +44,7 @@ function DateTimeSummary({ label, entry }: { label: string; entry?: DateTimeEntr
 }
 
 export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProps) {
-  const { sectionA, sectionC } = visit;
+  const { sectionA, sectionB, sectionC } = visit;
 
   const offenceList = Array.isArray(sectionA?.offence)
     ? sectionA.offence
@@ -92,6 +92,17 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
         </div>
       </div>
 
+      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+          <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+          Reported to SOCO Lab
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <DisplayField label="Date" value={readValue(sectionA?.reportedToSocoLab?.date)} />
+          <DisplayField label="Time" value={readValue(sectionA?.reportedToSocoLab?.time)} />
+        </div>
+      </div>
+
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-4">
         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
           <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
@@ -107,6 +118,51 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
           </div>
         </div>
       </div>
+
+      {sectionB?.socoOfficers?.inCharge &&
+      (sectionB.socoOfficers.inCharge.name?.trim() ||
+        sectionB.socoOfficers.inCharge.regNo?.trim() ||
+        sectionB.socoOfficers.inCharge.rank?.trim()) ? (
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-4 rounded-full bg-green-500 inline-block flex-shrink-0" />
+            In-Charge Officer
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <DisplayField label="Name" value={readValue(sectionB.socoOfficers.inCharge.name)} />
+            <DisplayField label="Reg. Number" value={readValue(sectionB.socoOfficers.inCharge.regNo)} />
+            <DisplayField label="Rank" value={readValue(sectionB.socoOfficers.inCharge.rank)} />
+          </div>
+        </div>
+      ) : null}
+
+      {(sectionB?.experts ?? []).some(
+        (e) => e.name?.trim() || e.inTime?.trim() || e.outTime?.trim() || e.annex?.trim(),
+      ) ? (
+        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
+          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-4 rounded-full bg-fuchsia-500 inline-block flex-shrink-0" />
+            Experts
+          </h4>
+          <div className="space-y-3">
+            {(sectionB?.experts ?? [])
+              .filter(
+                (e) => e.name?.trim() || e.inTime?.trim() || e.outTime?.trim() || e.annex?.trim(),
+              )
+              .map((expert, idx) => (
+                <div
+                  key={`expert-${idx}-${expert.name}`}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border border-gray-100 bg-white px-3 py-2"
+                >
+                  <DisplayField label="Annex" value={readValue(expert.annex)} />
+                  <DisplayField label="Name" value={readValue(expert.name)} />
+                  <DisplayField label="In time" value={readValue(expert.inTime)} />
+                  <DisplayField label="Out time" value={readValue(expert.outTime)} />
+                </div>
+              ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
