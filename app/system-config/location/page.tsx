@@ -319,26 +319,37 @@ export default function LocationConfigPage() {
 
       {activeTab === "all" && (
         <div>
-          <div className="flex items-center gap-3 mb-4">
-            <label className="text-sm font-medium text-gray-600">Search:</label>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search locations..."
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:outline-none w-52 text-gray-800"
-            />
-          </div>
-          <AppTable<LocationRow>
-            columns={columns}
-            data={filtered}
-            keyField="id"
-            sortKey={sortKey}
-            sortAsc={sortAsc}
-            onSort={handleSort}
-            emptyMessage={isLoading ? "Loading locations..." : "No locations found."}
-            variant="card"
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
+                <p className="text-sm text-gray-500">Loading locations...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <label className="text-sm font-medium text-gray-600">Search:</label>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search locations..."
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:outline-none w-52 text-gray-800"
+                />
+              </div>
+              <AppTable<LocationRow>
+                columns={columns}
+                data={filtered}
+                keyField="id"
+                sortKey={sortKey}
+                sortAsc={sortAsc}
+                onSort={handleSort}
+                emptyMessage="No locations found."
+                variant="card"
+              />
+            </>
+          )}
         </div>
       )}
 

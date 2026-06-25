@@ -5,6 +5,8 @@ const KEYS = {
   username: 'soco_username',
   isAuthenticated: 'isAuthenticated',
   authTimestamp: 'authTimestamp',
+  userDisplayName: 'soco_userDisplayName',
+  userDesignation: 'soco_userDesignation',
 } as const;
 
 export interface AuthSession {
@@ -58,6 +60,22 @@ export function updateAccessToken(accessToken: string, expiresAt: string): void 
 export function clearAuthSession(): void {
   if (!isBrowser()) return;
   Object.values(KEYS).forEach((key) => localStorage.removeItem(key));
+}
+
+export function saveUserDisplayInfo(displayName: string, designation: string): void {
+  if (!isBrowser()) return;
+  localStorage.setItem(KEYS.userDisplayName, displayName);
+  localStorage.setItem(KEYS.userDesignation, designation);
+}
+
+export function getUserDisplayName(): string | null {
+  if (!isBrowser()) return null;
+  return localStorage.getItem(KEYS.userDisplayName);
+}
+
+export function getUserDesignation(): string | null {
+  if (!isBrowser()) return null;
+  return localStorage.getItem(KEYS.userDesignation);
 }
 
 // Local session lifetime. We intentionally do NOT compare the backend's

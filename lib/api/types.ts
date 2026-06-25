@@ -526,6 +526,7 @@ export interface OfficerDetailBundle {
 export interface GrantLoginAccessRequest {
   systemUserId: number;
   userKey: string;
+  designationId?: number;
 }
 
 // ─── Update Personal Info (SOCO_U14) ────────────────────────────────

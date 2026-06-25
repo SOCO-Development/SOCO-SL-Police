@@ -6,8 +6,8 @@ import { publicAssetSrc } from "@/lib/publicAsset";
 import FormInput from "@/components/forms/FormInput";
 import { Button } from "@/components/ui";
 import { Lock, Shield, User, CheckCircle, Eye, EyeOff } from "lucide-react";
-import { authService } from "@/lib/api";
-import { clearAuthSession, isAuthenticated as hasValidSession } from "@/lib/api/authStorage";
+import { authService, userService } from "@/lib/api";
+import { clearAuthSession, isAuthenticated as hasValidSession, saveUserDisplayInfo } from "@/lib/api/authStorage";
 import { getErrorMessage, showErrorAlert } from "@/lib/alerts";
 
 export default function LoginPage() {
@@ -34,6 +34,10 @@ export default function LoginPage() {
 
     try {
       await authService.login({ username: username.trim(), password });
+      try {
+        const info = await userService.getCurrentUserInfo();
+        saveUserDisplayInfo(info.callingName, info.designationName);
+      } catch {}
       setLoginSuccess(true);
       router.replace("/crime-visit-registry");
     } catch (err) {

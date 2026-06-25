@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import CustomSelect from '@/components/forms/CustomSelect';
@@ -150,10 +150,10 @@ export default function ViewOfficersPage() {
                 const locationIds = appliedLocations
                     .map((id) => parseInt(id, 10))
                     .filter((id) => !isNaN(id));
-
-                const designationIds = appliedDesignations
-                    .map((val) => parseInt(val, 10))
-                    .filter((id) => !isNaN(id));
+              
+            const designationIds = appliedDesignations
+                .map((val) => parseInt(val, 10))
+                .filter((id) => !isNaN(id));
 
                 const raw = await officerService.getAllOfficers({
                     locationIds,
@@ -186,6 +186,12 @@ export default function ViewOfficersPage() {
         return () => { cancelled = true; };
     }, [hasSearched, locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
 
+    useEffect(() => {
+        let cancelled = false;
+        fetchOfficers({ cancelled });
+        return () => { cancelled = true; };
+    }, [fetchOfficers]);
+
     const handleSort = (key: string) => {
         const k = key as SortKey;
         if (k === sortKey) setSortAsc((prev) => !prev);
@@ -196,8 +202,8 @@ export default function ViewOfficersPage() {
     };
 
     const handleGrantPrivilege = async () => {
-        if (!privilegeOfficer || !newPassword.trim()) return;
-        if (newPassword !== confirmPassword) {
+        if (!privilegeOfficer) return;
+        if (newPassword.trim() && newPassword !== confirmPassword) {
             setPrivilegeError('Passwords do not match.');
             return;
         }
@@ -205,25 +211,47 @@ export default function ViewOfficersPage() {
         setPrivilegeError(null);
         setPrivilegeSuccess(null);
         try {
-            await officerService.grantLoginAccess({
-                systemUserId: parseInt(privilegeOfficer.id, 10),
-                userKey: newPassword.trim(),
-            });
+            const messages: string[] = [];
+            const desId = privilegeDesignationId ? parseInt(privilegeDesignationId, 10) : undefined;
 
-            if (privilegeDesignationId) {
-                await officerService.updateUserDesignation({
+            if (newPassword.trim()) {
+                await officerService.grantLoginAccess({
                     systemUserId: parseInt(privilegeOfficer.id, 10),
-                    designationId: parseInt(privilegeDesignationId, 10),
+                    userKey: newPassword.trim(),
+                    ...(desId !== undefined ? { designationId: desId } : {}),
                 });
+                messages.push('Login access granted successfully. Password updated.');
+                if (desId !== undefined) messages.push('Designation updated.');
+            } else if (desId !== undefined && desId !== parseInt(privilegeOfficer.designationId || '0', 10)) {
+                const bundle = await officerService.getOfficerById(parseInt(privilegeOfficer.id, 10));
+                const p = bundle.personalInfo[0];
+                if (p) {
+                    await officerService.updatePersonalInfo({
+                        systemUserId: parseInt(privilegeOfficer.id, 10),
+                        userFullName: p.USER_FULL_NAME || '',
+                        userCallingName: p.USER_CALLING_NAME || '',
+                        locationId: parseInt(p.LOCATION_ID, 10) || 1,
+                        userDesignationId: desId,
+                        userDob: p.USER_DOB || '',
+                        phoneMobile: p.PHONE_MOBILE || '',
+                        phoneOffice: p.PHONE_OFFICE || '',
+                        phoneHome: p.PHONE_HOME || '',
+                        userImageUrl: p.USER_IMAGE_URL || '',
+                        civilStatus: p.CIVIL_STATUS || '',
+                        currentRank: parseInt(p.CURRENT_RANK, 10) || 1,
+                        appointRank: parseInt(p.APPOINT_RANK, 10) || 1,
+                        courseNo: p.COURSE_NO || '',
+                        socoJoinedDate: p.SOCO_JOINED_DATE || '',
+                    });
+                    messages.push('Designation updated.');
+                }
             }
 
-            setPrivilegeSuccess('Login access granted successfully. Password updated.');
-            if (privilegeDesignationId) {
-                setPrivilegeSuccess(prev => prev + ' Designation updated.');
-            }
+            setPrivilegeSuccess(messages.join(' ') || 'No changes made.');
             setNewPassword('');
             setConfirmPassword('');
             setPrivilegeDesignationId('');
+            fetchOfficers({ cancelled: false });
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
             setPrivilegeError(apiError.message || 'An error occurred.');
@@ -631,7 +659,7 @@ export default function ViewOfficersPage() {
 
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                                    New Password / User Key
+                                    New Password / User Key <span className="text-gray-400 normal-case">(optional)</span>
                                 </label>
                                 <div className="relative">
                                     <input
@@ -656,7 +684,7 @@ export default function ViewOfficersPage() {
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                                    Confirm New Password
+                                    Confirm New Password <span className="text-gray-400 normal-case">(optional)</span>
                                 </label>
                                 <div className="relative">
                                     <input
@@ -704,9 +732,9 @@ export default function ViewOfficersPage() {
                                 type="button"
                                 variant="primary"
                                 onClick={handleGrantPrivilege}
-                                disabled={privilegeLoading || !newPassword.trim() || !confirmPassword.trim() || newPassword !== confirmPassword}
+                                disabled={privilegeLoading || (newPassword.trim() !== '' && newPassword !== confirmPassword)}
                             >
-                                {privilegeLoading ? 'Granting...' : 'Grant Access'}
+                                {privilegeLoading ? 'Saving...' : 'Save Changes'}
                             </Button>
                         </div>
                     </div>
