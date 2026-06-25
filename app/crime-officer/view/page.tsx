@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import CustomSelect from '@/components/forms/CustomSelect';
@@ -135,50 +135,51 @@ export default function ViewOfficersPage() {
         loadDesignations();
     }, []);
 
+    const fetchOfficers = useCallback(async (signal?: { cancelled: boolean }) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const locationIds = appliedLocations
+                .map((id) => parseInt(id, 10))
+                .filter((id) => !isNaN(id));
+
+            const designationIds = appliedDesignations
+                .map((val) => parseInt(val, 10))
+                .filter((id) => !isNaN(id));
+
+            const raw = await officerService.getAllOfficers({
+                locationIds,
+                designationIds,
+            });
+            if (signal?.cancelled) return;
+            const rows: OfficerRow[] = raw.map((o) => ({
+                id: o.SYSTEM_USER_ID,
+                name: o.USER_FULL_NAME,
+                regNo: o.USER_REGI_NO || '',
+                status: o.STATUS,
+                locationId: o.LOCATION_ID,
+                rankId: o.RANK_ID || '',
+                mobile: o.PHONE_MOBILE || '',
+                socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
+                rank: rankIdToName.get(o.RANK_ID || '') || '',
+                designationId: o.USER_DESIGNATION_ID || '',
+                designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
+            }));
+            setOfficers(rows);
+        } catch (err) {
+            if (signal?.cancelled) return;
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
+            setError(apiError.message || 'Failed to load officers');
+        } finally {
+            if (!signal?.cancelled) setLoading(false);
+        }
+    }, [locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
+
     useEffect(() => {
         let cancelled = false;
-        const fetch = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const locationIds = appliedLocations
-                    .map((id) => parseInt(id, 10))
-                    .filter((id) => !isNaN(id));
-
-                const designationIds = appliedDesignations
-                    .map((val) => parseInt(val, 10))
-                    .filter((id) => !isNaN(id));
-
-                const raw = await officerService.getAllOfficers({
-                    locationIds,
-                    designationIds,
-                });
-                if (cancelled) return;
-                const rows: OfficerRow[] = raw.map((o) => ({
-                    id: o.SYSTEM_USER_ID,
-                    name: o.USER_FULL_NAME,
-                    regNo: o.USER_REGI_NO || '',
-                    status: o.STATUS,
-                    locationId: o.LOCATION_ID,
-                    rankId: o.RANK_ID || '',
-                    mobile: o.PHONE_MOBILE || '',
-                    socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
-                    rank: rankIdToName.get(o.RANK_ID || '') || '',
-                    designationId: o.USER_DESIGNATION_ID || '',
-                    designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
-                }));
-                setOfficers(rows);
-            } catch (err) {
-                if (cancelled) return;
-                const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
-                setError(apiError.message || 'Failed to load officers');
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-        fetch();
+        fetchOfficers({ cancelled });
         return () => { cancelled = true; };
-    }, [locationIdToName, rankIdToName, appliedLocations, appliedDesignations, designations, designationMap]);
+    }, [fetchOfficers]);
 
     const handleSort = (key: string) => {
         const k = key as SortKey;
@@ -200,16 +201,17 @@ export default function ViewOfficersPage() {
         setPrivilegeSuccess(null);
         try {
             const messages: string[] = [];
+            const desId = privilegeDesignationId ? parseInt(privilegeDesignationId, 10) : undefined;
 
             if (newPassword.trim()) {
                 await officerService.grantLoginAccess({
                     systemUserId: parseInt(privilegeOfficer.id, 10),
                     userKey: newPassword.trim(),
+                    ...(desId !== undefined ? { designationId: desId } : {}),
                 });
                 messages.push('Login access granted successfully. Password updated.');
-            }
-
-            if (privilegeDesignationId && privilegeDesignationId !== privilegeOfficer.designationId) {
+                if (desId !== undefined) messages.push('Designation updated.');
+            } else if (desId !== undefined && desId !== parseInt(privilegeOfficer.designationId || '0', 10)) {
                 const bundle = await officerService.getOfficerById(parseInt(privilegeOfficer.id, 10));
                 const p = bundle.personalInfo[0];
                 if (p) {
@@ -218,7 +220,7 @@ export default function ViewOfficersPage() {
                         userFullName: p.USER_FULL_NAME || '',
                         userCallingName: p.USER_CALLING_NAME || '',
                         locationId: parseInt(p.LOCATION_ID, 10) || 1,
-                        userDesignationId: parseInt(privilegeDesignationId, 10),
+                        userDesignationId: desId,
                         userDob: p.USER_DOB || '',
                         phoneMobile: p.PHONE_MOBILE || '',
                         phoneOffice: p.PHONE_OFFICE || '',
@@ -238,6 +240,7 @@ export default function ViewOfficersPage() {
             setNewPassword('');
             setConfirmPassword('');
             setPrivilegeDesignationId('');
+            fetchOfficers({ cancelled: false });
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
             setPrivilegeError(apiError.message || 'An error occurred.');
