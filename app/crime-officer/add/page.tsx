@@ -1,15 +1,24 @@
 'use client';
 
-import { useState, useRef, useCallback, useId, useEffect } from 'react';
+import { useState, useRef, useCallback, useId, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
-import { officerService, ApiError } from '@/lib/api';
+import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
 import type { InsertNewOfficerRequest, ChildData } from '@/lib/api/types';
+import {
+    validateRegNo,
+    validateFullName,
+    validatePhone,
+    validateDateNotFuture,
+    validateYear,
+    validateRequired,
+    validateDateRange,
+} from '@/lib/validation';
 import {
     ANNEX_01_SOCO_LABS,
     ANNEX_06_CIVIL_STATUS,
@@ -45,6 +54,12 @@ const ANNEX_13_CATEGORY_OPTIONS = [
     'H',
 ].map((s) => ({ value: s, label: s }));
 
+const CATEGORY_NAME_TO_ID: Record<string, number> = {
+    A1: 1, A: 2, B1: 3, B2: 4, B: 5,
+    C1: 6, C: 7, CE: 8, D1: 9, D: 10,
+    DE: 11, G1: 12, G: 13, J: 14, H: 15,
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ChildRow {
@@ -62,6 +77,7 @@ interface PromotionRow {
 
 interface CourseBeforeRow {
     id: number;
+    recordId?: string;
     conNo: string;
     policeStation: string;
     branch: string;
@@ -72,6 +88,7 @@ interface CourseBeforeRow {
 
 interface CourseAfterRow {
     id: number;
+    recordId?: string;
     courseName: string;
     from: string;
     to: string;
@@ -102,12 +119,26 @@ interface ALSubjectRow {
     grade: string;
 }
 
+type QualificationType = 'Degree' | 'Diploma' | 'Certificate' | 'Postgraduate' | 'Doctorate' | 'Other' | '';
+
+const QUALIFICATION_TYPE_OPTIONS = [
+    { value: 'Degree', label: 'Degree' },
+    { value: 'Diploma', label: 'Diploma' },
+    { value: 'Certificate', label: 'Certificate' },
+    { value: 'Postgraduate', label: 'Postgraduate' },
+    { value: 'Doctorate', label: 'Doctorate' },
+    { value: 'Other', label: 'Other' },
+];
+
 interface DegreeRow {
     id: number;
     degree: string;
     university: string;
     yearFrom: string;
     yearTo: string;
+    timing: 'before' | 'after' | '';
+    qualificationType: QualificationType;
+    qualificationTypeOther: string;
 }
 
 type ToggleChoice = 'Yes' | 'No' | '';
@@ -131,6 +162,7 @@ interface FormData {
     rankDesignationId: string; // Store the designation ID for API submission (NEW)
     regNo: string;
     fullName: string;
+    callingName: string;
     reportedDate: string;
     dob: string;
     dateJoinedSoco: string;
@@ -161,8 +193,7 @@ interface FormData {
     alSubjects: ALSubjectRow[];
     alGeneralEnglish: string;
     alGeneralKnowledge: string;
-    degreesBefore: DegreeRow[];
-    degreesAfter: DegreeRow[];
+    degrees: DegreeRow[];
     // Section 5
     localBeforeCourses: CourseBeforeRow[];
     foreignBeforeCourses: CourseBeforeRow[];
@@ -259,7 +290,7 @@ function formatAssignmentDuration(from: string, to: string): string {
 
 function defaultForm(): FormData {
     return {
-        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '',
+        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '', callingName: '',
         reportedDate: '', dob: '', dateJoinedSoco: '',
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
@@ -286,12 +317,10 @@ function defaultForm(): FormData {
         alSubjects: [
             { id: newId(), subject: '', grade: '' },
             { id: newId(), subject: '', grade: '' },
-            { id: newId(), subject: '', grade: '' },
         ],
         alGeneralEnglish: '',
         alGeneralKnowledge: '',
-        degreesBefore: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
-        degreesAfter: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }],
+        degrees: [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '', timing: '' as const, qualificationType: '' as QualificationType, qualificationTypeOther: '' }],
         localBeforeCourses: [
             { id: newId(), conNo: '', policeStation: '', branch: '', from: '', to: '', institute: '' },
         ],
@@ -360,6 +389,46 @@ function SectionHeader({ sectionNo, title, titleSi }: { sectionNo: number; title
     );
 }
 
+function SubSectionTitle({ title, titleSi }: { title: string; titleSi?: string }) {
+    return (
+        <div className="mb-4 mt-6 first:mt-0 pb-2 border-b border-slate-200/70">
+            <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{title}</h4>
+            {titleSi && <p className="text-xs text-gray-500 mt-0.5 font-noto-sinhala">{titleSi}</p>}
+        </div>
+    );
+}
+
+function SectionActions({
+    showEdit = false,
+    isEditingSection,
+    onEdit,
+    onSave,
+    saving = false,
+    saveLabel = 'Save',
+}: {
+    showEdit?: boolean;
+    isEditingSection: boolean;
+    onEdit?: () => void;
+    onSave: () => void;
+    saving?: boolean;
+    saveLabel?: string;
+}) {
+    return (
+        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-200/80">
+            {showEdit && !isEditingSection && onEdit && (
+                <Button variant="secondary" type="button" onClick={onEdit}>
+                    Edit
+                </Button>
+            )}
+            {(!showEdit || isEditingSection) && (
+                <Button variant="success" type="button" onClick={onSave} disabled={saving}>
+                    {saving ? 'Saving...' : saveLabel}
+                </Button>
+            )}
+        </div>
+    );
+}
+
 function FieldLabel({ label, si }: { label: string; si?: string }) {
     return (
         <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide leading-tight">
@@ -369,16 +438,18 @@ function FieldLabel({ label, si }: { label: string; si?: string }) {
 }
 
 function GInput({
-    value, onChange, placeholder, maxLength, readOnly, type = 'text', min, max
+    value, onChange, placeholder, maxLength, readOnly, disabled, type = 'text', min, max, inputMode
 }: {
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
     maxLength?: number;
     readOnly?: boolean;
+    disabled?: boolean;
     type?: string;
     min?: number;
     max?: number;
+    inputMode?: 'text' | 'numeric' | 'tel' | 'email' | 'url' | 'decimal' | 'search' | 'none';
 }) {
     return (
         <input
@@ -389,10 +460,13 @@ function GInput({
             maxLength={maxLength}
             min={min}
             max={max}
+            inputMode={inputMode}
             readOnly={readOnly}
+            disabled={disabled}
             className={`w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800
         focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500
         hover:border-gray-400 transition-colors
+        disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 disabled:hover:border-gray-300
         ${readOnly ? 'cursor-default bg-gray-100 text-gray-500' : ''}`}
         />
     );
@@ -459,17 +533,26 @@ export default function AddOfficerPage() {
     const searchParams = useSearchParams();
     const editId = searchParams.get('edit');
     const isEditing = !!editId;
+
+    // Convert dd-mm-yyyy → yyyy-mm-dd for the API
+    const toApiDate = (d: string): string => {
+        if (!d) return '';
+        const parts = d.split('-');
+        if (parts.length !== 3) return d;
+        if (parts[0].length === 4) return d; // already yyyy-mm-dd
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    };
     const { locations, loading: locationsLoading, error: locationsError, locationNameToId } = useLocationData();
-    const { ranks, loading: ranksLoading, error: ranksError, rankNameToId } = useUserData();
+    const { ranks, loading: ranksLoading, error: ranksError, rankNameToId, rankIdToName } = useUserData();
     const [form, setForm] = useState<FormData>(defaultForm);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const [submitted, setSubmitted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [courseTiming, setCourseTiming] = useState<'before' | 'after'>('before');
-    const [courseLocation, setCourseLocation] = useState<'local' | 'foreign'>('local');
-    const [degreeTiming, setDegreeTiming] = useState<'before' | 'after'>('before');
+    const [personalFamilyEditing, setPersonalFamilyEditing] = useState(!isEditing);
+    const [sectionSaving, setSectionSaving] = useState<string | null>(null);
     const civilStatusRadioName = useId();
     const showSpouseAndChildren = form.civilStatus === 'Married';
 
@@ -508,6 +591,238 @@ export default function AddOfficerPage() {
         'J',
         'H',
     ].map((s) => ({ value: s, label: s }));
+
+    const locationIdToName = useMemo(() => {
+        const map = new Map<string, string>();
+        locations.forEach((loc) => map.set(loc.id, loc.name));
+        return map;
+    }, [locations]);
+
+    // Load officer data when editing
+    useEffect(() => {
+        if (!isEditing || !editId) return;
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const data = await officerService.getOfficerById(parseInt(editId, 10));
+                if (cancelled || !data.personalInfo?.length) return;
+                const p = data.personalInfo[0];
+
+                setForm({
+                    ...defaultForm(),
+                    // Section 1
+                    socoLab: locationIdToName.get(p.LOCATION_ID) || '',
+                    socoLabId: p.LOCATION_ID,
+                    rankDropdown: rankIdToName.get(p.RANK_ID || '') || '',
+                    rankDesignationId: p.RANK_ID || '',
+                    regNo: p.USER_REGI_NO || '',
+                    fullName: p.USER_FULL_NAME || '',
+                    callingName: p.USER_CALLING_NAME || '',
+                    reportedDate: '',
+                    dob: p.USER_DOB || '',
+                    dateJoinedSoco: p.SOCO_JOINED_DATE || '',
+                    socoCourseNo: p.COURSE_NO || '',
+                    socoService: '',
+                    telOffice: p.PHONE_OFFICE || '',
+                    telResidence: p.PHONE_HOME || '',
+                    telMobile: p.PHONE_MOBILE || '',
+                    photoUrl: p.USER_IMAGE_URL || '',
+                    // Section 2
+                    civilStatus: p.CIVIL_STATUS || '',
+                    spouseName: data.spouse?.[0]?.SPOUSE_NAME || '',
+                    spouseDesignation: data.spouse?.[0]?.SPOUSE_DESIGNATION || '',
+                    spouseDesignationOther: '',
+                    spouseAddressOfInstitute: data.spouse?.[0]?.SPOUSE_WORK_ADDRESS || '',
+                    children: (data.children?.length
+                        ? data.children.map((c) => ({
+                            id: newId(),
+                            name: c.CHILD_NAME || '',
+                            birthday: c.CHILD_DOB || '',
+                            status: '',
+                        }))
+                        : [{ id: newId(), name: '', birthday: '', status: '' }]
+                    ),
+                    // Section 3
+                    dateJoinedPolice: '',
+                    appointedRank: rankIdToName.get(p.APPOINT_RANK || '') || '',
+                    appointedRankId: p.APPOINT_RANK || '',
+                    presentRank: rankIdToName.get(p.CURRENT_RANK || '') || '',
+                    presentRankId: p.CURRENT_RANK || '',
+                    promotions: (data.promotions?.length
+                        ? data.promotions.map((pr) => ({
+                            id: newId(),
+                            rank: rankIdToName.get(pr.PROMOTED_RANK_ID) || '',
+                            date: pr.PROMOTED_DATE || '',
+                        }))
+                        : [{ id: newId(), rank: '', date: '' }]
+                    ),
+                    // Section 4 – Education
+                    olMandatorySubjects: [
+                        { subject: 'First Language (Sinhala / Tamil)', grade: (data.olResults || []).find((r) => {
+                            const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                            return ['sinhala', 'tamil', 'first language (sinhala / tamil)'].includes(n);
+                        })?.SUBJECT_RESULT || '' },
+                        { subject: 'English (Second Language)', grade: (data.olResults || []).find((r) => {
+                            const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                            return ['english', 'english (second language)'].includes(n);
+                        })?.SUBJECT_RESULT || '' },
+                        { subject: 'Mathematics', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'mathematics')?.SUBJECT_RESULT || '' },
+                        { subject: 'Science', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'science')?.SUBJECT_RESULT || '' },
+                        { subject: 'History', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'history')?.SUBJECT_RESULT || '' },
+                        { subject: 'Religion', grade: (data.olResults || []).find((r) => (r.SUBJECT_NAME || '').trim().toLowerCase() === 'religion')?.SUBJECT_RESULT || '' },
+                    ].filter(Boolean) as OLSubjectResult[],
+                    olOptionalSubjects: (data.olResults || [])
+                        .filter((r) => {
+                            const name = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                            const excluded = ['sinhala', 'tamil', 'english', 'mathematics', 'science', 'history', 'religion',
+                                'first language (sinhala / tamil)', 'english (second language)'];
+                            return !excluded.includes(name);
+                        })
+                        .map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT as OLGrade })),
+                    alStream: (data.alResults?.[0]?.STREAM || '') as ALStream,
+                    alSubjects: (() => {
+                        const fromApi = (data.alResults || [])
+                            .filter((r) => {
+                                const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                                return !['general english', 'general english language', 'general knowledge', 'general knowledge test'].includes(n);
+                            })
+                            .map((r) => ({ id: newId(), subject: r.SUBJECT_NAME, grade: r.SUBJECT_RESULT }));
+                        const fixed = fromApi.slice(0, 2);
+                        while (fixed.length < 2) {
+                            fixed.push({ id: newId(), subject: '', grade: '' });
+                        }
+                        return fixed;
+                    })(),
+                    alGeneralEnglish: (data.alResults || []).find((r) => {
+                        const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                        return ['general english', 'general english language', 'english'].includes(n);
+                    })?.SUBJECT_RESULT || '',
+                    alGeneralKnowledge: (data.alResults || []).find((r) => {
+                        const n = (r.SUBJECT_NAME || '').trim().toLowerCase();
+                        return ['general knowledge', 'general knowledge test', 'knowledge'].includes(n);
+                    })?.SUBJECT_RESULT || '',
+                    degrees: (data.higherEducation || []).length > 0
+                        ? (data.higherEducation || []).map((h) => ({
+                            id: newId(),
+                            degree: h.QUALIFICATION_NAME || '',
+                            university: h.INSTITUTE_NAME || '',
+                            yearFrom: h.FROM_YEAR || '',
+                            yearTo: h.TO_YEAR || '',
+                            timing: (h.DONE_BEFORE_JOIN === 'Yes' ? 'before' : 'after') as 'before' | 'after',
+                            qualificationType: (h.EDUCATION_TYPE || '') as QualificationType,
+                            qualificationTypeOther: '',
+                        }))
+                        : [{ id: newId(), degree: '', university: '', yearFrom: '', yearTo: '', timing: '' as const, qualificationType: '' as QualificationType, qualificationTypeOther: '' }],
+                    // Sections 5/6 – Courses
+                    localBeforeCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '1')
+                        .map((c) => ({
+                            id: newId(),
+                            recordId: c.RECORD_ID,
+                            conNo: c.CON_NO || '',
+                            policeStation: c.POLICE_STATION || '',
+                            branch: c.BRANCH || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            institute: c.INSTITUTE || '',
+                        })),
+                    foreignBeforeCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '1' && c.COURSE_TYPE_ID === '2')
+                        .map((c) => ({
+                            id: newId(),
+                            recordId: c.RECORD_ID,
+                            conNo: c.CON_NO || '',
+                            policeStation: c.POLICE_STATION || '',
+                            branch: c.BRANCH || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            institute: c.COUNTRY || c.INSTITUTE || '',
+                        })),
+                    localAfterCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '1')
+                        .map((c) => ({
+                            id: newId(),
+                            recordId: c.RECORD_ID,
+                            courseName: c.CON_NO || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            time: c.DURATION || '',
+                            institute: c.INSTITUTE || '',
+                        })),
+                    foreignAfterCourses: (data.courses || [])
+                        .filter((c) => c.COURSE_DONE_ID === '2' && c.COURSE_TYPE_ID === '2')
+                        .map((c) => ({
+                            id: newId(),
+                            recordId: c.RECORD_ID,
+                            courseName: c.CON_NO || '',
+                            from: c.FROM_DATE || '',
+                            to: c.TO_DATE || '',
+                            time: c.DURATION || '',
+                            institute: c.COUNTRY || c.INSTITUTE || '',
+                        })),
+                    // Section 7 – Driving License
+                    drivingLicenseNo: data.drivingCategoryDetails?.[0]?.DRIVING_LICENSE_NO || '',
+                    vehicleCategories: (data.drivingCategoryDetails || []).map((d) =>
+                        Object.entries(CATEGORY_NAME_TO_ID).find(([, id]) => id === parseInt(d.LICENCE_CATEGORY_ID))?.[0] || ''
+                    ).filter(Boolean),
+                    heavyVehicleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '1') ? 'Yes' : '',
+                    lightVehicleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '2') ? 'Yes' : '',
+                    motorcycleQualified: (data.drivingQualificationDetails || []).some((d) => d.QUALIFICATION_TYPE_ID === '3') ? 'Yes' : '',
+                    // Section 8 – Transfer
+                    transferDraft: createAssignmentRow(),
+                    transferHistory: (data.transfers || []).map((t) => ({
+                        id: newId(),
+                        socoLab: locationIdToName.get(t.LOCATION_ID) || '',
+                        from: t.FROM_DATE || '',
+                        to: t.TO_DATE || '',
+                        duration: t.DURATION || '',
+                        oic: '',
+                        reason: t.REASON || '',
+                        reasonOther: '',
+                    })),
+                    // Section 9 – Special Duty
+                    specialDutyDraft: createAssignmentRow(),
+                    specialDutyHistory: (data.specialDuty || []).map((d) => ({
+                        id: newId(),
+                        socoLab: locationIdToName.get(d.LOCATION_ID) || '',
+                        from: d.FROM_DATE || '',
+                        to: d.TO_DATE || '',
+                        duration: d.DURATION || '',
+                        oic: '',
+                        reason: d.REASON || '',
+                        reasonOther: '',
+                    })),
+                    // Section 10 – Disciplinary Inquiries
+                    orderlyRoomStatus: (data.disciplinaryInquiries?.[0]?.ORDERLY_ROOM_STATUS || '') as ToggleChoice,
+                    orderlyRoomResult: data.disciplinaryInquiries?.[0]?.ORDERLY_ROOM_RESULT || '',
+                    preliminaryInquiryStatus: (data.disciplinaryInquiries?.[0]?.PRELIMINARY_INQUIRY_STATUS || '') as ToggleChoice,
+                    preliminaryInquiryResult: data.disciplinaryInquiries?.[0]?.PRELIMINARY_INQUIRY_RESULT || '',
+                    disciplinaryInquiryStatus: (data.disciplinaryInquiries?.[0]?.DISCIPLINARY_INQUIRY_STATUS || '') as ToggleChoice,
+                    disciplinaryInquiryResult: data.disciplinaryInquiries?.[0]?.DISCIPLINARY_INQUIRY_RESULT || '',
+                    // Section 11 – Special Illnesses & Notes
+                    specialIllnesses: data.specialIllnesses?.map((s) => s.SPECIAL_ILLNESS_NOTE).join('\n') || '',
+                    specialNotes: data.specialNotes?.map((s) => s.SPECIAL_NOTE).join('\n') || '',
+                });
+
+                if (p.USER_IMAGE_URL && (p.USER_IMAGE_URL.startsWith('http://') || p.USER_IMAGE_URL.startsWith('https://') || p.USER_IMAGE_URL.startsWith('/'))) {
+                    setPhotoPreview(p.USER_IMAGE_URL);
+                } else if (p.USER_REGI_NO) {
+                    userService.getProfileImage(p.USER_REGI_NO).then((dataUrl) => {
+                        if (dataUrl && !cancelled) {
+                            setPhotoPreview(dataUrl);
+                            setForm((f) => ({ ...f, photoUrl: dataUrl }));
+                        }
+                    });
+                }
+            } catch (err) {
+                const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officer data');
+                setError(apiError.message || 'An error occurred while loading officer data.');
+                console.error('Load officer data error:', err);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
+    }, [isEditing, editId, locationIdToName, rankNameToId, rankIdToName]);
 
     const set = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
         setForm((f) => ({ ...f, [key]: val }));
@@ -563,6 +878,7 @@ export default function AddOfficerPage() {
     const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setPhotoFile(file);
         const url = URL.createObjectURL(file);
         setPhotoPreview(url);
         set('photoUrl', url);
@@ -689,8 +1005,21 @@ export default function AddOfficerPage() {
         set('olMandatorySubjects', updated);
     };
 
+    const updateOLMandatorySubject = (index: number, subject: string) => {
+        const updated = form.olMandatorySubjects.map((s, i) => i === index ? { ...s, subject } : s);
+        set('olMandatorySubjects', updated);
+    };
+
     const updateOLOptional = (id: number, patch: Partial<OLOptionalSubject>) => {
         set('olOptionalSubjects', form.olOptionalSubjects.map((s) => s.id === id ? { ...s, ...patch } : s));
+    };
+
+    const addOLOptional = () => {
+        set('olOptionalSubjects', [...form.olOptionalSubjects, { id: newId(), subject: '', grade: '' }]);
+    };
+
+    const removeOLOptional = (id: number) => {
+        set('olOptionalSubjects', form.olOptionalSubjects.filter((s) => s.id !== id));
     };
 
     const updateALSubject = (id: number, patch: Partial<ALSubjectRow>) => {
@@ -707,37 +1036,567 @@ export default function AddOfficerPage() {
         set('alSubjects', form.alSubjects.filter((s) => s.id !== id));
     };
 
-    const updateDegree = (section: 'degreesBefore' | 'degreesAfter', id: number, patch: Partial<DegreeRow>) => {
-        set(section, form[section].map((d) => d.id === id ? { ...d, ...patch } : d));
+    const updateDegree = (id: number, patch: Partial<DegreeRow>) => {
+        set('degrees', form.degrees.map((d) => d.id === id ? { ...d, ...patch } : d));
     };
 
-    const addDegree = (section: 'degreesBefore' | 'degreesAfter') => {
-        if (form[section].length >= 6) return;
-        set(section, [...form[section], { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '' }]);
+    const addDegree = () => {
+        if (form.degrees.length >= 12) return;
+        set('degrees', [...form.degrees, { id: newId(), degree: '', university: '', yearFrom: '', yearTo: '', timing: '' as const, qualificationType: '' as QualificationType, qualificationTypeOther: '' }]);
     };
 
-    const removeDegree = (section: 'degreesBefore' | 'degreesAfter', id: number) => {
-        if (form[section].length <= 1) return;
-        set(section, form[section].filter((d) => d.id !== id));
+    const removeDegree = (id: number) => {
+        if (form.degrees.length <= 1) return;
+        set('degrees', form.degrees.filter((d) => d.id !== id));
+    };
+
+    const buildChildrenData = (): ChildData[] =>
+        form.children
+            .filter((c) => c.name.trim())
+            .map((c) => ({
+                childName: c.name,
+                childDob: toApiDate(c.birthday),
+                childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
+                childStatusId: 2,
+            }));
+
+    const buildPersonalFamilyPayload = (): InsertNewOfficerRequest => {
+        const childrenData = buildChildrenData();
+        return {
+            username: form.regNo,
+            userFullName: form.fullName,
+            userCallingName: form.callingName || form.fullName.split(' ')[0],
+            locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
+            userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
+            userDob: toApiDate(form.dob),
+            phoneMobile: form.telMobile,
+            phoneOffice: form.telOffice,
+            phoneHome: form.telResidence,
+            userImageUrl: form.photoUrl || '',
+            civilStatus: form.civilStatus,
+            userRegiNo: form.regNo,
+            currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+            appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
+            courseNo: form.socoCourseNo,
+            socoJoinedDate: toApiDate(form.dateJoinedSoco),
+            ...(form.civilStatus === 'Married' && {
+                spouse: {
+                    spouseName: form.spouseName,
+                    spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
+                    spouseWorkAddress: form.spouseAddressOfInstitute,
+                },
+                children: childrenData.length > 0 ? childrenData : [],
+            }),
+        };
+    };
+
+    const savePersonalFamilySection = async () => {
+        setError(null);
+
+        const regNoErr = validateRegNo(form.regNo);
+        const nameErr = validateFullName(form.fullName);
+        const dobErr = validateDateNotFuture(form.dob, 'Date of birth');
+        const mobileErr = validatePhone(form.telMobile);
+        const officeErr = form.telOffice.trim() ? validatePhone(form.telOffice) : null;
+        const residenceErr = form.telResidence.trim() ? validatePhone(form.telResidence) : null;
+
+        const firstErr = regNoErr || nameErr || dobErr || mobileErr || officeErr || residenceErr;
+        if (firstErr) {
+            setError(firstErr);
+            return;
+        }
+        setSectionSaving('personal-family');
+
+        try {
+            if (!isEditing) {
+                const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
+if (regiNoCheck.isAvailable) {
+                    setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
+                    return;
+                }
+
+                // Upload profile photo if a file was selected
+                let imageUrl = '';
+                if (photoFile) {
+                    try {
+                        imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                    } catch (uploadErr) {
+                        setError('Failed to upload profile image. Please try again.');
+                        return;
+                    }
+                }
+
+                const payload = buildPersonalFamilyPayload();
+                if (imageUrl) payload.userImageUrl = imageUrl;
+                console.log('InsertNewOfficer payload:', JSON.stringify(payload, null, 2));
+                const result = await officerService.insertNewOfficer(payload);
+                setSubmitted(true);
+                router.push(`/crime-officer/add?edit=${result.systemUserId}`);
+            } else {
+                let imageUrl = form.photoUrl || '';
+                if (photoFile) {
+                    try {
+                        imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                    } catch (uploadErr) {
+                        setError('Failed to upload profile image. Please try again.');
+                        return;
+                    }
+                }
+
+                const childrenData = buildChildrenData();
+                await officerService.updatePersonalInfo({
+                    systemUserId: parseInt(editId!, 10),
+                    userFullName: form.fullName,
+                    userCallingName: form.callingName || form.fullName.split(' ')[0],
+                    locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
+                    userDesignationId: 1,
+                    userDob: toApiDate(form.dob),
+                    phoneMobile: form.telMobile,
+                    phoneOffice: form.telOffice,
+                    phoneHome: form.telResidence,
+                    userImageUrl: imageUrl,
+                    civilStatus: form.civilStatus,
+                    currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+                    appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
+                    courseNo: form.socoCourseNo,
+                    socoJoinedDate: toApiDate(form.dateJoinedSoco),
+                    ...(form.civilStatus === 'Married' && {
+                        spouse: {
+                            spouseName: form.spouseName,
+                            spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
+                            spouseWorkAddress: form.spouseAddressOfInstitute,
+                        },
+                        children: childrenData.length > 0 ? childrenData : [],
+                    }),
+                });
+            }
+
+            setPersonalFamilyEditing(false);
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save personal and family details');
+            setError(apiError.message || 'An error occurred while saving.');
+            console.error('Save personal/family error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const savePromotionsSection = async () => {
+        setError(null);
+        setSectionSaving('promotions');
+
+        try {
+            if (isEditing && editId) {
+                const promotions = form.promotions
+                    .filter((p) => p.rank.trim() && p.date.trim())
+                    .map((p) => ({
+                        promotedDate: toApiDate(p.date),
+                        promotedRankId: rankNameToId.get(p.rank) ? parseInt(rankNameToId.get(p.rank)!, 10) : 1,
+                    }));
+
+                if (promotions.length > 0) {
+                    await officerService.updatePromotions({
+                        systemUserId: parseInt(editId, 10),
+                        promotions,
+                    });
+                }
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save promotions');
+            setError(apiError.message || 'An error occurred while saving promotions.');
+            console.error('Save promotions error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveEducation = async () => {
+        setError(null);
+        setSectionSaving('Education');
+
+        try {
+            if (isEditing && editId) {
+                for (const d of form.degrees.filter((d) => d.degree.trim() || d.university.trim())) {
+                    const fromErr = validateYear(d.yearFrom, 'From year', 1950, new Date().getFullYear() + 10);
+                    if (fromErr) { setError(`${d.degree || 'Degree'}: ${fromErr}`); setSectionSaving(null); return; }
+                    const toErr = validateYear(d.yearTo, 'To year', 1950, new Date().getFullYear() + 10);
+                    if (toErr) { setError(`${d.degree || 'Degree'}: ${toErr}`); setSectionSaving(null); return; }
+                    if (d.yearFrom && d.yearTo && parseInt(d.yearFrom) > parseInt(d.yearTo)) {
+                        setError(`${d.degree || 'Degree'}: From year cannot be after To year`);
+                        setSectionSaving(null); return;
+                    }
+                }
+                const olResults = [
+                    ...form.olMandatorySubjects.filter((s) => s.grade).map((s) => ({
+                        subjectName: s.subject,
+                        subjectResult: s.grade,
+                    })),
+                    ...form.olOptionalSubjects.filter((s) => s.subject.trim() && s.grade).map((s) => ({
+                        subjectName: s.subject,
+                        subjectResult: s.grade,
+                    })),
+                ];
+
+                const alResults = [
+                    ...form.alSubjects
+                        .filter((s) => s.subject.trim() && s.grade)
+                        .map((s) => ({
+                            stream: form.alStream || '',
+                            subjectName: s.subject,
+                            subjectResult: s.grade,
+                        })),
+                    ...(form.alGeneralEnglish.trim() ? [{
+                        stream: form.alStream || '',
+                        subjectName: 'General English',
+                        subjectResult: form.alGeneralEnglish,
+                    }] : []),
+                    ...(form.alGeneralKnowledge.trim() ? [{
+                        stream: form.alStream || '',
+                        subjectName: 'General Knowledge',
+                        subjectResult: form.alGeneralKnowledge,
+                    }] : []),
+                ];
+
+                const higherEducations = form.degrees
+                    .filter((d) => d.degree.trim() || d.university.trim())
+                    .map((d) => ({
+                        doneBeforeJoin: (d.timing === 'before' ? 'Yes' : 'No') as 'Yes' | 'No',
+                        sponsored: (d.timing === 'after' ? 'Yes' : 'No') as 'Yes' | 'No',
+                        educationType: d.qualificationType === 'Other' ? d.qualificationTypeOther : (d.qualificationType || 'Degree'),
+                        qualificationName: d.degree,
+                        instituteName: d.university,
+                        fromYear: parseInt(d.yearFrom) || 0,
+                        toYear: parseInt(d.yearTo) || 0,
+                    }));
+
+                await officerService.updateEducation({
+                    systemUserId: parseInt(editId, 10),
+                    olResults,
+                    alResults,
+                    higherEducations,
+                });
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save education');
+            setError(apiError.message || 'An error occurred while saving education.');
+            console.error('Save education error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveCourses = async (sectionLabel: string, courseDoneId: number) => {
+        setError(null);
+        setSectionSaving(sectionLabel);
+
+        try {
+            if (isEditing && editId) {
+                let courses: {
+                    courseTypeId: number;
+                    courseDoneId: number;
+                    conNo: string;
+                    courseName: string;
+                    policeStation: string;
+                    branch: string;
+                    fromDate: string;
+                    toDate: string;
+                    duration: string;
+                    institute: string;
+                    country: string;
+                }[] = [];
+
+                if (courseDoneId === 1) {
+                    courses = [
+                        ...form.localBeforeCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 1,
+                                courseDoneId,
+                                conNo: c.conNo || '',
+                                courseName: c.conNo || '',
+                                policeStation: c.policeStation || '',
+                                branch: c.branch || '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: '',
+                                institute: c.institute || '',
+                                country: '',
+                            })),
+                        ...form.foreignBeforeCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 2,
+                                courseDoneId,
+                                conNo: c.conNo || '',
+                                courseName: c.conNo || '',
+                                policeStation: c.policeStation || '',
+                                branch: c.branch || '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: '',
+                                institute: c.institute || '',
+                                country: c.institute || '',
+                            })),
+                    ];
+                } else {
+                    courses = [
+                        ...form.localAfterCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 1,
+                                courseDoneId,
+                                conNo: c.courseName || '',
+                                courseName: c.courseName || '',
+                                policeStation: '',
+                                branch: '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: c.time || '',
+                                institute: c.institute || '',
+                                country: '',
+                            })),
+                        ...form.foreignAfterCourses
+                            .filter((c) => !c.recordId)
+                            .map((c) => ({
+                                courseTypeId: 2,
+                                courseDoneId,
+                                conNo: c.courseName || '',
+                                courseName: c.courseName || '',
+                                policeStation: '',
+                                branch: '',
+                                fromDate: toApiDate(c.from),
+                                toDate: toApiDate(c.to),
+                                duration: c.time || '',
+                                institute: c.institute || '',
+                                country: c.institute || '',
+                            })),
+                    ];
+                }
+
+                await officerService.updateCourses({
+                    systemUserId: parseInt(editId, 10),
+                    courses,
+                });
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError(`Failed to save ${sectionLabel}`);
+            setError(apiError.message || `An error occurred while saving ${sectionLabel}.`);
+            console.error(`Save ${sectionLabel} error:`, err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveDrivingLicense = async () => {
+        setError(null);
+        setSectionSaving('Driving License');
+
+        try {
+            if (isEditing && editId) {
+                if (form.vehicleCategories.length > 0 && !form.drivingLicenseNo.trim()) {
+                    setError('Driving license number is required when selecting vehicle categories');
+                    setSectionSaving(null); return;
+                }
+                if (form.drivingLicenseNo.trim() && form.drivingLicenseNo.trim().length < 5) {
+                    setError('Driving license number is too short');
+                    setSectionSaving(null); return;
+                }
+                const categoryDetails = form.vehicleCategories
+                    .filter((cat) => CATEGORY_NAME_TO_ID[cat])
+                    .map((cat) => ({
+                        drivingLicenseNo: form.drivingLicenseNo,
+                        licenceCategoryId: CATEGORY_NAME_TO_ID[cat],
+                    }));
+
+                const qualificationDetails: { qualificationTypeId: number }[] = [];
+                if (form.heavyVehicleQualified === 'Yes') qualificationDetails.push({ qualificationTypeId: 1 });
+                if (form.lightVehicleQualified === 'Yes') qualificationDetails.push({ qualificationTypeId: 2 });
+                if (form.motorcycleQualified === 'Yes') qualificationDetails.push({ qualificationTypeId: 3 });
+
+                await officerService.updateDriving({
+                    systemUserId: parseInt(editId, 10),
+                    categoryDetails,
+                    qualificationDetails,
+                });
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save driving license');
+            setError(apiError.message || 'An error occurred while saving driving license.');
+            console.error('Save driving license error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveTransfers = async () => {
+        setError(null);
+        setSectionSaving('Transfer');
+
+        try {
+            if (isEditing && editId) {
+                const validTransfers = form.transferHistory.filter((t) => t.socoLab && t.from && t.to);
+                for (const t of validTransfers) {
+                    const rangeErr = validateDateRange(t.from, t.to, 'Transfer');
+                    if (rangeErr) { setError(rangeErr); setSectionSaving(null); return; }
+                }
+                const transfers = validTransfers
+                    .map((t) => {
+                        const locId = locationNameToId.get(t.socoLab);
+                        return {
+                            locationId: locId ? parseInt(locId, 10) : 1,
+                            fromDate: toApiDate(t.from),
+                            toDate: toApiDate(t.to),
+                            duration: t.duration || '',
+                            officerInchargeUserId: 1,
+                            reason: t.reason === 'Other' ? t.reasonOther : (t.reason || ''),
+                        };
+                    });
+
+                await officerService.updateTransfers({
+                    systemUserId: parseInt(editId, 10),
+                    transfers,
+                });
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save transfers');
+            setError(apiError.message || 'An error occurred while saving transfers.');
+            console.error('Save transfers error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveSpecialDuty = async () => {
+        setError(null);
+        setSectionSaving('Special Duty');
+
+        try {
+            if (isEditing && editId) {
+                const validDuties = form.specialDutyHistory.filter((d) => d.socoLab && d.from && d.to);
+                for (const d of validDuties) {
+                    const rangeErr = validateDateRange(d.from, d.to, 'Special duty');
+                    if (rangeErr) { setError(rangeErr); setSectionSaving(null); return; }
+                }
+                const specialDuties = validDuties
+                    .map((d) => {
+                        const locId = locationNameToId.get(d.socoLab);
+                        return {
+                            locationId: locId ? parseInt(locId, 10) : 1,
+                            fromDate: toApiDate(d.from),
+                            toDate: toApiDate(d.to),
+                            duration: d.duration || '',
+                            officerInchargeUserId: 1,
+                            reason: d.reason === 'Other' ? d.reasonOther : (d.reason || ''),
+                        };
+                    });
+
+                await officerService.updateSpecialDuty({
+                    systemUserId: parseInt(editId, 10),
+                    specialDuties,
+                });
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special duty');
+            setError(apiError.message || 'An error occurred while saving special duty.');
+            console.error('Save special duty error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveDisciplinaryInquiries = async () => {
+        setError(null);
+        setSectionSaving('Disciplinary Inquiries');
+
+        try {
+            if (isEditing && editId) {
+                await officerService.updateDisciplinaryInquiries({
+                    systemUserId: parseInt(editId, 10),
+                    disciplinaryInquiries: [
+                        {
+                            orderlyRoomStatus: form.orderlyRoomStatus || '',
+                            orderlyRoomResult: form.orderlyRoomResult,
+                            preliminaryInquiryStatus: form.preliminaryInquiryStatus || '',
+                            preliminaryInquiryResult: form.preliminaryInquiryResult,
+                            disciplinaryInquiryStatus: form.disciplinaryInquiryStatus || '',
+                            disciplinaryInquiryResult: form.disciplinaryInquiryResult,
+                        },
+                    ],
+                });
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save disciplinary inquiries');
+            setError(apiError.message || 'An error occurred while saving disciplinary inquiries.');
+            console.error('Save disciplinary inquiries error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveSpecialIllnessesNotes = async () => {
+        setError(null);
+        setSectionSaving('Special Illnesses & Notes');
+
+        try {
+            if (isEditing && editId) {
+                await officerService.updateSpecialIllnessesNotes({
+                    systemUserId: parseInt(editId, 10),
+                    specialIllnesses: form.specialIllnesses.trim()
+                        ? [{ specialIllnessNote: form.specialIllnesses }]
+                        : [],
+                    specialNotes: form.specialNotes.trim()
+                        ? [{ specialNote: form.specialNotes }]
+                        : [],
+                });
+            }
+
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special illnesses & notes');
+            setError(apiError.message || 'An error occurred while saving special illnesses & notes.');
+            console.error('Save special illnesses & notes error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (form.alSubjects.length < 3) {
-            alert('Please keep at least 3 A/L subject rows.');
-            return;
-        }
-
         setError(null);
+
+        const regNoErr = validateRegNo(form.regNo);
+        const nameErr = validateFullName(form.fullName);
+        const dobErr = validateDateNotFuture(form.dob, 'Date of birth');
+        const mobileErr = form.telMobile.trim() ? validatePhone(form.telMobile) : null;
+        const firstErr = regNoErr || nameErr || dobErr || mobileErr;
+        if (firstErr) { setError(firstErr); return; }
         setLoading(true);
 
         try {
             // Check if regNo is already in use
             const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
-            if (!regiNoCheck.isAvailable) {
+            if (regiNoCheck.isAvailable) {
                 setError(`Registration number ${form.regNo} is already in use. Please use a different one.`);
                 setLoading(false);
                 return;
+            }
+
+            // Upload profile photo if a file was selected
+            let imageUrl = form.photoUrl;
+            if (photoFile) {
+                try {
+                    imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
+                } catch (uploadErr) {
+                    setError('Failed to upload profile image. Please try again.');
+                    setLoading(false);
+                    return;
+                }
             }
 
             // Build children data
@@ -745,8 +1604,8 @@ export default function AddOfficerPage() {
                 .filter((c) => c.name.trim()) // Only include non-empty children
                 .map((c) => ({
                     childName: c.name,
-                    childDob: c.birthday,
-                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday).getFullYear() : 0,
+                    childDob: toApiDate(c.birthday),
+                    childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                     childStatusId: 2, // Default status ID
                 }));
 
@@ -754,28 +1613,28 @@ export default function AddOfficerPage() {
             const payload: InsertNewOfficerRequest = {
                 username: form.regNo, // Using regNo as username
                 userFullName: form.fullName,
-                userCallingName: form.fullName.split(' ')[0], // Use first name as calling name
+                userCallingName: form.callingName || form.fullName.split(' ')[0], // Use first name as calling name
                 locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
-                userDesignationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : 1, // Use mapped rank ID
-                userDob: form.dob,
+                userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
+                userDob: toApiDate(form.dob),
                 phoneMobile: form.telMobile,
                 phoneOffice: form.telOffice,
                 phoneHome: form.telResidence,
-                userImageUrl: form.photoUrl,
+                userImageUrl: imageUrl || '',
                 civilStatus: form.civilStatus,
                 userRegiNo: form.regNo,
-                currentRank: form.presentRank,
-                appointRank: form.appointedRank,
+                currentRank: form.presentRankId ? parseInt(form.presentRankId, 10) : 1,
+                appointRank: form.appointedRankId ? parseInt(form.appointedRankId, 10) : 1,
                 courseNo: form.socoCourseNo,
-                socoJoinedDate: form.dateJoinedSoco,
+                socoJoinedDate: toApiDate(form.dateJoinedSoco),
                 ...(form.civilStatus === 'Married' && {
                     spouse: {
                         spouseName: form.spouseName,
                         spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                         spouseWorkAddress: form.spouseAddressOfInstitute,
                     },
+                    children: childrenData.length > 0 ? childrenData : [],
                 }),
-                ...(childrenData.length > 0 && { children: childrenData }),
             };
 
             // Submit to API
@@ -817,11 +1676,16 @@ export default function AddOfficerPage() {
 
     return (
         <PageLayout>
-            <PageHeader
+        {isEditing ? <PageHeader
+                backHref="/crime-officer"
+                title="Edit SOCO Officer"
+                description="Complete all required details to register a new officer profile."
+            /> : 
+                <PageHeader
                 backHref="/crime-officer"
                 title="Add SOCO Officer"
                 description="Complete all required details to register a new officer profile."
-            />
+            /> } 
             {error && (
                 <p className="mb-6 -mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 inline-block">
                     {error}
@@ -844,7 +1708,7 @@ export default function AddOfficerPage() {
                                 <span className="text-xs text-blue-500">(Registration number used as login username)</span>
                             </div>
 
-                            {/* ─── SECTION 1: Personal Details ─────────────────────────────── */}
+                            {/* ─── SECTION 1: Personal & Family Details ───────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
                                 <SectionHeader
                                     sectionNo={1}
@@ -852,7 +1716,13 @@ export default function AddOfficerPage() {
                                     titleSi="අපරාධ ස්ථාන නිලධාරිගේ පුද්ගලික තොරතුරු"
                                 />
 
-                                <div className="flex flex-col xl:flex-row xl:items-start gap-4">
+                                <fieldset disabled={!personalFamilyEditing} className="min-w-0 border-0 p-0 m-0 disabled:opacity-90">
+                                    <SubSectionTitle
+                                        title="Personal Details"
+                                        titleSi="පුද්ගලික තොරතුරු"
+                                    />
+
+                                    <div className="flex flex-col xl:flex-row xl:items-start gap-4">
                                     <div className="flex-1 min-w-0">
                                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                             {/* SOCO Lab */}
@@ -863,33 +1733,31 @@ export default function AddOfficerPage() {
                                                      onChange={handleSocoLabChange}
                                                      options={SOCO_LABS_OPTIONS} 
                                                      placeholder={locationsLoading ? "Loading..." : "Select SOCO Lab"}
-                                                     disabled={locationsLoading}
+                                                     disabled={locationsLoading || !personalFamilyEditing}
                                                  />
                                                  {locationsError && (
                                                      <p className="text-xs text-red-600 mt-1">{locationsError}</p>
                                                  )}
                                              </div>
 
-                                            {/* Rank & Reg No */}
-                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:col-span-2">
-                                                 <div>
-                                                     <FieldLabel label="Rank" si="තනතුර" />
-                                                     <CustomSelect 
-                                                         value={form.rankDropdown} 
-                                                         onChange={(v) => handleRankChange(v, 'rankDesignationId')}
-                                                         options={RANK_OPTIONS} 
-                                                         placeholder={ranksLoading ? "Loading..." : "Rank"}
-                                                         disabled={ranksLoading}
-                                                     />
-                                                     {ranksError && (
-                                                         <p className="text-xs text-red-600 mt-1">{ranksError}</p>
-                                                     )}
-                                                 </div>
-                                                 <div>
-                                                     <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
-                                                     <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
-                                                 </div>
-                                            </div>
+                                            {/* Present Rank & Reg No */}
+                                             <div>
+                                                 <FieldLabel label="Present Rank / වත්මන් තනතුර" />
+                                                 <CustomSelect 
+                                                     value={form.rankDropdown} 
+                                                     onChange={(v) => handleRankChange(v, 'rankDesignationId')}
+                                                     options={RANK_OPTIONS} 
+                                                     placeholder={ranksLoading ? "Loading..." : "Rank"}
+                                                     disabled={ranksLoading || !personalFamilyEditing}
+                                                 />
+                                                 {ranksError && (
+                                                     <p className="text-xs text-red-600 mt-1">{ranksError}</p>
+                                                 )}
+                                             </div>
+                                             <div>
+                                                 <FieldLabel label="Reg. No" si="රෙජි. අංකය" />
+                                                 <GInput value={form.regNo} onChange={(v) => set('regNo', v)} placeholder="Register Number" />
+                                             </div>
 
                                             {/* Full Name */}
                                             <div className="md:col-span-2 xl:col-span-3">
@@ -899,14 +1767,21 @@ export default function AddOfficerPage() {
                                                 <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
                                             </div>
 
-                                            {/* Dates */}
-                                            <div>
-                                                <FieldLabel label="Reported Date / වාර්තා දිනය" />
-                                                <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
+                                            {/* Calling Name */}
+                                            <div className="md:col-span-2 xl:col-span-3">
+                                                <FieldLabel label="Calling Name" si="ඇමතුම් නම" />
+                                                <GInput value={form.callingName} onChange={(v) => set('callingName', v)}
+                                                    placeholder="Calling name" maxLength={50} />
                                             </div>
+
+                                            {/* Dates Row 1 */}
                                             <div>
                                                 <FieldLabel label="Date of Birth / උපන් දිනය" />
                                                 <DatePicker value={form.dob} onChange={(v) => set('dob', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Reported Date / වාර්තා දිනය" />
+                                                <DatePicker value={form.reportedDate} onChange={(v) => set('reportedDate', v)} />
                                             </div>
                                             <div>
                                                 <FieldLabel label="Date Joined SOCO Project / ව්‍යාපෘතියට එකතු වූ දිනය" />
@@ -923,35 +1798,30 @@ export default function AddOfficerPage() {
                                                 <GInput value={form.socoService} onChange={(v) => set('socoService', v)} placeholder="Service details" />
                                             </div>
 
+                                            {/* Date Joined Police & Appointed Rank */}
+                                            <div>
+                                                <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
+                                                <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
+                                            </div>
+                                            <div>
+                                                <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
+                                                <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
+                                                    options={RANK_OPTIONS} placeholder="Select" />
+                                            </div>
+
                                             {/* Telephone */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3" style={{ padding: 0, margin: 0 }}>
                                                 <div>
                                                     <FieldLabel label="Office Tel. / කාර්යාල දුරකථන අංකය" />
-                                                    <GInput value={form.telOffice} onChange={(v) => set('telOffice', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                    <GInput value={form.telOffice} onChange={(v) => set('telOffice', v.replace(/\D/g, ''))} placeholder="0XX-XXXXXXX" type="tel" inputMode="numeric" />
                                                 </div>
                                                 <div>
                                                     <FieldLabel label="Residence Tel. / නිවාස දුරකථනය අංකය" />
-                                                    <GInput value={form.telResidence} onChange={(v) => set('telResidence', v)} placeholder="0XX-XXXXXXX" type="tel" />
+                                                    <GInput value={form.telResidence} onChange={(v) => set('telResidence', v.replace(/\D/g, ''))} placeholder="0XX-XXXXXXX" type="tel" inputMode="numeric" />
                                                 </div>
                                                 <div>
                                                     <FieldLabel label="Mobile / ජංගම දුරකථනය අංකය" />
-                                                    <GInput value={form.telMobile} onChange={(v) => set('telMobile', v)} placeholder="07X-XXXXXXX" type="tel" />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2 xl:col-span-3">
-                                                <div>
-                                                    <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
-                                                    <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
-                                                </div>
-                                                <div>
-                                                    <FieldLabel label="Appointed Rank / පත් කළ තනතුර" />
-                                                    <CustomSelect value={form.appointedRank} onChange={(v) => set('appointedRank', v)}
-                                                        options={RANK_OPTIONS} placeholder="Select" />
-                                                </div>
-                                                <div>
-                                                    <FieldLabel label="Present Rank / වත්මන් තනතුර" />
-                                                    <CustomSelect value={form.presentRank} onChange={(v) => set('presentRank', v)}
-                                                        options={RANK_OPTIONS} placeholder="Select" />
+                                                    <GInput value={form.telMobile} onChange={(v) => set('telMobile', v.replace(/\D/g, ''))} placeholder="07X-XXXXXXX" type="tel" inputMode="numeric" />
                                                 </div>
                                             </div>
                                         </div>
@@ -978,7 +1848,9 @@ export default function AddOfficerPage() {
                                                         height: 'auto',
                                                         boxSizing: 'border-box',
                                                     }}
-                                                    onClick={() => fileRef.current?.click()}
+                                                    onClick={() => {
+                                                        if (personalFamilyEditing) fileRef.current?.click();
+                                                    }}
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' || e.key === ' ') {
                                                             e.preventDefault();
@@ -999,17 +1871,17 @@ export default function AddOfficerPage() {
                                                             </div>
                                                         )}
                                                 </div>
-                                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-                                                <FileUploadButton variant="sky-block" type="button" onClick={() => fileRef.current?.click()}>Upload Photo</FileUploadButton>
+                                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={!personalFamilyEditing} />
+                                                <FileUploadButton variant="sky-block" type="button" onClick={() => fileRef.current?.click()} disabled={!personalFamilyEditing}>Upload Photo</FileUploadButton>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* ─── SECTION 2: Family Details ───────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-emerald-200 bg-emerald-50/70">
-                                <SectionHeader sectionNo={2} title="Family Details" titleSi="පවුල් තොරතුරු" />
+                                    <SubSectionTitle
+                                        title="Family Details"
+                                        titleSi="පවුල් තොරතුරු"
+                                    />
 
                                 <div
                                     className={`grid grid-cols-1 gap-4 ${
@@ -1160,11 +2032,21 @@ export default function AddOfficerPage() {
                                     <AddRowButton onClick={addChild}>Add Child</AddRowButton>
                                 </div>
                                 ) : null}
+                                </fieldset>
+
+                                <SectionActions
+                                    showEdit
+                                    isEditingSection={personalFamilyEditing}
+                                    onEdit={() => setPersonalFamilyEditing(true)}
+                                    onSave={savePersonalFamilySection}
+                                    saving={sectionSaving === 'personal-family'}
+                                    saveLabel="Save"
+                                />
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
-                                <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
+                            {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
+                                <SectionHeader sectionNo={2} title="Promotions  " titleSi="උසස්වීම්" />
 
                                 {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
@@ -1237,11 +2119,17 @@ export default function AddOfficerPage() {
                                     </div>
                                     <AddRowButton onClick={addPromotion}>Add Promotion</AddRowButton>
                                 </div>
-                            </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={savePromotionsSection}
+                                    saving={sectionSaving === 'promotions'}
+                                />
+                            </div> }
 
                             {/* ─── SECTION 4: Education ────────────────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
-                                <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
+                                <SectionHeader sectionNo={3} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
                                 {/* ── O/L Results ─────────────────────────────────────────── */}
                                 <div className="mb-6">
@@ -1261,8 +2149,14 @@ export default function AddOfficerPage() {
                                             </thead>
                                             <tbody>
                                                 {form.olMandatorySubjects.map((row, idx) => (
-                                                    <tr key={row.subject} className="border-b border-violet-50 last:border-0 odd:bg-white even:bg-violet-50/20">
-                                                        <td className="px-3 py-2 text-sm text-gray-800 font-medium">{row.subject}</td>
+                                                    <tr key={idx} className="border-b border-violet-50 last:border-0 odd:bg-white even:bg-violet-50/20">
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={row.subject}
+                                                                onChange={(v) => updateOLMandatorySubject(idx, v)}
+                                                                placeholder="Subject name"
+                                                            />
+                                                        </td>
                                                         <td className="px-2 py-1.5">
                                                             <div className="flex gap-1.5 flex-wrap">
                                                                 {OL_GRADES.map((g) => (
@@ -1285,6 +2179,7 @@ export default function AddOfficerPage() {
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-8">#</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-56">Grade</th>
+                                                    <th className="w-10"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1305,12 +2200,18 @@ export default function AddOfficerPage() {
                                                                 ))}
                                                             </div>
                                                         </td>
+                                                        <td className="px-1 py-1.5">
+                                                            <RemoveRowButton onClick={() => removeOLOptional(row.id)} size="sm" />
+                                                        </td>
                                                     </tr>
                                                 ))}
-                                            </tbody>
-                                        </table>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <AddRowButton onClick={addOLOptional}>Add Subject</AddRowButton>
+                                        </div>
                                     </div>
-                                </div>
 
                                 {/* ── A/L Results ─────────────────────────────────────────── */}
                                 <div className="mb-6">
@@ -1327,325 +2228,396 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
 
-                                    {form.alStream && (
-                                        <div className="rounded-xl border border-violet-100 overflow-hidden">
-                                            <div className="px-4 py-2.5 bg-violet-50/70 border-b border-violet-100">
-                                                <span className="text-xs font-bold text-violet-800 uppercase tracking-wide">{form.alStream} Stream — Subjects</span>
-                                            </div>
-                                            <div className="overflow-x-auto">
-                                                <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
-                                                    <thead>
-                                                        <tr className="bg-gray-50 border-b border-gray-200">
-                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
-                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject Name</th>
-                                                            <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Grade</th>
-                                                            <th className="px-2 py-2.5 w-px whitespace-nowrap"><span className="sr-only">Actions</span></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {form.alSubjects.map((row, idx) => (
-                                                            <tr key={row.id} className="border-b border-gray-100 last:border-0">
-                                                                <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">{idx + 1}</td>
-                                                                <td className="px-2 py-1.5">
-                                                                    <GInput
-                                                                        value={row.subject}
-                                                                        onChange={(v) => updateALSubject(row.id, { subject: v })}
-                                                                        placeholder="Subject name"
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-1.5">
-                                                                    <GInput
-                                                                        value={row.grade}
-                                                                        onChange={(v) => updateALSubject(row.id, { grade: v })}
-                                                                        placeholder="e.g. A, B, C"
-                                                                        maxLength={3}
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-1.5 text-right whitespace-nowrap w-px">
-                                                                    {form.alSubjects.length > 3 && (
-                                                                        <RemoveRowButton onClick={() => removeALSubject(row.id)} />
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                        {/* General English */}
-                                                        <tr className="border-b border-gray-100 bg-violet-50/30">
-                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GE</td>
-                                                            <td className="px-3 py-2 text-sm font-medium text-gray-700">General English</td>
-                                                            <td className="px-2 py-1.5">
-                                                                <GInput
-                                                                    value={form.alGeneralEnglish}
-                                                                    onChange={(v) => set('alGeneralEnglish', v)}
-                                                                    placeholder="e.g. A, B, C"
-                                                                    maxLength={3}
-                                                                />
-                                                            </td>
-                                                            <td />
-                                                        </tr>
-                                                        {/* General Knowledge */}
-                                                        <tr className="bg-violet-50/30">
-                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GK</td>
-                                                            <td className="px-3 py-2 text-sm font-medium text-gray-700">General Knowledge</td>
-                                                            <td className="px-2 py-1.5">
-                                                                <GInput
-                                                                    value={form.alGeneralKnowledge}
-                                                                    onChange={(v) => set('alGeneralKnowledge', v)}
-                                                                    placeholder="e.g. A, B, C"
-                                                                    maxLength={3}
-                                                                />
-                                                            </td>
-                                                            <td />
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            {form.alSubjects.length < 5 && (
-                                                <div className="px-4 pb-3">
-                                                    <AddRowButton onClick={addALSubject}>Add Subject</AddRowButton>
-                                                </div>
-                                            )}
-                                            {form.alSubjects.length >= 5 && (
-                                                <p className="px-4 pb-3 text-xs text-gray-400">Maximum 5 subjects reached.</p>
-                                            )}
+                                    <div className={`rounded-xl border border-violet-100 overflow-hidden transition-all duration-200 ${
+                                        !form.alStream ? 'opacity-50 pointer-events-none select-none bg-gray-50/50' : ''
+                                    }`}>
+                                        <div className="px-4 py-2.5 bg-violet-50/70 border-b border-violet-100">
+                                            <span className="text-xs font-bold text-violet-800 uppercase tracking-wide">
+                                                {form.alStream ? `${form.alStream} Stream — Subjects` : 'Subjects (Select Stream to edit)'}
+                                            </span>
                                         </div>
-                                    )}
+                                        <div className="overflow-x-auto">
+                                            <table className="data-grid-table data-grid-table--compact w-full text-sm text-gray-900">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
+                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject Name</th>
+                                                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Grade</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.alSubjects.map((row, idx) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 last:border-0">
+                                                            <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">{idx + 1}</td>
+                                                            <td className="px-2 py-1.5">
+                                                                <GInput
+                                                                    value={row.subject}
+                                                                    onChange={(v) => updateALSubject(row.id, { subject: v })}
+                                                                    placeholder="Subject name"
+                                                                    disabled={!form.alStream}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1.5">
+                                                                <GInput
+                                                                    value={row.grade}
+                                                                    onChange={(v) => updateALSubject(row.id, { grade: v })}
+                                                                    placeholder="e.g. A, B, C"
+                                                                    maxLength={3}
+                                                                    disabled={!form.alStream}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* General English */}
+                                                    <tr className="border-b border-gray-100 bg-violet-50/30">
+                                                        <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GE</td>
+                                                        <td className="px-3 py-2 text-sm font-medium text-gray-700">General English</td>
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={form.alGeneralEnglish}
+                                                                onChange={(v) => set('alGeneralEnglish', v)}
+                                                                placeholder="e.g. A, B, C"
+                                                                maxLength={3}
+                                                                disabled={!form.alStream}
+                                                            />
+                                                        </td>
+                                                        <td />
+                                                    </tr>
+                                                    {/* General Knowledge */}
+                                                    <tr className="bg-violet-50/30">
+                                                        <td className="px-3 py-1.5 text-xs text-gray-400 font-semibold">GK</td>
+                                                        <td className="px-3 py-2 text-sm font-medium text-gray-700">General Knowledge</td>
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput
+                                                                value={form.alGeneralKnowledge}
+                                                                onChange={(v) => set('alGeneralKnowledge', v)}
+                                                                placeholder="e.g. A, B, C"
+                                                                maxLength={3}
+                                                                disabled={!form.alStream}
+                                                            />
+                                                        </td>
+                                                        <td />
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* ── Degrees ─────────────────────────────────────────────── */}
                                 <div className="mb-5">
-                                    <div className="flex flex-wrap gap-6 mb-4">
-                                        <div>
-                                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
-                                            <div className="flex gap-3">
-                                                {(['before', 'after'] as const).map((val) => {
-                                                    const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
-                                                    const isSelected = degreeTiming === val;
-                                                    return (
-                                                        <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
-                                                            isSelected
-                                                                ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
-                                                                : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
-                                                        }`}>
-                                                            <input
-                                                                type="radio"
-                                                                name="degree-timing"
-                                                                value={val}
-                                                                checked={isSelected}
-                                                                onChange={() => setDegreeTiming(val)}
-                                                                className="accent-violet-600"
-                                                            />
-                                                            {label}
-                                                        </label>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
                                     <div className="rounded-xl border border-violet-100 bg-white overflow-hidden shadow-sm">
                                         <div className="px-4 py-3 border-b border-violet-100 bg-violet-50/60">
                                             <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wide">
-                                                Degrees / Qualifications {degreeTiming === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)'}
+                                                Degrees / Qualifications
                                             </h4>
                                             <p className="text-xs text-violet-700 mt-0.5">
-                                                {degreeTiming === 'before' ? 'Obtained prior to joining the Police Department' : 'Sponsored degrees obtained after joining the Police Department'}
+                                                Record qualifications obtained before or after joining the Police Department
                                             </p>
                                         </div>
                                         <div className="p-4 space-y-3">
-                                            {form[degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter'].map((row, idx) => (
-                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-2">
-                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                            {form.degrees.map((row, idx) => (
+                                                <div key={row.id} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3 space-y-3">
+                                                    <div className="flex items-center justify-between gap-2">
                                                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {idx + 1}</span>
-                                                        {(degreeTiming === 'before' ? form.degreesBefore.length : form.degreesAfter.length) > 1 && (
-                                                            <RemoveRowButton onClick={() => removeDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id)} size="sm" />
+                                                        {form.degrees.length > 1 && (
+                                                            <RemoveRowButton onClick={() => removeDegree(row.id)} size="sm" />
                                                         )}
+                                                    </div>
+                                                    <div>
+                                                        <FieldLabel label="University / Institute" />
+                                                        <GInput value={row.university} onChange={(v) => updateDegree(row.id, { university: v })} placeholder="University or Institute name" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(['before', 'after'] as const).map((val) => {
+                                                                const label = val === 'before' ? 'Before Joining Police' : 'After Joining Police (Sponsored)';
+                                                                const isSelected = row.timing === val;
+                                                                return (
+                                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
+                                                                        isSelected
+                                                                            ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
+                                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                                                    }`}>
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={`degree-timing-${row.id}`}
+                                                                            value={val}
+                                                                            checked={isSelected}
+                                                                            onChange={() => updateDegree(row.id, { timing: val })}
+                                                                            className="accent-violet-600"
+                                                                        />
+                                                                        {label}
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         <div>
-                                                            <FieldLabel label="Degree / Qualification" />
-                                                            <GInput value={row.degree} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
+                                                            <FieldLabel label="Qualification Type" />
+                                                            <CustomSelect
+                                                                value={row.qualificationType}
+                                                                onChange={(v) => {
+                                                                    updateDegree(row.id, {
+                                                                        qualificationType: v as QualificationType,
+                                                                        qualificationTypeOther: v === 'Other' ? row.qualificationTypeOther : '',
+                                                                    });
+                                                                }}
+                                                                options={QUALIFICATION_TYPE_OPTIONS}
+                                                                placeholder="Select type"
+                                                            />
                                                         </div>
                                                         <div>
-                                                            <FieldLabel label="University / Institute" />
-                                                            <GInput value={row.university} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { university: v })} placeholder="University or Institute name" />
+                                                            <FieldLabel label="Degree / Qualification Name" />
+                                                            <GInput value={row.degree} onChange={(v) => updateDegree(row.id, { degree: v })} placeholder="e.g. BSc Computer Science" />
                                                         </div>
                                                     </div>
+                                                    {row.qualificationType === 'Other' && (
+                                                        <div>
+                                                            <FieldLabel label="Specify Qualification Type" />
+                                                            <GInput
+                                                                value={row.qualificationTypeOther}
+                                                                onChange={(v) => updateDegree(row.id, { qualificationTypeOther: v })}
+                                                                placeholder="Enter qualification type"
+                                                            />
+                                                        </div>
+                                                    )}
                                                     <div className="flex gap-2">
                                                         <div className="w-32">
                                                             <FieldLabel label="From" />
-                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearFrom} onChange={(v) => updateDegree(row.id, { yearFrom: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                         <div className="w-32">
                                                             <FieldLabel label="To" />
-                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter', row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
+                                                            <GInput value={row.yearTo} onChange={(v) => updateDegree(row.id, { yearTo: v })} placeholder="YYYY" maxLength={4} />
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
-                                        {(degreeTiming === 'before' ? form.degreesBefore.length : form.degreesAfter.length) < 6 && (
-                                            <div className="px-4 pb-4"><AddRowButton onClick={() => addDegree(degreeTiming === 'before' ? 'degreesBefore' : 'degreesAfter')}>Add Qualification</AddRowButton></div>
+                                        {form.degrees.length < 12 && (
+                                            <div className="px-4 pb-4"><AddRowButton onClick={addDegree}>Add Qualification</AddRowButton></div>
                                         )}
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={saveEducation}
+                                    saving={sectionSaving === 'Education'}
+                                />
                             </div>}
 
-                            {/* ─── SECTION 5: Course Details ──────────────────────────── */}
-                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-indigo-200 bg-indigo-50/70">
+                            {/* ─── SECTION 5: Courses Before SOCO ──────────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-amber-200 bg-amber-50/70">
                                 <SectionHeader
                                     sectionNo={5}
-                                    title="COURSE DETAILS"
+                                    title="DETAILS OF COURSES (BEFORE JOINED THE SOCO PROJECT)"
                                 />
-                                <p className="text-sm text-indigo-900/80 mb-4">
-                                    Record departmental and external training completed.
+                                <p className="text-sm text-amber-900/80 mb-4">
+                                    Capture departmental and external training completed before joining the SOCO project.
                                 </p>
 
-                                <div className="flex flex-wrap gap-6 mb-5">
-                                    <div>
-                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timing</p>
-                                        <div className="flex gap-3">
-                                            {(['before', 'after'] as const).map((val) => {
-                                                const label = val === 'before' ? 'Before Joining SOCO' : 'After Joining SOCO';
-                                                const isSelected = courseTiming === val;
-                                                return (
-                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
-                                                        isSelected
-                                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-medium'
-                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
-                                                    }`}>
-                                                        <input
-                                                            type="radio"
-                                                            name="course-timing"
-                                                            value={val}
-                                                            checked={isSelected}
-                                                            onChange={() => setCourseTiming(val)}
-                                                            className="accent-indigo-600"
-                                                        />
-                                                        {label}
-                                                    </label>
-                                                );
-                                            })}
+                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
+                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Local</h4>
+                                            <p className="text-xs text-amber-700">Department & Others</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.localBeforeCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-amber-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { conNo: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { policeStation: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { branch: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('localBeforeCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.localBeforeCourses.length > 1 ? (
+                                                                    <RemoveRowButton onClick={() => removeBeforeCourse('localBeforeCourses', row.id)} />
+                                                                ) : null}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addBeforeCourse('localBeforeCourses')}>Add row</AddRowButton>
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Location</p>
-                                        <div className="flex gap-3">
-                                            {(['local', 'foreign'] as const).map((val) => {
-                                                const isSelected = courseLocation === val;
-                                                return (
-                                                    <label key={val} className={`min-h-10 flex items-center gap-1.5 cursor-pointer text-sm px-3 py-2 rounded-lg border transition-colors ${
-                                                        isSelected
-                                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-800 font-medium'
-                                                            : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
-                                                    }`}>
-                                                        <input
-                                                            type="radio"
-                                                            name="course-location"
-                                                            value={val}
-                                                            checked={isSelected}
-                                                            onChange={() => setCourseLocation(val)}
-                                                            className="accent-indigo-600"
-                                                        />
-                                                        {val.charAt(0).toUpperCase() + val.slice(1)}
-                                                    </label>
-                                                );
-                                            })}
+                                    <div className="rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/60">
+                                            <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Foreign</h4>
+                                            <p className="text-xs text-amber-700">Department & Others</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.foreignBeforeCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-amber-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { conNo: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { policeStation: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { branch: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateBeforeCourse('foreignBeforeCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.foreignBeforeCourses.length > 1 ? (
+                                                                    <RemoveRowButton onClick={() => removeBeforeCourse('foreignBeforeCourses', row.id)} />
+                                                                ) : null}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addBeforeCourse('foreignBeforeCourses')}>Add row</AddRowButton>
                                         </div>
                                     </div>
                                 </div>
 
-                                {(() => {
-                                    const isBefore = courseTiming === 'before';
-                                    const isLocal = courseLocation === 'local';
-                                    const dataKey = isBefore
-                                        ? isLocal ? 'localBeforeCourses' : 'foreignBeforeCourses'
-                                        : isLocal ? 'localAfterCourses' : 'foreignAfterCourses';
-                                    const rows = form[dataKey];
-                                    const updateRow: (...args: any[]) => void = isBefore ? updateBeforeCourse : updateAfterCourse;
-                                    const addRow: (...args: any[]) => void = isBefore ? addBeforeCourse : addAfterCourse;
-                                    const removeRow: (...args: any[]) => void = isBefore ? removeBeforeCourse : removeAfterCourse;
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveCourses('Courses Before SOCO', 1)}
+                                    saving={sectionSaving === 'Courses Before SOCO'}
+                                />
+                            </div>}
 
-                                    return (
-                                        <div className="rounded-xl border border-indigo-100 bg-white shadow-sm overflow-hidden">
-                                            <div className="px-4 py-3 border-b border-indigo-100 bg-indigo-50/60">
-                                                <h4 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">
-                                                    {isLocal ? 'Local' : 'Foreign'}
-                                                </h4>
-                                                <p className="text-xs text-indigo-700">Department & Others</p>
-                                            </div>
-                                            <div className="overflow-x-auto">
-                                                {isBefore ? (
-                                                    <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
-                                                        <thead>
-                                                            <tr className="bg-gray-50 border-b border-gray-200">
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Con. No.</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Police Station</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Branch</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{isLocal ? 'Institute' : 'Country & Institute'}</th>
-                                                                <th className="px-2 py-2 text-right w-px whitespace-nowrap">
-                                                                    <span className="sr-only">Actions</span>
-                                                                </th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {rows.map((row: any) => (
-                                                                <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-indigo-50/20 last:border-0">
-                                                                    <td className="px-2 py-1.5"><GInput value={row.conNo} onChange={(v) => updateRow(dataKey, row.id, { conNo: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><GInput value={row.policeStation} onChange={(v) => updateRow(dataKey, row.id, { policeStation: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><GInput value={row.branch} onChange={(v) => updateRow(dataKey, row.id, { branch: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateRow(dataKey, row.id, { from: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateRow(dataKey, row.id, { to: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateRow(dataKey, row.id, { institute: v })} /></td>
-                                                                    <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
-                                                                        {rows.length > 1 ? (
-                                                                            <RemoveRowButton onClick={() => removeRow(dataKey, row.id)} />
-                                                                        ) : null}
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                ) : (
-                                                    <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
-                                                        <thead>
-                                                            <tr className="bg-gray-50 border-b border-gray-200">
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
-                                                                <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{isLocal ? 'Department or Institute' : 'Country & Institute'}</th>
-                                                                <th className="px-2 py-2 text-right w-px whitespace-nowrap">
-                                                                    <span className="sr-only">Actions</span>
-                                                                </th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {rows.map((row: any) => (
-                                                                <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-indigo-50/20 last:border-0">
-                                                                    <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateRow(dataKey, row.id, { courseName: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateRow(dataKey, row.id, { from: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateRow(dataKey, row.id, { to: v })} /></td>
-                                                                    <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateRow(dataKey, row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
-                                                                    <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateRow(dataKey, row.id, { institute: v })} /></td>
-                                                                    <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
-                                                                        {rows.length > 1 ? (
-                                                                            <RemoveRowButton onClick={() => removeRow(dataKey, row.id)} />
-                                                                        ) : null}
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                )}
-                                            </div>
-                                            <div className="px-4 pb-3">
-                                                <AddRowButton onClick={() => addRow(dataKey)}>Add row</AddRowButton>
-                                            </div>
+                            {/* ─── SECTION 6: Courses After SOCO ───────────────────────────── */}
+                            {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-cyan-200 bg-cyan-50/70">
+                                <SectionHeader
+                                    sectionNo={6}
+                                    title="DETAILS OF COURSE (AFTER JOINED THE SOCO PROJECT)"
+                                />
+                                <p className="text-sm text-cyan-900/80 mb-4">
+                                    Record advanced courses and certifications completed after joining the SOCO project.
+                                </p>
+
+                                <div className="grid grid-cols-1 gap-5">
+                                    <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-cyan-100 bg-cyan-50/60">
+                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Local</h4>
+                                            <p className="text-xs text-cyan-700">Department & Others</p>
                                         </div>
-                                    );
-                                })()}
+                                        <div className="overflow-x-auto">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department or Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.localAfterCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-cyan-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { courseName: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('localAfterCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.localAfterCourses.length > 1 ? (
+                                                                    <RemoveRowButton onClick={() => removeAfterCourse('localAfterCourses', row.id)} />
+                                                                ) : null}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addAfterCourse('localAfterCourses')}>Add row</AddRowButton>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-cyan-100 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-cyan-100 bg-cyan-50/60">
+                                            <h4 className="text-sm font-bold text-cyan-900 uppercase tracking-wide">Foreign</h4>
+                                            <p className="text-xs text-cyan-700">Department & Others</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="data-grid-table data-grid-table--compact min-w-[760px] w-full text-sm text-gray-900">
+                                                <thead>
+                                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">From</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">To</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
+                                                        <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Country & Institute</th>
+                                                        <th className="px-2 py-2 text-right w-px whitespace-nowrap">
+                                                            <span className="sr-only">Actions</span>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {form.foreignAfterCourses.map((row) => (
+                                                        <tr key={row.id} className="border-b border-gray-100 odd:bg-white even:bg-cyan-50/20 last:border-0">
+                                                            <td className="px-2 py-1.5"><GInput value={row.courseName} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { courseName: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.from} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { from: v })} /></td>
+                                                            <td className="px-2 py-1.5"><DatePicker value={row.to} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { to: v })} /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.time} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { time: v })} placeholder="e.g. 3 Months" /></td>
+                                                            <td className="px-2 py-1.5"><GInput value={row.institute} onChange={(v) => updateAfterCourse('foreignAfterCourses', row.id, { institute: v })} /></td>
+                                                            <td className="px-2 py-1.5 align-middle text-right whitespace-nowrap w-px">
+                                                                {form.foreignAfterCourses.length > 1 ? (
+                                                                    <RemoveRowButton onClick={() => removeAfterCourse('foreignAfterCourses', row.id)} />
+                                                                ) : null}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="px-4 pb-3">
+                                            <AddRowButton onClick={() => addAfterCourse('foreignAfterCourses')}>Add row</AddRowButton>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={() => saveCourses('Courses After SOCO', 2)}
+                                    saving={sectionSaving === 'Courses After SOCO'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 7: Driving License ──────────────────────────────── */}
@@ -1722,6 +2694,12 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={saveDrivingLicense}
+                                    saving={sectionSaving === 'Driving License'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 8: Transfer ─────────────────────────────────────── */}
@@ -1850,6 +2828,12 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={saveTransfers}
+                                    saving={sectionSaving === 'Transfer'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 9: Special Duty ─────────────────────────────────── */}
@@ -1978,6 +2962,12 @@ export default function AddOfficerPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={saveSpecialDuty}
+                                    saving={sectionSaving === 'Special Duty'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 10: Disciplinary Inquiries ──────────────────────── */}
@@ -2036,12 +3026,18 @@ export default function AddOfficerPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={saveDisciplinaryInquiries}
+                                    saving={sectionSaving === 'Disciplinary Inquiries'}
+                                />
                             </div>}
 
                             {/* ─── SECTION 11: Special Illnesses & Notes ───────────────────── */}
                             {isEditing && <div className="p-5 sm:p-6 rounded-2xl border border-sky-200 bg-sky-50/70">
                                 <SectionHeader
-                                    sectionNo={11}
+                                    sectionNo={10}
                                     title="Special Illnesses & Special Notes"
                                     titleSi="විශේෂ රෝග හා විශේෂ සටහන්"
                                 />
@@ -2076,12 +3072,18 @@ export default function AddOfficerPage() {
                                         />
                                     </div>
                                 </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={saveSpecialIllnessesNotes}
+                                    saving={sectionSaving === 'Special Illnesses & Notes'}
+                                />
                             </div>}
 
                             </div>
 
                             {/* ─── Action Bar ──────────────────────────────────────────────── */}
-                            <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
+                            {!isEditing && <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
                                 <div />
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -2110,7 +3112,7 @@ export default function AddOfficerPage() {
                                     </Button>
                                 </div>
                                 <div />
-                            </div>
+                            </div> }
 
                         </form>
         </PageLayout>

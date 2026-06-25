@@ -6,17 +6,15 @@ import Link from 'next/link';
 import { publicAssetSrc } from '@/lib/publicAsset';
 import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { usePathname, useRouter } from 'next/navigation';
-import { authService } from '@/lib/api';
+import { authService, userService } from '@/lib/api';
 import { getUsername } from '@/lib/api/authStorage';
 import { getErrorMessage, showErrorAlert } from '@/lib/alerts';
 import {
   Home,
   FileText,
-  User,
   LogOut,
   ChevronDown,
   Menu,
-  UserCog,
   LayoutDashboard,
   Users,
   AlertTriangle,
@@ -44,6 +42,8 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
   const router = useRouter();
   const [storedUserName, setStoredUserName] = useState(userNameProp ?? 'User');
   const userName = userNameProp ?? storedUserName;
+  const [userInfo, setUserInfo] = useState<{ callingName: string; designationName: string } | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -97,6 +97,19 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
     if (username) setStoredUserName(username);
   }, []);
 
+  useEffect(() => {
+    const username = getUsername();
+    if (!username) return;
+    let cancelled = false;
+    userService.getCurrentUserInfo().then((info) => {
+      if (!cancelled) setUserInfo(info);
+    }).catch(() => {});
+    userService.getProfileImage(username).then((dataUrl) => {
+      if (!cancelled && dataUrl) setProfileImage(dataUrl);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   async function handleLogoutConfirm() {
     setIsLoggingOut(true);
     const username = getUsername() ?? '';
@@ -122,47 +135,28 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
         <div
           ref={dropdownRef}
           data-scroll-lock-exempt
-          className={`${isDark ? 'dropdown-blur-dark' : 'dropdown-blur'} fixed w-52 rounded-xl border py-1.5 z-[99999] animate-fade-in ${
+          className={`${isDark ? 'dropdown-blur-dark' : 'dropdown-blur'} fixed w-64 rounded-xl border py-1.5 z-[99999] animate-fade-in ${
             isDark ? 'border-gray-600/50' : 'border-white/50'
           }`}
           style={{ top: dropdownPos.top, right: dropdownPos.right }}
         >
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-              {userName.charAt(0).toUpperCase()}
-            </div>
+            <div className="flex items-center gap-3 px-4 py-3">
+              {profileImage ? (
+                <img src={profileImage} alt={userInfo?.callingName || userName} className="w-9 h-9 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
+                  {(userInfo?.callingName || userName).charAt(0).toUpperCase()}
+                </div>
+              )}
             <div className="min-w-0">
-              <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userName}</p>
-              <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>SOCO Officer</p>
+              <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userInfo?.callingName || userName}</p>
+              <p className={`text-[11px] truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{userInfo?.designationName || 'SOCO Officer'}</p>
             </div>
           </div>
 
           <div className={`h-px mx-2 mb-1 ${isDark ? 'bg-gray-600/40' : 'bg-gray-200/60'}`} />
 
-          <Link
-            href="/profile"
-            className={`flex items-center gap-2.5 px-3 py-2.5 mx-1.5 text-sm transition-colors duration-150 rounded-lg ${
-              isDark
-                ? 'text-gray-300 hover:bg-white/10 hover:text-white'
-                : 'text-gray-700 hover:bg-blue-100 hover:text-blue-800'
-            }`}
-            onClick={() => setUserMenuOpen(false)}
-          >
-            <User className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-            Profile
-          </Link>
-          <Link
-            href="/settings"
-            className={`flex items-center gap-2.5 px-3 py-2.5 mx-1.5 text-sm transition-colors duration-150 rounded-lg ${
-              isDark
-                ? 'text-gray-300 hover:bg-white/10 hover:text-white'
-                : 'text-gray-700 hover:bg-blue-100 hover:text-blue-800'
-            }`}
-            onClick={() => setUserMenuOpen(false)}
-          >
-            <UserCog className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-            Settings
-          </Link>
+          {/* Profile & Settings removed */}
 
           <div className={`h-px mx-2 my-1 ${isDark ? 'bg-gray-600/40' : 'bg-gray-200/60'}`} />
 
@@ -269,16 +263,20 @@ export default function Header({ userName: userNameProp, homeTheme, onToggleHome
                 }`}
               >
                 <div className="hidden sm:flex flex-col items-end min-w-0">
-                  <span className={`text-sm font-semibold leading-tight truncate max-w-[100px] transition-colors duration-300 ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
-                    {userName}
+                  <span className={`text-sm font-semibold leading-tight truncate max-w-[140px] transition-colors duration-300 ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
+                    {userInfo?.callingName || userName}
                   </span>
-                  <span className={`text-[10px] leading-tight transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                    Officer
+                  <span className={`text-[10px] leading-tight truncate max-w-[140px] transition-colors duration-300 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                    {userInfo?.designationName || 'Officer'}
                   </span>
                 </div>
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
+                {profileImage ? (
+                  <img src={profileImage} alt={userName} className="w-8 h-8 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${isDark ? 'text-gray-400' : 'text-gray-400'} ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 

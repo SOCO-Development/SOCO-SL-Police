@@ -1,5 +1,5 @@
 import { apiRequest } from './client';
-import type { UserRank, CurrentUserInfo } from './types';
+import type { UserRank, UserDesignation, CurrentUserInfo } from './types';
 
 /**
  * Fetch all user ranks from the system (SOCO_UC1)
@@ -15,9 +15,58 @@ export async function getUserRanks(): Promise<UserRank[]> {
 }
 
 /**
+ * Fetch all user designations from the system (SOCO_UC2)
+ * Returns array of designation IDs and names
+ */
+export async function getAllDesignations(): Promise<UserDesignation[]> {
+  try {
+    return await apiRequest<UserDesignation[]>('User/GetAllDesignations');
+  } catch {
+    // Return standard fallback designations if the API fails
+    return [
+      { USER_DESIGNATION_ID: '1', USER_DESIGNATION_NAME: 'OIC' },
+      { USER_DESIGNATION_ID: '5', USER_DESIGNATION_NAME: 'Acting OIC' },
+      { USER_DESIGNATION_ID: '6', USER_DESIGNATION_NAME: 'Soco Officer' },
+      { USER_DESIGNATION_ID: '7', USER_DESIGNATION_NAME: 'Soco Admin' },
+      { USER_DESIGNATION_ID: '8', USER_DESIGNATION_NAME: 'System Admin' },
+    ];
+  }
+}
+
+/**
  * Get current logged-in user info (SOCO_U3)
  * Returns calling name, designation name, and profile image URL
  */
 export async function getCurrentUserInfo(): Promise<CurrentUserInfo> {
   return apiRequest<CurrentUserInfo>('User/GetCurrentUserInfo');
+}
+
+/**
+ * Fetch profile image for a given registration number (File/GetProfileImage)
+ * Returns a data URL (e.g. data:image/png;base64,...) or null if no image.
+ */
+export async function getProfileImage(regiNo: string): Promise<string | null> {
+  try {
+    const token = (await import('./authStorage')).getAccessToken();
+    const base = (await import('./config')).API_BASE_URL;
+    const url = `${base.replace(/\/+$/, '')}/File/GetProfileImage?userRegiNo=${encodeURIComponent(regiNo)}`;
+
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    if (!blob.type.startsWith('image/')) return null;
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }

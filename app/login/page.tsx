@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { publicAssetSrc } from "@/lib/publicAsset";
 import FormInput from "@/components/forms/FormInput";
 import { Button } from "@/components/ui";
-import { Lock, Shield, User, CheckCircle } from "lucide-react";
+import { Lock, Shield, User, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { authService } from "@/lib/api";
 import { clearAuthSession, isAuthenticated as hasValidSession } from "@/lib/api/authStorage";
 import { getErrorMessage, showErrorAlert } from "@/lib/alerts";
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Clear expired sessions on mount, but don't auto-redirect
   // Let user explicitly log in or navigate to protected routes
@@ -239,13 +240,21 @@ export default function LoginPage() {
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <FormInput
                         label=""
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter your password"
                         required
-                        className="font-noto pl-10"
+                        className="font-noto pl-10 pr-10"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
                     </div>
                   </div>
 
