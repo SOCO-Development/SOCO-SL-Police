@@ -126,9 +126,10 @@ export async function apiRequest<T>(
     clearAuthSession();
     if (typeof window !== 'undefined') {
       window.alert('Your session has expired. Please log in again.');
-      window.location.href = '/login';
+      window.location.replace('/login');
     }
-    throw new ApiError('Session expired. Please log in again.', 401, json);
+    // Return a never-settling promise to prevent further execution after redirect.
+    return new Promise<T>(() => {});
   }
 
   if (!res.ok || !json.isSuccess) {
