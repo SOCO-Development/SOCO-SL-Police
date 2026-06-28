@@ -1,27 +1,20 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState, useEffect } from 'react';
 import FormInput from '@/components/forms/FormInput';
 import CustomSelect from '@/components/forms/CustomSelect';
 import VehicleList from './VehicleList';
 import type { VehicleRecord } from './types';
 import { PageHeader, PageLayout, Button, TabBar } from '@/components/ui';
 import { Plus } from 'lucide-react';
+import { crimeService, locationService } from '@/lib/api';
+import { getErrorMessage, showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 
 type FilterTab = 'ALL' | 'ADD';
 
 const tabs: { label: string; value: FilterTab }[] = [
     { label: 'All', value: 'ALL' },
     { label: 'Add New', value: 'ADD' },
-];
-
-const locationOptions = [
-    { value: '', label: 'Select Location' },
-    { value: 'colombo-south', label: 'Colombo South' },
-    { value: 'colombo-north', label: 'Colombo North' },
-    { value: 'kandy', label: 'Kandy' },
-    { value: 'galle', label: 'Galle' },
-    { value: 'kurunegala', label: 'Kurunegala' },
 ];
 
 const driverOptions = [
@@ -32,35 +25,7 @@ const driverOptions = [
     { value: 'kasun-silva', label: 'Kasun Silva' },
 ];
 
-const initialVehicles: VehicleRecord[] = [
-    {
-        id: 'VH-001',
-        vehicleNumber: 'CAB-4587',
-        model: 'Hilux',
-        make: 'Toyota',
-        year: '2021',
-        assignedLocation: 'Colombo South',
-        assignedDriver: 'Dinesh Perera',
-    },
-    {
-        id: 'VH-002',
-        vehicleNumber: 'CAA-1023',
-        model: 'Navara',
-        make: 'Nissan',
-        year: '2020',
-        assignedLocation: 'Kandy',
-        assignedDriver: '',
-    },
-    {
-        id: 'VH-003',
-        vehicleNumber: 'KA-7789',
-        model: 'L200',
-        make: 'Mitsubishi',
-        year: '2022',
-        assignedLocation: 'Galle',
-        assignedDriver: 'Kasun Silva',
-    },
-];
+const initialVehicles: VehicleRecord[] = [];
 
 export default function VehicleConfigPage() {
     const [filter, setFilter] = useState<FilterTab>('ALL');
@@ -68,15 +33,50 @@ export default function VehicleConfigPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortKey, setSortKey] = useState<keyof VehicleRecord | string | null>('vehicleNumber');
     const [sortAsc, setSortAsc] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+    const [locationOptions, setLocationOptions] = useState<Array<{ value: string; label: string }>>([
+        { value: '', label: 'Select Location' },
+    ]);
 
     const [vehicleNumber, setVehicleNumber] = useState('');
     const [model, setModel] = useState('');
     const [make, setMake] = useState('');
     const [year, setYear] = useState('');
+    const [color, setColor] = useState('');
+    const [type, setType] = useState('');
+    const [chassisNo, setChassisNo] = useState('');
+    const [engineNo, setEngineNo] = useState('');
+    const [fuelType, setFuelType] = useState('');
     const [assignedLocation, setAssignedLocation] = useState('');
     const [assignedDriver, setAssignedDriver] = useState('');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+    // Load locations from API when component mounts
+    useEffect(() => {
+        const loadLocations = async () => {
+            setIsLoadingLocations(true);
+            try {
+                const locations = await locationService.getAllLocations();
+                const options = [
+                    { value: '', label: 'Select Location' },
+                    ...locations.map((loc) => ({
+                        value: loc.LOCATION_ID,
+                        label: loc.LOCATION_NAME,
+                    })),
+                ];
+                setLocationOptions(options);
+            } catch (err) {
+                console.error('Failed to load locations:', err);
+                showErrorAlert('Error', 'Failed to load locations from server');
+            } finally {
+                setIsLoadingLocations(false);
+            }
+        };
+
+        loadLocations();
+    }, []);
 
     const filteredVehicles = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
@@ -118,11 +118,16 @@ export default function VehicleConfigPage() {
         setModel('');
         setMake('');
         setYear('');
+        setColor('');
+        setType('');
+        setChassisNo('');
+        setEngineNo('');
+        setFuelType('');
         setAssignedLocation('');
         setAssignedDriver('');
     };
 
-    const onSubmitVehicle = (event: FormEvent<HTMLFormElement>) => {
+    const onSubmitVehicle = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError('');
         setSuccessMessage('');
@@ -141,25 +146,61 @@ export default function VehicleConfigPage() {
             return;
         }
 
-        const selectedLocationLabel =
-            locationOptions.find((option) => option.value === assignedLocation)?.label ?? assignedLocation;
-        const selectedDriverLabel =
-            driverOptions.find((option) => option.value === assignedDriver)?.label ?? '';
+        setIsLoading(true);
 
-        const newVehicle: VehicleRecord = {
-            id: `VH-${String(vehicles.length + 1).padStart(3, '0')}`,
-            vehicleNumber: vehicleNumber.trim().toUpperCase(),
-            model: model.trim(),
-            make: make.trim(),
-            year: year.trim(),
-            assignedLocation: selectedLocationLabel,
-            assignedDriver: selectedDriverLabel,
-        };
+        try {
+            // Get locationId from the selected location value
+            const locationId = parseInt(assignedLocation) || 0;
 
-        setVehicles((prev) => [newVehicle, ...prev]);
-        setSuccessMessage('Vehicle has been added successfully.');
-        resetForm();
-        setFilter('ALL');
+            // Call Crime/AddVehicle API
+            const response = await crimeService.addVehicle({
+                locationId: locationId,
+                vehicleRegistrationNo: vehicleNumber.trim().toUpperCase(),
+                vehicleBrand: make.trim(),
+                vehicleModel: model.trim(),
+                vehicleColor: color.trim(),
+                vehicleType: type.trim(),
+                vehicleYear: parseInt(year) || 0,
+                chassisNo: chassisNo.trim(),
+                engineNo: engineNo.trim(),
+                fuelType: fuelType.trim(),
+            });
+
+            // Add the new vehicle to the local list
+            const selectedLocationLabel =
+                locationOptions.find((option) => option.value === assignedLocation)?.label ?? assignedLocation;
+            const selectedDriverLabel =
+                driverOptions.find((option) => option.value === assignedDriver)?.label ?? '';
+
+            const newVehicle: VehicleRecord = {
+                id: response.vehicleId || `VH-${String(vehicles.length + 1).padStart(3, '0')}`,
+                vehicleNumber: vehicleNumber.trim().toUpperCase(),
+                model: model.trim(),
+                make: make.trim(),
+                year: year.trim(),
+                color: color.trim(),
+                type: type.trim(),
+                chassisNo: chassisNo.trim(),
+                engineNo: engineNo.trim(),
+                fuelType: fuelType.trim(),
+                assignedLocation: selectedLocationLabel,
+                assignedDriver: selectedDriverLabel,
+            };
+
+            setVehicles((prev) => [newVehicle, ...prev]);
+            
+            const message = response.message || 'Vehicle has been added successfully.';
+            setSuccessMessage(message);
+            showSuccessAlert('Success', message);
+            resetForm();
+            setFilter('ALL');
+        } catch (err) {
+            const message = getErrorMessage(err, 'Failed to add vehicle. Please try again.');
+            setError(message);
+            showErrorAlert('Error', message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -243,6 +284,7 @@ export default function VehicleConfigPage() {
                                                     options={locationOptions}
                                                     value={assignedLocation}
                                                     onChange={setAssignedLocation}
+                                                    disabled={isLoadingLocations}
                                                 />
                                                 <CustomSelect
                                                     label="Assigned Driver (if any)"
@@ -269,8 +311,8 @@ export default function VehicleConfigPage() {
                                         <Button variant="secondary" type="button" onClick={resetForm}>
                                             Reset
                                         </Button>
-                                        <Button variant="success" type="submit">
-                                            Save Vehicle
+                                        <Button variant="success" type="submit" disabled={isLoading}>
+                                            {isLoading ? 'Saving...' : 'Save Vehicle'}
                                         </Button>
                                     </div>
                                 </form>
