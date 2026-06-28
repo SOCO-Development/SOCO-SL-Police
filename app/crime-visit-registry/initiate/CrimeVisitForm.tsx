@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type {
   SectionA,
   SectionB,
@@ -17,7 +17,7 @@ import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
-import { getLocationRegistry } from "@/lib/api/locationService";
+import { locationService, userService } from "@/lib/api";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -55,23 +55,9 @@ const SUPPORT_ROLE_OPTIONS: { value: SupportRole; label: string }[] = [
 ];
 */
 
-const FALLBACK_STATIONS = [
-  { value: "Colombo Fort Police Station", label: "Colombo Fort Police Station", division: "Colombo Division" },
-  { value: "Borella Police Station", label: "Borella Police Station", division: "Colombo Division" },
-  { value: "Kandy Police Station", label: "Kandy Police Station", division: "Kandy Division" },
-  { value: "Galle Police Station", label: "Galle Police Station", division: "Galle Division" },
-  { value: "Kurunegala Police Station", label: "Kurunegala Police Station", division: "Kurunegala Division" },
-  { value: "Jaffna Police Station", label: "Jaffna Police Station", division: "Jaffna Division" },
-];
+const FALLBACK_STATIONS: { value: string; label: string }[] = [];
 
-const FALLBACK_DIVISIONS = [
-  { value: "Colombo Division", label: "Colombo Division" },
-  { value: "Kandy Division", label: "Kandy Division" },
-  { value: "Gampaha Division", label: "Gampaha Division" },
-  { value: "Kalutara Division", label: "Kalutara Division" },
-  { value: "Galle Division", label: "Galle Division" },
-  { value: "Kurunegala Division", label: "Kurunegala Division" },
-];
+const FALLBACK_SOCO_LABS: { value: string; label: string }[] = [];
 
 const OFFENCE_OPTIONS = [
   "මනුෂ්‍ය ඝාතනය",
@@ -563,41 +549,44 @@ export default function CrimeVisitForm({
   const [formData, setFormData] = useState<CrimeVisitFormData>(
     initialData ?? defaultFormData(),
   );
-  const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
-  const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
+  const [socoLabs, setSocoLabs] = useState<{ value: string; label: string }[]>(FALLBACK_SOCO_LABS);
+  const [stations, setStations] = useState<{ value: string; label: string }[]>(FALLBACK_STATIONS);
+  const [stationsLoading, setStationsLoading] = useState(false);
 
   useEffect(() => {
-    getLocationRegistry().then(({ locations }) => {
-      if (!locations || locations.length === 0) return;
-      const uniqueDivisionsMap = new Map<string, string>();
-      locations.forEach(loc => {
-        if (loc.division) {
-          uniqueDivisionsMap.set(loc.division, loc.division);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [userInfo, locations] = await Promise.all([
+          userService.getCurrentUserInfo(),
+          locationService.getAllLocations(),
+        ]);
+        if (cancelled) return;
+
+        const userLocId = userInfo.locationId;
+        const matchingLab = locations.find(l => l.LOCATION_ID === userLocId);
+        if (matchingLab) {
+          setSocoLabs([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
+          setFormData((f) => ({
+            ...f,
+            sectionA: { ...f.sectionA, requestDivision: matchingLab.LOCATION_NAME },
+          }));
+          setStationsLoading(true);
+          try {
+            const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
+            if (!cancelled) {
+              setStations(ps.map(s => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
+            }
+          } finally {
+            if (!cancelled) setStationsLoading(false);
+          }
         }
-      });
-      const divisionOpts = Array.from(uniqueDivisionsMap.keys()).map(name => ({
-        value: name,
-        label: name,
-      })).sort((a, b) => a.label.localeCompare(b.label));
-
-      const stationOpts = locations.map(loc => ({
-        value: loc.name,
-        label: loc.name,
-        division: loc.division,
-      })).sort((a, b) => a.label.localeCompare(b.label));
-
-      setDivisions(divisionOpts);
-      setStations(stationOpts);
-    }).catch(err => {
-      console.error("Failed to load locations for form dropdowns", err);
-    });
+      } catch (err) {
+        console.error("Failed to load SOCO lab / user info", err);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
-
-  const filteredStationOptions = useMemo(() => {
-    const selectedDiv = formData.sectionA?.requestDivision;
-    if (!selectedDiv) return stations;
-    return stations.filter(s => s.division === selectedDiv);
-  }, [stations, formData.sectionA?.requestDivision]);
 
   const [offenceTypeOther, setOffenceTypeOther] = useState<string>(() => {
     const defaults = initialData ?? defaultFormData();
@@ -693,20 +682,12 @@ export default function CrimeVisitForm({
                   <CustomSelect
                     value={sA.requestDivision ?? ""}
                     onChange={(val) =>
-                      setFormData((f) => {
-                        const currentStation = f.sectionA?.requestFromStation;
-                        const matches = stations.find(s => s.value === currentStation && s.division === val);
-                        return {
-                          ...f,
-                          sectionA: {
-                            ...f.sectionA,
-                            requestDivision: val,
-                            requestFromStation: matches ? currentStation : "",
-                          },
-                        };
-                      })
+                      setFormData((f) => ({
+                        ...f,
+                        sectionA: { ...f.sectionA, requestDivision: val },
+                      }))
                     }
-                    options={divisions}
+                    options={socoLabs}
                     placeholder="Select SOCO lab"
                   />
                 )}
@@ -721,23 +702,13 @@ export default function CrimeVisitForm({
                   <CustomSelect
                     value={sA.requestFromStation ?? ""}
                     onChange={(val) =>
-                      setFormData((f) => {
-                        const matchingStation = stations.find(s => s.value === val);
-                        const newDivision = matchingStation && matchingStation.division
-                          ? matchingStation.division
-                          : f.sectionA?.requestDivision;
-                        return {
-                          ...f,
-                          sectionA: {
-                            ...f.sectionA,
-                            requestFromStation: val,
-                            requestDivision: newDivision,
-                          },
-                        };
-                      })
+                      setFormData((f) => ({
+                        ...f,
+                        sectionA: { ...f.sectionA, requestFromStation: val },
+                      }))
                     }
-                    options={filteredStationOptions}
-                    placeholder="Select police station"
+                    options={stations}
+                    placeholder={stationsLoading ? "Loading stations..." : "Select police station"}
                   />
                 )}
               </FieldGroup>

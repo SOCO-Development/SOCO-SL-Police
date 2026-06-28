@@ -60,7 +60,7 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
           Request Details
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <DisplayField label="Division" value={readValue(sectionA?.requestDivision)} />
+          <DisplayField label="SOCO Lab" value={readValue(sectionA?.requestDivision)} />
           <DisplayField label="Police station" value={readValue(sectionA?.requestFromStation)} />
           <DisplayField
             label="Offence Type"

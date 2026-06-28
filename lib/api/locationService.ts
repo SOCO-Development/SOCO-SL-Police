@@ -7,6 +7,7 @@ import type {
   UpdateDivisionRequest,
   InsertNewSocoLabRequest,
   InsertNewSocoLabResponse,
+  PoliceStation,
 } from './types';
 
 export async function getAllLocations(): Promise<ApiLocation[]> {
@@ -40,6 +41,14 @@ export async function updateDivision(payload: UpdateDivisionRequest): Promise<nu
   return apiRequest<null>('Location/UpdateDivision', {
     method: 'POST',
     body: payload,
+  });
+}
+
+export async function getPoliceStationsBySocoLab(
+  locationId: string,
+): Promise<PoliceStation[]> {
+  return apiRequest<PoliceStation[]>('Location/GetPoliceStationsBySocoLab', {
+    params: { locationId },
   });
 }
 
