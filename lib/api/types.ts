@@ -164,6 +164,15 @@ export interface CurrentUserInfo {
   callingName: string;
   designationName: string;
   userImageUrl: string;
+  locationId: string;
+}
+
+export interface PoliceStation {
+  POLICE_STATION_ID: string;
+  POLICE_STATION_NAME: string;
+  DIVISION_ID: string;
+  PROVINCE_ID: string;
+  LOCATION_ID: string;
 }
 
 // ─── Update Promotions (SOCO_U4) ──────────────────────────────────────
