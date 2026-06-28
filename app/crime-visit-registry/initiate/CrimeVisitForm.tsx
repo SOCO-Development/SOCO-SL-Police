@@ -684,7 +684,7 @@ export default function CrimeVisitForm({
               Request Details
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <FieldGroup label="Division">
+              <FieldGroup label="SOCO Lab">
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sA.requestDivision || "—"}
@@ -707,7 +707,7 @@ export default function CrimeVisitForm({
                       })
                     }
                     options={divisions}
-                    placeholder="Select division"
+                    placeholder="Select SOCO lab"
                   />
                 )}
               </FieldGroup>
