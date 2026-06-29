@@ -48,6 +48,7 @@ export interface SectionB {
 
 export interface SectionC {
   vehicleNo?: string;
+  vehicleId?: string;
   driver?: OfficerInfo;
   examinedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };
   reExaminedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };

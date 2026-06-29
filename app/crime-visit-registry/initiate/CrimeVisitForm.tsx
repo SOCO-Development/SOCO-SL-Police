@@ -17,7 +17,7 @@ import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
-import { locationService, userService } from "@/lib/api";
+import { locationService, userService, crimeService } from "@/lib/api";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -182,6 +182,7 @@ function defaultFormData(): CrimeVisitFormData {
     },
     sectionC: {
       vehicleNo: "",
+      vehicleId: "",
       driver: emptyOfficer(),
       examinedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
       reExaminedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
@@ -552,16 +553,24 @@ export default function CrimeVisitForm({
   const [socoLabs, setSocoLabs] = useState<{ value: string; label: string }[]>(FALLBACK_SOCO_LABS);
   const [stations, setStations] = useState<{ value: string; label: string }[]>(FALLBACK_STATIONS);
   const [stationsLoading, setStationsLoading] = useState(false);
+  const [vehicleOptions, setVehicleOptions] = useState<{ value: string; label: string }[]>([]);
+  const [vehicleMap, setVehicleMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [userInfo, locations] = await Promise.all([
+        const [userInfo, locations, vehicles] = await Promise.all([
           userService.getCurrentUserInfo(),
           locationService.getAllLocations(),
+          crimeService.getAllVehicles(),
         ]);
         if (cancelled) return;
+
+        setVehicleOptions(
+          vehicles.map(v => ({ value: v.VEHICLE_REGISTRATION_NO, label: v.VEHICLE_REGISTRATION_NO })),
+        );
+        setVehicleMap(new Map(vehicles.map(v => [v.VEHICLE_REGISTRATION_NO, v.VEHICLE_ID])));
 
         const userLocId = userInfo.locationId;
         const matchingLab = locations.find(l => l.LOCATION_ID === userLocId);
@@ -895,12 +904,21 @@ export default function CrimeVisitForm({
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
               <FieldGroup label="Vehicle Number">
-                <TextInput
-                  isReadOnly={ro}
-                  value={sC.vehicleNo ?? ""}
-                  onChange={(e) => updateC({ vehicleNo: e.target.value })}
-                  placeholder="e.g. CAB-1234"
-                />
+                {ro ? (
+                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
+                    {sC.vehicleNo || "—"}
+                  </div>
+                ) : (
+                  <CustomSelect
+                    value={sC.vehicleNo ?? ""}
+                    onChange={(val) => {
+                      const vId = vehicleMap.get(val) ?? "";
+                      updateC({ vehicleNo: val, vehicleId: vId });
+                    }}
+                    options={vehicleOptions}
+                    placeholder="Select vehicle"
+                  />
+                )}
               </FieldGroup>
               <FieldGroup label="Driver Name">
                 <TextInput

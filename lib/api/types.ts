@@ -587,6 +587,20 @@ export interface AddVehicleResponse {
   message: string;
 }
 
+export interface VehicleInfo {
+  VEHICLE_ID: string;
+  LOCATION_ID: string;
+  VEHICLE_REGISTRATION_NO: string;
+  VEHICLE_BRAND: string;
+  VEHICLE_MODEL: string;
+  VEHICLE_COLOR: string;
+  VEHICLE_TYPE: string;
+  VEHICLE_YEAR?: string;
+  CHASSIS_NO?: string;
+  ENGINE_NO?: string;
+  FUEL_TYPE?: string;
+}
+
 export interface GetVisitByIdResponse {
   visitId: string;
   visitDate: string;
