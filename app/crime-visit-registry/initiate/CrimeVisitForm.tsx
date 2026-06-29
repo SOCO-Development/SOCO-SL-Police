@@ -17,7 +17,7 @@ import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
-import { locationService, userService, crimeService } from "@/lib/api";
+import { locationService, userService } from "@/lib/api";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -58,6 +58,38 @@ const SUPPORT_ROLE_OPTIONS: { value: SupportRole; label: string }[] = [
 const FALLBACK_STATIONS: { value: string; label: string }[] = [];
 
 const FALLBACK_SOCO_LABS: { value: string; label: string }[] = [];
+
+const OFFENCE_OPTIONS = [
+  "මනුෂ්‍ය ඝාතනය",
+  "මනුෂ්‍ය ඝාතනයට තැත්කිරීම හා සියදිවි නසා ගැනීමට අනුබල දීම",
+  "කැමැත්තෙන්ම තුවාල සිදු කිරීම",
+  "ස්ත්‍රී දූෂණය",
+  "ව්‍යවස්ථාපිත ස්ත්‍රී දූෂණය හා ව්‍යභිචාරය",
+  "ළමයින්ගෙන් අයුතු ලිංගික ප්‍රෙයා්ජන ගැනීම, බරපතල ලිංගික අපයෝජනය සහ අස්වාභාවික වැරදි",
+  "ළමයින් අතහැර යාම, කෘෘරත්වයට භාජනය කිරීම සහ වහල් භාවට ගැනීම",
+  "අපහරණය හා පැහැරගෙන යාම සම්බන්ධ වැරදි",
+  "කුට්ඨනය කිරීම සහ තැනැත්තන් වෙළදාම සිදු කිරීම",
+  "රාජකාරියට බාධා කිරීම",
+  "කොල්ලකෑම",
+  "අයුතු ඇතුල්වීම සහ ගෙවල් බිදිම",
+  "සොරකම් කිරීම",
+  "ගිණි තැබීම් හා අනර්ථය සිදු කිරීම",
+  "බලෙන් ලබා ගැනීම ( මුදලක්, යම් දේපළක් හෝ වටිනා ඇපයක්, වටිනා ඇපයකට හැරවිය හැකි අත්සන් කරනු ලැබු යමක් )",
+  "රු. 700000/- ක් හෝ ඊට වැඩි සාවද්‍ය පරිහරණය, සාපරාධි විශ්වාසය කඩ කිරීම, වංචා කිරීම සහ අනෙකෙකු ලෙස පෙනි සිට වංචා කිරීම",
+  "රාජ්‍ය විරෝධී වැරදි",
+  "නීති විරෝධි රැස්වීම / කැරළි කෝලාහල",
+  "ව්‍යාජ මුදල් පිළිබද අපරාධ",
+  "2007 අංක 24 දරණ පරිගණක අපරාධ පනත",
+  "ගෙවීම් උපක්‍රම වංචා සංයුක්ත වන ක්‍රියා",
+  "2006 අංක 05 දරණ මුදල් විශුද්ධීකරණය වැලැක්වීමේ පනත යටතේ ගැනෙන වැරදි",
+  "පීඩාකාරි ආයුධ පනත",
+  "ස්වයංක්‍රීය, ස්වයංපූරක ගිණි අවි හෝ රිපීටර් තුවක්කු සන්තකය",
+  "2007 අංක 56 දරන සිවිල් හා දේශපාලන අයිතිවාසිකම් පිළිබද ජාත්‍යන්තර සම්මුතිය (ICCPR) පනත",
+  "1984 අංක 13 සහ 2022 අංක 2022 අංක 41 පනත් වලින් සංශෝධිත විෂ වර්ග, අබිං සහ අන්තරාදායක ඖෂධ ආඥා පනත සහ 2008 අංක 01 දරන මාද ඖෂධ සහ මනෝවර්ථක නිතිවිරෝධි ලෙස ජාවාරම් කිරීමට එරෙහි සම්මුති පනත යටතේ වැරදි",
+  "1979 අංක 48 දරන ත්‍රස්තවාදි වැලැක්වීම පනත යටතේ වැරදි",
+  "2025 අංක 05 දරන අපරාධයකින් උත්පාදිත දේ පිළිබද පනත යටතේ සිදු කෙරෙන වැරදි",
+  "1993 අංක 49 දරන පනතින් සංශෝධිත 1937 අංක 02 දරන වන සත්ත්ව හා වෘක්ෂලතා ආඥා පනත ( 2009 අංක 22 සංශෝධනය දක්වා සියළු සංශෝධන ඇතුලත් )",
+].map((value) => ({ value, label: value }));
 
 const OFFENCE_TYPES = [
   { value: "D", label: "D" },
@@ -126,8 +158,6 @@ function defaultFormData(): CrimeVisitFormData {
     sectionA: {
       requestFromStation: "",
       requestDivision: "",
-      locationId: "",
-      policeStationId: "",
       offence: "",
       offenceType: "",
       offenceTypeOther: "",
@@ -152,7 +182,6 @@ function defaultFormData(): CrimeVisitFormData {
     },
     sectionC: {
       vehicleNo: "",
-      vehicleId: "",
       driver: emptyOfficer(),
       examinedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
       reExaminedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
@@ -522,32 +551,17 @@ export default function CrimeVisitForm({
   );
   const [socoLabs, setSocoLabs] = useState<{ value: string; label: string }[]>(FALLBACK_SOCO_LABS);
   const [stations, setStations] = useState<{ value: string; label: string }[]>(FALLBACK_STATIONS);
-  const [stationMap, setStationMap] = useState<Map<string, string>>(new Map());
   const [stationsLoading, setStationsLoading] = useState(false);
-  const [vehicleOptions, setVehicleOptions] = useState<{ value: string; label: string }[]>([]);
-  const [vehicleMap, setVehicleMap] = useState<Map<string, string>>(new Map());
-  const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [userInfo, locations, vehicles, offences] = await Promise.all([
+        const [userInfo, locations] = await Promise.all([
           userService.getCurrentUserInfo(),
           locationService.getAllLocations(),
-          crimeService.getAllVehicles(),
-          crimeService.getAllOffences(),
         ]);
         if (cancelled) return;
-
-        setOffenceOptions(
-          offences.map(o => ({ value: o.OFFENCE_ID, label: o.OFFENCE_NAME })),
-        );
-
-        setVehicleOptions(
-          vehicles.map(v => ({ value: v.VEHICLE_REGISTRATION_NO, label: v.VEHICLE_REGISTRATION_NO })),
-        );
-        setVehicleMap(new Map(vehicles.map(v => [v.VEHICLE_REGISTRATION_NO, v.VEHICLE_ID])));
 
         const userLocId = userInfo.locationId;
         const matchingLab = locations.find(l => l.LOCATION_ID === userLocId);
@@ -555,18 +569,13 @@ export default function CrimeVisitForm({
           setSocoLabs([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
           setFormData((f) => ({
             ...f,
-            sectionA: {
-              ...f.sectionA,
-              requestDivision: matchingLab.LOCATION_NAME,
-              locationId: matchingLab.LOCATION_ID,
-            },
+            sectionA: { ...f.sectionA, requestDivision: matchingLab.LOCATION_NAME },
           }));
           setStationsLoading(true);
           try {
             const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
             if (!cancelled) {
               setStations(ps.map(s => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
-              setStationMap(new Map(ps.map(s => [s.POLICE_STATION_NAME, s.POLICE_STATION_ID])));
             }
           } finally {
             if (!cancelled) setStationsLoading(false);
@@ -695,11 +704,7 @@ export default function CrimeVisitForm({
                     onChange={(val) =>
                       setFormData((f) => ({
                         ...f,
-                        sectionA: {
-                          ...f.sectionA,
-                          requestFromStation: val,
-                          policeStationId: stationMap.get(val) ?? "",
-                        },
+                        sectionA: { ...f.sectionA, requestFromStation: val },
                       }))
                     }
                     options={stations}
@@ -717,7 +722,7 @@ export default function CrimeVisitForm({
                           key={idx}
                           className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-md border border-gray-300"
                         >
-                          {offenceOptions.find(o => o.value === off)?.label || off}
+                          {off}
                         </span>
                       ))
                     ) : (
@@ -742,7 +747,7 @@ export default function CrimeVisitForm({
                         sectionA: { ...f.sectionA, offence: val },
                       }))
                     }
-                    options={offenceOptions}
+                    options={OFFENCE_OPTIONS}
                     placeholder="Select one or more offences"
                   />
                 )}
@@ -762,7 +767,7 @@ export default function CrimeVisitForm({
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
                           <span className="text-xs font-medium text-violet-900 leading-snug">
-                            {offenceOptions.find(o => o.value === off)?.label || off}
+                            {off}
                           </span>
                           {!locked && (
                             <IconButton variant="danger" className="ml-1" aria-label="Remove offence" onClick={() => { const updated = (sA.offence as string[]).filter((_, i) => i !== idx); setFormData((f) => ({ ...f, sectionA: { ...f.sectionA, offence: updated } })); }}>×</IconButton>
@@ -890,21 +895,12 @@ export default function CrimeVisitForm({
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
               <FieldGroup label="Vehicle Number">
-                {ro ? (
-                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
-                    {sC.vehicleNo || "—"}
-                  </div>
-                ) : (
-                  <CustomSelect
-                    value={sC.vehicleNo ?? ""}
-                    onChange={(val) => {
-                      const vId = vehicleMap.get(val) ?? "";
-                      updateC({ vehicleNo: val, vehicleId: vId });
-                    }}
-                    options={vehicleOptions}
-                    placeholder="Select vehicle"
-                  />
-                )}
+                <TextInput
+                  isReadOnly={ro}
+                  value={sC.vehicleNo ?? ""}
+                  onChange={(e) => updateC({ vehicleNo: e.target.value })}
+                  placeholder="e.g. CAB-1234"
+                />
               </FieldGroup>
               <FieldGroup label="Driver Name">
                 <TextInput

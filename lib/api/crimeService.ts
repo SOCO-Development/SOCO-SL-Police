@@ -8,7 +8,6 @@ import type {
   InitiateVisitResponse,
   UpdateVisitInDetailsRequest,
   UpdateVisitInDetailsResponse,
-  VehicleInfo,
   UpdateVehicleRequest,
   ApiVehicle,
 } from './types';
@@ -92,21 +91,5 @@ export async function initiateVisit(
   return apiRequest<InitiateVisitResponse>('Crime/InitiateVisit', {
     method: 'POST',
     body: payload,
-  });
-}
-
-/**
- * Get all vehicles (SOCO_C8)
- */
-export async function getAllVehicles(): Promise<VehicleInfo[]> {
-  return apiRequest<VehicleInfo[]>('Crime/GetAllVehicles');
-}
-
-/**
- * Get vehicle by ID (SOCO_C7)
- */
-export async function getVehicleById(vehicleId: string): Promise<VehicleInfo[]> {
-  return apiRequest<VehicleInfo[]>('Crime/GetVehicleById', {
-    params: { vehicleId },
   });
 }
