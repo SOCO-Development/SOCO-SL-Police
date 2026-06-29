@@ -115,8 +115,20 @@ export default function VehicleConfigPage() {
                     locMap.set(String(loc.LOCATION_ID), loc.LOCATION_NAME);
                 });
 
+                // Fetch full details for each vehicle to obtain the vehicle year (since GetAllVehicles doesn't return it)
+                const detailedVehicles = await Promise.all(
+                    apiVehicles.map(async (v) => {
+                        try {
+                            const details = await crimeService.getVehicleById(Number(v.VEHICLE_ID));
+                            return details[0] || v;
+                        } catch {
+                            return v;
+                        }
+                    })
+                );
+
                 // Map ApiVehicle -> VehicleRecord
-                const mappedVehicles: VehicleRecord[] = apiVehicles.map((v) => ({
+                const mappedVehicles: VehicleRecord[] = detailedVehicles.map((v) => ({
                     id: String(v.VEHICLE_ID),
                     vehicleNumber: v.VEHICLE_REGISTRATION_NO || '',
                     model: v.VEHICLE_MODEL || '',
@@ -128,7 +140,6 @@ export default function VehicleConfigPage() {
                     engineNo: v.ENGINE_NO || '',
                     fuelType: v.FUEL_TYPE || '',
                     assignedLocation: locMap.get(String(v.LOCATION_ID)) || `Lab #${v.LOCATION_ID}`,
-                    assignedDriver: '', // driver information is not in the API response currently
                 }));
 
                 setVehicles(mappedVehicles);
