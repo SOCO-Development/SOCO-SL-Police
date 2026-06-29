@@ -27,7 +27,7 @@ export default function VehicleList({
         () => [
             { key: 'vehicleNumber', label: 'Vehicle No.', sortable: true, className: 'font-mono text-xs text-blue-700 font-semibold' },
             { key: 'model', label: 'Model', sortable: true },
-            { key: 'make', label: 'Make', sortable: true },
+            { key: 'make', label: 'Brand', sortable: true },
             { key: 'year', label: 'Year', sortable: true },
             { key: 'assignedLocation', label: 'Assigned Location', sortable: true },
             {

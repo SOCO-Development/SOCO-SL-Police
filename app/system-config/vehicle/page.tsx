@@ -391,7 +391,7 @@ export default function VehicleConfigPage() {
                                                         className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
                                                     />
                                                     <FormInput
-                                                        label="Make"
+                                                        label="Brand"
                                                         placeholder="e.g. Toyota"
                                                         value={make}
                                                         onChange={(e) => setMake(e.target.value)}
