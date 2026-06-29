@@ -6,4 +6,9 @@ export type VehicleRecord = {
     year: string;
     assignedLocation: string;
     assignedDriver: string;
+    color?: string;
+    type?: string;
+    chassisNo?: string;
+    engineNo?: string;
+    fuelType?: string;
 };

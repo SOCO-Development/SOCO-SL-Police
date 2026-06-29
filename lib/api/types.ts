@@ -567,3 +567,63 @@ export interface UpdateUserDesignationRequest {
   designationId: number;
 }
 
+// ─── Crime API Types ──────────────────────────────────────────────────
+
+export interface AddVehicleRequest {
+  locationId: number;
+  vehicleRegistrationNo: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  vehicleColor: string;
+  vehicleType: string;
+  vehicleYear: number;
+  chassisNo: string;
+  engineNo: string;
+  fuelType: string;
+}
+
+export interface AddVehicleResponse {
+  vehicleId?: string;
+  message: string;
+}
+
+export interface GetVisitByIdResponse {
+  visitId: string;
+  visitDate: string;
+  locationId: string;
+  locationName: string;
+  officerId: string;
+  officerName: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+export interface OffenceItem {
+  offenceId: string;
+  offenceName: string;
+  offenceCode: string;
+  [key: string]: unknown;
+}
+
+export interface InitiateVisitRequest {
+  locationId: number;
+  visitDate: string;
+  officerId: number;
+  [key: string]: unknown;
+}
+
+export interface InitiateVisitResponse {
+  visitId: string;
+  message: string;
+}
+
+export interface UpdateVisitInDetailsRequest {
+  visitId: number;
+  inDateTime: string;
+  [key: string]: unknown;
+}
+
+export interface UpdateVisitInDetailsResponse {
+  message: string;
+}
+
