@@ -18,6 +18,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { crimeService } from '@/lib/api';
 import {
   buildCrimeScenePayloadFromForm,
   crimeSceneToFormData,
@@ -290,6 +291,7 @@ export default function CreateCrimeSceneForm({
   const [error, setError] = useState('');
   const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
   const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
+  const [visitInTimeLoading, setVisitInTimeLoading] = useState(false);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
@@ -327,34 +329,63 @@ export default function CreateCrimeSceneForm({
   // Derive the currently selected visit object
   const selectedVisit = allVisits.find((v) => v.id === form.visitId) ?? null;
 
-  // When visit selection changes, sync the in-time state from the visit record
+  // When visit selection changes, fetch in-time from API
   useEffect(() => {
-    if (!selectedVisit) {
+    const visitId = form.visitId;
+    if (!visitId) {
       setVisitInTime({ date: '', time: '', page: '', para: '' });
       setVisitInTimeSaved(false);
       return;
     }
-    const existingIn = selectedVisit.sectionA?.in;
-    if (existingIn?.date || existingIn?.time) {
-      setVisitInTime({
-        date: existingIn.date ?? '',
-        time: existingIn.time ?? '',
-        page: existingIn.page ?? '',
-        para: existingIn.para ?? '',
+    let cancelled = false;
+    setVisitInTimeLoading(true);
+    crimeService.getVisitById(Number(visitId))
+      .then((data) => {
+        if (cancelled) return;
+        const record = data.visit?.[0];
+        if (record?.IN_DATE && record?.IN_TIME) {
+          setVisitInTime({
+            date: record.IN_DATE,
+            time: record.IN_TIME,
+            page: record.IN_PAGE ?? '',
+            para: record.IN_PARA ?? '',
+          });
+          setVisitInTimeSaved(true);
+        } else {
+          setVisitInTime({ date: '', time: '', page: '', para: '' });
+          setVisitInTimeSaved(false);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setVisitInTime({ date: '', time: '', page: '', para: '' });
+        setVisitInTimeSaved(false);
+      })
+      .finally(() => {
+        if (!cancelled) setVisitInTimeLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [form.visitId]);
+
+  const handleSaveVisitInTime = async () => {
+    if (!form.visitId) return;
+    setVisitInTimeLoading(true);
+    try {
+      const [dd, mm, yyyy] = (visitInTime.date ?? '').split('-');
+      const apiDate = yyyy && mm && dd ? `${yyyy}-${mm}-${dd}` : visitInTime.date ?? '';
+      await crimeService.updateVisitInDetails({
+        visitId: Number(form.visitId),
+        inDate: apiDate,
+        inTime: visitInTime.time ? `${visitInTime.time}:00` : '',
+        inPage: Number(visitInTime.page) || 0,
+        inPara: Number(visitInTime.para) || 0,
       });
       setVisitInTimeSaved(true);
-    } else {
-      setVisitInTime({ date: '', time: '', page: '', para: '' });
-      setVisitInTimeSaved(false);
+    } catch (err) {
+      console.error('Failed to save visit in-time', err);
+    } finally {
+      setVisitInTimeLoading(false);
     }
-  }, [form.visitId, selectedVisit?.id]);
-
-  const handleSaveVisitInTime = () => {
-    if (!selectedVisit) return;
-    crimeVisitService.updateVisitInOut(selectedVisit.id, { in: visitInTime });
-    setVisitInTimeSaved(true);
-    // Refresh visits list so the saved value is reflected
-    setAllVisits(crimeVisitService.getAll());
   };
 
   const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr, label: cvr }));
@@ -682,10 +713,10 @@ export default function CreateCrimeSceneForm({
                           variant="teal-outline"
                           type="button"
                           onClick={handleSaveVisitInTime}
-                          disabled={!visitInTime.date || !visitInTime.time}
+                          disabled={!visitInTime.date || !visitInTime.time || visitInTimeLoading}
                           className="mt-1"
                         >
-                          Save In Time
+                          {visitInTimeLoading ? 'Saving...' : 'Save In Time'}
                         </Button>
                       </>
                     )}

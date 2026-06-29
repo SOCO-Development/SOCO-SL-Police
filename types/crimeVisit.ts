@@ -21,6 +21,8 @@ export interface Expert {
 export interface SectionA {
   requestFromStation?: string;
   requestDivision?: string;
+  locationId?: string;
+  policeStationId?: string;
   offence: {};
   offenceType: string;
   offenceTypeOther?: string;
@@ -48,6 +50,7 @@ export interface SectionB {
 
 export interface SectionC {
   vehicleNo?: string;
+  vehicleId?: string;
   driver?: OfficerInfo;
   examinedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };
   reExaminedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };

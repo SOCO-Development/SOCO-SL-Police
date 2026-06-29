@@ -587,29 +587,64 @@ export interface AddVehicleResponse {
   message: string;
 }
 
+export interface VehicleInfo {
+  VEHICLE_ID: string;
+  LOCATION_ID: string;
+  VEHICLE_REGISTRATION_NO: string;
+  VEHICLE_BRAND: string;
+  VEHICLE_MODEL: string;
+  VEHICLE_COLOR: string;
+  VEHICLE_TYPE: string;
+  VEHICLE_YEAR?: string;
+  CHASSIS_NO?: string;
+  ENGINE_NO?: string;
+  FUEL_TYPE?: string;
+}
+
+export interface VisitRecord {
+  VISIT_ID: string;
+  LOCATION_ID: string;
+  POLICE_STATION_ID: string;
+  OFFENCE_TYPE: string;
+  VEHICLE_ID: string;
+  DRIVER_ID: string;
+  OUT_DATE: string;
+  OUT_TIME: string;
+  OUT_PAGE: string;
+  OUT_PARA: string;
+  IN_DATE: string;
+  IN_TIME: string;
+  IN_PAGE: string;
+  IN_PARA: string;
+}
+
+export interface VisitOffence {
+  VISIT_OFFENCE_ID: string;
+  OFFENCE_ID: string;
+}
+
 export interface GetVisitByIdResponse {
-  visitId: string;
-  visitDate: string;
-  locationId: string;
-  locationName: string;
-  officerId: string;
-  officerName: string;
-  status: string;
-  [key: string]: unknown;
+  visit: VisitRecord[];
+  offences: VisitOffence[];
 }
 
 export interface OffenceItem {
-  offenceId: string;
-  offenceName: string;
-  offenceCode: string;
-  [key: string]: unknown;
+  OFFENCE_ID: string;
+  OFFENCE_NAME: string;
+  OFFENCE_CODE?: string;
 }
 
 export interface InitiateVisitRequest {
   locationId: number;
-  visitDate: string;
-  officerId: number;
-  [key: string]: unknown;
+  policeStationId: number;
+  offenceIds: number[];
+  offenceType: string;
+  outDate: string;
+  outTime: string;
+  outPage: number;
+  outPara: number;
+  vehicleId: number;
+  driverId: number;
 }
 
 export interface InitiateVisitResponse {
@@ -619,8 +654,10 @@ export interface InitiateVisitResponse {
 
 export interface UpdateVisitInDetailsRequest {
   visitId: number;
-  inDateTime: string;
-  [key: string]: unknown;
+  inDate: string;
+  inTime: string;
+  inPage: number;
+  inPara: number;
 }
 
 export interface UpdateVisitInDetailsResponse {
