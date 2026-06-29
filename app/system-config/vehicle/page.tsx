@@ -17,13 +17,7 @@ const tabs: { label: string; value: FilterTab }[] = [
     { label: 'Add New', value: 'ADD' },
 ];
 
-const driverOptions = [
-    { value: '', label: 'Unassigned' },
-    { value: 'dinesh-perera', label: 'Dinesh Perera' },
-    { value: 'malith-fonseka', label: 'Malith Fonseka' },
-    { value: 'ranga-jayasekara', label: 'Ranga Jayasekara' },
-    { value: 'kasun-silva', label: 'Kasun Silva' },
-];
+
 
 const initialVehicles: VehicleRecord[] = [];
 
@@ -49,16 +43,63 @@ export default function VehicleConfigPage() {
     const [engineNo, setEngineNo] = useState('');
     const [fuelType, setFuelType] = useState('');
     const [assignedLocation, setAssignedLocation] = useState('');
-    const [assignedDriver, setAssignedDriver] = useState('');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
 
-    // Load locations from API when component mounts
+    const handleEdit = async (vehicle: VehicleRecord) => {
+        setIsLoading(true);
+        setError('');
+        setSuccessMessage('');
+        try {
+            const vehicleIdNum = parseInt(vehicle.id) || 0;
+            const apiRes = await crimeService.getVehicleById(vehicleIdNum);
+            
+            if (apiRes && apiRes.length > 0) {
+                const details = apiRes[0];
+                setEditingVehicleId(String(details.VEHICLE_ID));
+                setVehicleNumber(details.VEHICLE_REGISTRATION_NO || '');
+                setModel(details.VEHICLE_MODEL || '');
+                setMake(details.VEHICLE_BRAND || '');
+                setYear(String(details.VEHICLE_YEAR || ''));
+                setColor(details.VEHICLE_COLOR || '');
+                setType(details.VEHICLE_TYPE || '');
+                setChassisNo(details.CHASSIS_NO || '');
+                setEngineNo(details.ENGINE_NO || '');
+                setFuelType(details.FUEL_TYPE || '');
+
+                // Match assigned location value from option value
+                const locationVal = locationOptions.find((option) => option.value === String(details.LOCATION_ID))?.value ?? '';
+                setAssignedLocation(locationVal);
+
+                setFilter('ADD');
+            } else {
+                setError('Vehicle details not found on the server.');
+                showErrorAlert('Error', 'Vehicle details not found on the server.');
+            }
+        } catch (err) {
+            console.error('Failed to load vehicle details:', err);
+            const message = getErrorMessage(err, 'Failed to load vehicle details from server.');
+            setError(message);
+            showErrorAlert('Error', message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Load locations and vehicles from API when component mounts
     useEffect(() => {
-        const loadLocations = async () => {
+        const loadInitialData = async () => {
             setIsLoadingLocations(true);
+            setIsLoading(true);
             try {
-                const locations = await locationService.getAllLocations();
+                // Fetch locations and vehicles concurrently
+                const [locations, apiVehicles] = await Promise.all([
+                    locationService.getAllLocations(),
+                    crimeService.getAllVehicles(),
+                ]);
+
+                // Set location options
                 const options = [
                     { value: '', label: 'Select Location' },
                     ...locations.map((loc) => ({
@@ -67,15 +108,51 @@ export default function VehicleConfigPage() {
                     })),
                 ];
                 setLocationOptions(options);
+
+                // Create helper lookup map
+                const locMap = new Map<string, string>();
+                locations.forEach((loc) => {
+                    locMap.set(String(loc.LOCATION_ID), loc.LOCATION_NAME);
+                });
+
+                // Fetch full details for each vehicle to obtain the vehicle year (since GetAllVehicles doesn't return it)
+                const detailedVehicles = await Promise.all(
+                    apiVehicles.map(async (v) => {
+                        try {
+                            const details = await crimeService.getVehicleById(Number(v.VEHICLE_ID));
+                            return details[0] || v;
+                        } catch {
+                            return v;
+                        }
+                    })
+                );
+
+                // Map ApiVehicle -> VehicleRecord
+                const mappedVehicles: VehicleRecord[] = detailedVehicles.map((v) => ({
+                    id: String(v.VEHICLE_ID),
+                    vehicleNumber: v.VEHICLE_REGISTRATION_NO || '',
+                    model: v.VEHICLE_MODEL || '',
+                    make: v.VEHICLE_BRAND || '',
+                    year: String(v.VEHICLE_YEAR || ''),
+                    color: v.VEHICLE_COLOR || '',
+                    type: v.VEHICLE_TYPE || '',
+                    chassisNo: v.CHASSIS_NO || '',
+                    engineNo: v.ENGINE_NO || '',
+                    fuelType: v.FUEL_TYPE || '',
+                    assignedLocation: locMap.get(String(v.LOCATION_ID)) || `Lab #${v.LOCATION_ID}`,
+                }));
+
+                setVehicles(mappedVehicles);
             } catch (err) {
-                console.error('Failed to load locations:', err);
-                showErrorAlert('Error', 'Failed to load locations from server');
+                console.error('Failed to load initial data:', err);
+                showErrorAlert('Error', 'Failed to load configuration data from server');
             } finally {
                 setIsLoadingLocations(false);
+                setIsLoading(false);
             }
         };
 
-        loadLocations();
+        loadInitialData();
     }, []);
 
     const filteredVehicles = useMemo(() => {
@@ -88,7 +165,6 @@ export default function VehicleConfigPage() {
                     vehicle.make,
                     vehicle.year,
                     vehicle.assignedLocation,
-                    vehicle.assignedDriver,
                 ]
                     .join(' ')
                     .toLowerCase()
@@ -124,7 +200,7 @@ export default function VehicleConfigPage() {
         setEngineNo('');
         setFuelType('');
         setAssignedLocation('');
-        setAssignedDriver('');
+        setEditingVehicleId(null);
     };
 
     const onSubmitVehicle = async (event: FormEvent<HTMLFormElement>) => {
@@ -138,7 +214,7 @@ export default function VehicleConfigPage() {
         }
 
         const hasDuplicateVehicleNo = vehicles.some(
-            (vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.trim().toLowerCase()
+            (vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.trim().toLowerCase() && vehicle.id !== editingVehicleId
         );
 
         if (hasDuplicateVehicleNo) {
@@ -152,50 +228,92 @@ export default function VehicleConfigPage() {
             // Get locationId from the selected location value
             const locationId = parseInt(assignedLocation) || 0;
 
-            // Call Crime/AddVehicle API
-            const response = await crimeService.addVehicle({
-                locationId: locationId,
-                vehicleRegistrationNo: vehicleNumber.trim().toUpperCase(),
-                vehicleBrand: make.trim(),
-                vehicleModel: model.trim(),
-                vehicleColor: color.trim(),
-                vehicleType: type.trim(),
-                vehicleYear: parseInt(year) || 0,
-                chassisNo: chassisNo.trim(),
-                engineNo: engineNo.trim(),
-                fuelType: fuelType.trim(),
-            });
+            if (editingVehicleId) {
+                // Call Crime/UpdateVehicle API
+                const vehicleIdNum = parseInt(editingVehicleId) || 0;
+                await crimeService.updateVehicle({
+                    vehicleId: vehicleIdNum,
+                    locationId: locationId,
+                    vehicleRegistrationNo: vehicleNumber.trim().toUpperCase(),
+                    vehicleBrand: make.trim(),
+                    vehicleModel: model.trim(),
+                    vehicleColor: color.trim(),
+                    vehicleType: type.trim(),
+                    vehicleYear: parseInt(year) || 0,
+                    chassisNo: chassisNo.trim(),
+                    engineNo: engineNo.trim(),
+                    fuelType: fuelType.trim(),
+                });
 
-            // Add the new vehicle to the local list
-            const selectedLocationLabel =
-                locationOptions.find((option) => option.value === assignedLocation)?.label ?? assignedLocation;
-            const selectedDriverLabel =
-                driverOptions.find((option) => option.value === assignedDriver)?.label ?? '';
+                const selectedLocationLabel =
+                    locationOptions.find((option) => option.value === assignedLocation)?.label ?? assignedLocation;
 
-            const newVehicle: VehicleRecord = {
-                id: response.vehicleId || `VH-${String(vehicles.length + 1).padStart(3, '0')}`,
-                vehicleNumber: vehicleNumber.trim().toUpperCase(),
-                model: model.trim(),
-                make: make.trim(),
-                year: year.trim(),
-                color: color.trim(),
-                type: type.trim(),
-                chassisNo: chassisNo.trim(),
-                engineNo: engineNo.trim(),
-                fuelType: fuelType.trim(),
-                assignedLocation: selectedLocationLabel,
-                assignedDriver: selectedDriverLabel,
-            };
+                const updatedVehicle: VehicleRecord = {
+                    id: editingVehicleId,
+                    vehicleNumber: vehicleNumber.trim().toUpperCase(),
+                    model: model.trim(),
+                    make: make.trim(),
+                    year: year.trim(),
+                    color: color.trim(),
+                    type: type.trim(),
+                    chassisNo: chassisNo.trim(),
+                    engineNo: engineNo.trim(),
+                    fuelType: fuelType.trim(),
+                    assignedLocation: selectedLocationLabel,
+                };
 
-            setVehicles((prev) => [newVehicle, ...prev]);
-            
-            const message = response.message || 'Vehicle has been added successfully.';
-            setSuccessMessage(message);
-            showSuccessAlert('Success', message);
-            resetForm();
-            setFilter('ALL');
+                setVehicles((prev) =>
+                    prev.map((v) => (v.id === editingVehicleId ? updatedVehicle : v))
+                );
+
+                const message = 'Vehicle has been updated successfully.';
+                setSuccessMessage(message);
+                showSuccessAlert('Success', message);
+                resetForm();
+                setFilter('ALL');
+            } else {
+                // Call Crime/AddVehicle API
+                const response = await crimeService.addVehicle({
+                    locationId: locationId,
+                    vehicleRegistrationNo: vehicleNumber.trim().toUpperCase(),
+                    vehicleBrand: make.trim(),
+                    vehicleModel: model.trim(),
+                    vehicleColor: color.trim(),
+                    vehicleType: type.trim(),
+                    vehicleYear: parseInt(year) || 0,
+                    chassisNo: chassisNo.trim(),
+                    engineNo: engineNo.trim(),
+                    fuelType: fuelType.trim(),
+                });
+
+                // Add the new vehicle to the local list
+                const selectedLocationLabel =
+                    locationOptions.find((option) => option.value === assignedLocation)?.label ?? assignedLocation;
+
+                const newVehicle: VehicleRecord = {
+                    id: String(response.vehicleId || '') || `VH-${String(vehicles.length + 1).padStart(3, '0')}`,
+                    vehicleNumber: vehicleNumber.trim().toUpperCase(),
+                    model: model.trim(),
+                    make: make.trim(),
+                    year: year.trim(),
+                    color: color.trim(),
+                    type: type.trim(),
+                    chassisNo: chassisNo.trim(),
+                    engineNo: engineNo.trim(),
+                    fuelType: fuelType.trim(),
+                    assignedLocation: selectedLocationLabel,
+                };
+
+                setVehicles((prev) => [newVehicle, ...prev]);
+                
+                const message = response.message || 'Vehicle has been added successfully.';
+                setSuccessMessage(message);
+                showSuccessAlert('Success', message);
+                resetForm();
+                setFilter('ALL');
+            }
         } catch (err) {
-            const message = getErrorMessage(err, 'Failed to add vehicle. Please try again.');
+            const message = getErrorMessage(err, `Failed to ${editingVehicleId ? 'update' : 'add'} vehicle. Please try again.`);
             setError(message);
             showErrorAlert('Error', message);
         } finally {
@@ -219,79 +337,140 @@ export default function VehicleConfigPage() {
                         <TabBar
                             className="mb-6 border-b border-gray-200 pb-0"
                             tabs={tabs.map((tab) => ({
-                              label: tab.label,
+                              label: tab.value === 'ADD' && editingVehicleId ? 'Edit Vehicle' : tab.label,
                               value: tab.value,
                               count: tab.value === 'ALL' ? vehicles.length : undefined,
                             }))}
                             value={filter}
-                            onChange={setFilter}
+                            onChange={(val) => {
+                                if (val === 'ALL') {
+                                    resetForm();
+                                }
+                                setFilter(val);
+                            }}
                         />
 
                         {filter === 'ADD' && (
                             <div className="bg-white rounded-xl border border-gray-200 flex flex-col mb-6">
                                 <div className="px-6 py-5 border-b border-gray-200">
-                                    <h3 className="text-lg font-semibold text-gray-800">Add New Vehicle</h3>
+                                    <h3 className="text-lg font-semibold text-gray-800">
+                                        {editingVehicleId ? 'Edit Vehicle' : 'Add New Vehicle'}
+                                    </h3>
                                     <p className="text-sm text-gray-600 mt-1">
-                                        Enter vehicle details and assign the station/driver.
+                                        {editingVehicleId ? 'Update vehicle details and assignments.' : 'Enter vehicle details and assign the station/driver.'}
                                     </p>
                                 </div>
 
                                 <form onSubmit={onSubmitVehicle} className="px-6 py-5 space-y-5">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 items-start">
-                                        <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
-                                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                                                Vehicle Details
-                                            </h4>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <FormInput
-                                                    label="Vehicle Number *"
-                                                    placeholder="e.g. CAB-4587"
-                                                    value={vehicleNumber}
-                                                    onChange={(e) => setVehicleNumber(e.target.value)}
-                                                    className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                                                />
-                                                <FormInput
-                                                    label="Model *"
-                                                    placeholder="e.g. Hilux"
-                                                    value={model}
-                                                    onChange={(e) => setModel(e.target.value)}
-                                                    className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                                                />
-                                                <FormInput
-                                                    label="Make"
-                                                    placeholder="e.g. Toyota"
-                                                    value={make}
-                                                    onChange={(e) => setMake(e.target.value)}
-                                                    className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                                                />
-                                                <FormInput
-                                                    label="Year"
-                                                    placeholder="e.g. 2024"
-                                                    value={year}
-                                                    onChange={(e) => setYear(e.target.value)}
-                                                    className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                                                />
+                                        <div className="flex flex-col gap-4 sm:gap-5">
+                                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                                                    Vehicle Details
+                                                </h4>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <FormInput
+                                                        label="Vehicle Number *"
+                                                        placeholder="e.g. CAB-4587"
+                                                        value={vehicleNumber}
+                                                        onChange={(e) => setVehicleNumber(e.target.value)}
+                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                                                    />
+                                                    <FormInput
+                                                        label="Model *"
+                                                        placeholder="e.g. Hilux"
+                                                        value={model}
+                                                        onChange={(e) => setModel(e.target.value)}
+                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                                                    />
+                                                    <FormInput
+                                                        label="Brand"
+                                                        placeholder="e.g. Toyota"
+                                                        value={make}
+                                                        onChange={(e) => setMake(e.target.value)}
+                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                                                    />
+                                                    <FormInput
+                                                        label="Year"
+                                                        placeholder="e.g. 2024"
+                                                        value={year}
+                                                        onChange={(e) => setYear(e.target.value)}
+                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                                                    />
+                                                    <FormInput
+                                                        label="Color"
+                                                        placeholder="e.g. Black"
+                                                        value={color}
+                                                        onChange={(e) => setColor(e.target.value)}
+                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                                                    />
+                                                     <CustomSelect
+                                                         label="Type"
+                                                         options={[
+                                                             { value: '', label: 'Select Type' },
+                                                             { value: 'Suv', label: 'Suv' },
+                                                             { value: 'Cab', label: 'Cab' },
+                                                             { value: 'Van', label: 'Van' },
+                                                             { value: 'Sedan ( car )', label: 'Sedan ( car )' },
+                                                             { value: 'Three-wheeler', label: 'Three-wheeler' },
+                                                         ]}
+                                                         value={type}
+                                                         onChange={setType}
+                                                     />
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
-                                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                                                Assignment Details
-                                            </h4>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <CustomSelect
-                                                    label="Assigned SOCO Location *"
-                                                    options={locationOptions}
-                                                    value={assignedLocation}
-                                                    onChange={setAssignedLocation}
-                                                    disabled={isLoadingLocations}
-                                                />
-                                                <CustomSelect
-                                                    label="Assigned Driver (if any)"
-                                                    options={driverOptions}
-                                                    value={assignedDriver}
-                                                    onChange={setAssignedDriver}
-                                                />
+                                        <div className="flex flex-col gap-4 sm:gap-5">
+                                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                                                    Technical Specs
+                                                </h4>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <FormInput
+                                                        label="Chassis No"
+                                                        placeholder="e.g. MHR123..."
+                                                        value={chassisNo}
+                                                        onChange={(e) => setChassisNo(e.target.value)}
+                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                                                    />
+                                                    <FormInput
+                                                        label="Engine No"
+                                                        placeholder="e.g. 2TR-FE..."
+                                                        value={engineNo}
+                                                        onChange={(e) => setEngineNo(e.target.value)}
+                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                                                    />
+                                                    <div className="sm:col-span-2">
+                                                        <CustomSelect
+                                                            label="Fuel Type"
+                                                            options={[
+                                                                { value: '', label: 'Select Fuel Type' },
+                                                                { value: 'Petrol', label: 'Petrol' },
+                                                                { value: 'Diesel', label: 'Diesel' },
+                                                                { value: 'Hybrid', label: 'Hybrid' },
+                                                                { value: 'Electric', label: 'Electric' },
+                                                            ]}
+                                                            value={fuelType}
+                                                            onChange={setFuelType}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/80 space-y-3">
+                                                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                                                    Assignment Details
+                                                </h4>
+                                                <div>
+                                                    <CustomSelect
+                                                        label="Assigned SOCO Location *"
+                                                        options={locationOptions}
+                                                        value={assignedLocation}
+                                                        onChange={setAssignedLocation}
+                                                        disabled={isLoadingLocations}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -309,10 +488,10 @@ export default function VehicleConfigPage() {
 
                                     <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl -mx-6 -mb-5 flex items-center justify-end gap-2">
                                         <Button variant="secondary" type="button" onClick={resetForm}>
-                                            Reset
+                                            {editingVehicleId ? 'Cancel' : 'Reset'}
                                         </Button>
                                         <Button variant="success" type="submit" disabled={isLoading}>
-                                            {isLoading ? 'Saving...' : 'Save Vehicle'}
+                                            {isLoading ? 'Saving...' : editingVehicleId ? 'Update Vehicle' : 'Save Vehicle'}
                                         </Button>
                                     </div>
                                 </form>
@@ -331,13 +510,18 @@ export default function VehicleConfigPage() {
                                         className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm max-w-xs"
                                     />
                                 </div>
-                                <VehicleList
-                                    vehicles={filteredVehicles}
-                                    sortKey={sortKey}
-                                    sortAsc={sortAsc}
-                                    onSort={handleSort}
-                                    emptyMessage="No vehicles found for the selected search."
-                                />
+                                {isLoading ? (
+                                    <div className="text-center py-12 text-gray-400">Loading vehicles...</div>
+                                ) : (
+                                    <VehicleList
+                                        vehicles={filteredVehicles}
+                                        sortKey={sortKey}
+                                        sortAsc={sortAsc}
+                                        onSort={handleSort}
+                                        onEdit={handleEdit}
+                                        emptyMessage="No vehicles found for the selected search."
+                                    />
+                                )}
                             </>
                         )}
         </PageLayout>
