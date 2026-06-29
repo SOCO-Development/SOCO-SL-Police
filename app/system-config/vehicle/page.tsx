@@ -411,13 +411,19 @@ export default function VehicleConfigPage() {
                                                         onChange={(e) => setColor(e.target.value)}
                                                         className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
                                                     />
-                                                    <FormInput
-                                                        label="Type"
-                                                        placeholder="e.g. Cab, SUV, Sedan"
-                                                        value={type}
-                                                        onChange={(e) => setType(e.target.value)}
-                                                        className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                                                    />
+                                                     <CustomSelect
+                                                         label="Type"
+                                                         options={[
+                                                             { value: '', label: 'Select Type' },
+                                                             { value: 'Suv', label: 'Suv' },
+                                                             { value: 'Cab', label: 'Cab' },
+                                                             { value: 'Van', label: 'Van' },
+                                                             { value: 'Sedan ( car )', label: 'Sedan ( car )' },
+                                                             { value: 'Three-wheeler', label: 'Three-wheeler' },
+                                                         ]}
+                                                         value={type}
+                                                         onChange={setType}
+                                                     />
                                                 </div>
                                             </div>
                                         </div>
