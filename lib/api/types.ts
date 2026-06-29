@@ -583,7 +583,7 @@ export interface AddVehicleRequest {
 }
 
 export interface AddVehicleResponse {
-  vehicleId?: string;
+  vehicleId?: number | string;
   message: string;
 }
 
@@ -662,5 +662,34 @@ export interface UpdateVisitInDetailsRequest {
 
 export interface UpdateVisitInDetailsResponse {
   message: string;
+}
+
+export interface UpdateVehicleRequest {
+  vehicleId: number;
+  locationId: number;
+  vehicleRegistrationNo: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  vehicleColor: string;
+  vehicleType: string;
+  vehicleYear: number;
+  chassisNo: string;
+  engineNo: string;
+  fuelType: string;
+}
+
+export interface ApiVehicle {
+  VEHICLE_ID: string;
+  LOCATION_ID: string;
+  VEHICLE_REGISTRATION_NO: string;
+  VEHICLE_BRAND: string;
+  VEHICLE_MODEL: string;
+  VEHICLE_COLOR?: string;
+  VEHICLE_TYPE?: string;
+  VEHICLE_YEAR?: string | number;
+  CHASSIS_NO?: string;
+  ENGINE_NO?: string;
+  FUEL_TYPE?: string;
+  [key: string]: unknown;
 }
 

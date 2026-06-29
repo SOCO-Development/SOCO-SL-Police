@@ -9,6 +9,8 @@ import type {
   UpdateVisitInDetailsRequest,
   UpdateVisitInDetailsResponse,
   VehicleInfo,
+  UpdateVehicleRequest,
+  ApiVehicle,
 } from './types';
 
 /**
@@ -18,6 +20,35 @@ export async function addVehicle(payload: AddVehicleRequest): Promise<AddVehicle
   return apiRequest<AddVehicleResponse>('Crime/AddVehicle', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Update an existing vehicle in the system
+ */
+export async function updateVehicle(payload: UpdateVehicleRequest): Promise<string> {
+  return apiRequest<string>('Crime/UpdateVehicle', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Get all vehicles in the system
+ */
+export async function getAllVehicles(): Promise<ApiVehicle[]> {
+  return apiRequest<ApiVehicle[]>('Crime/GetAllVehicles', {
+    method: 'GET',
+  });
+}
+
+/**
+ * Get vehicle details by ID
+ */
+export async function getVehicleById(vehicleId: number): Promise<ApiVehicle[]> {
+  return apiRequest<ApiVehicle[]>('Crime/GetVehicleById', {
+    method: 'GET',
+    params: { vehicleId },
   });
 }
 
