@@ -21,6 +21,8 @@ export interface Expert {
 export interface SectionA {
   requestFromStation?: string;
   requestDivision?: string;
+  locationId?: string;
+  policeStationId?: string;
   offence: {};
   offenceType: string;
   offenceTypeOther?: string;
