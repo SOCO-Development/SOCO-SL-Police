@@ -602,6 +602,8 @@ export interface OffenceItem {
   offenceId: string;
   offenceName: string;
   offenceCode: string;
+  OFFENCE_ID?: string;
+  OFFENCE_NAME?: string;
   [key: string]: unknown;
 }
 
