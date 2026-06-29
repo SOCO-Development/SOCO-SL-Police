@@ -17,7 +17,7 @@ import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
-import { locationService, userService } from "@/lib/api";
+import { locationService, userService, crimeService } from "@/lib/api";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -59,37 +59,7 @@ const FALLBACK_STATIONS: { value: string; label: string }[] = [];
 
 const FALLBACK_SOCO_LABS: { value: string; label: string }[] = [];
 
-const OFFENCE_OPTIONS = [
-  "මනුෂ්‍ය ඝාතනය",
-  "මනුෂ්‍ය ඝාතනයට තැත්කිරීම හා සියදිවි නසා ගැනීමට අනුබල දීම",
-  "කැමැත්තෙන්ම තුවාල සිදු කිරීම",
-  "ස්ත්‍රී දූෂණය",
-  "ව්‍යවස්ථාපිත ස්ත්‍රී දූෂණය හා ව්‍යභිචාරය",
-  "ළමයින්ගෙන් අයුතු ලිංගික ප්‍රෙයා්ජන ගැනීම, බරපතල ලිංගික අපයෝජනය සහ අස්වාභාවික වැරදි",
-  "ළමයින් අතහැර යාම, කෘෘරත්වයට භාජනය කිරීම සහ වහල් භාවට ගැනීම",
-  "අපහරණය හා පැහැරගෙන යාම සම්බන්ධ වැරදි",
-  "කුට්ඨනය කිරීම සහ තැනැත්තන් වෙළදාම සිදු කිරීම",
-  "රාජකාරියට බාධා කිරීම",
-  "කොල්ලකෑම",
-  "අයුතු ඇතුල්වීම සහ ගෙවල් බිදිම",
-  "සොරකම් කිරීම",
-  "ගිණි තැබීම් හා අනර්ථය සිදු කිරීම",
-  "බලෙන් ලබා ගැනීම ( මුදලක්, යම් දේපළක් හෝ වටිනා ඇපයක්, වටිනා ඇපයකට හැරවිය හැකි අත්සන් කරනු ලැබු යමක් )",
-  "රු. 700000/- ක් හෝ ඊට වැඩි සාවද්‍ය පරිහරණය, සාපරාධි විශ්වාසය කඩ කිරීම, වංචා කිරීම සහ අනෙකෙකු ලෙස පෙනි සිට වංචා කිරීම",
-  "රාජ්‍ය විරෝධී වැරදි",
-  "නීති විරෝධි රැස්වීම / කැරළි කෝලාහල",
-  "ව්‍යාජ මුදල් පිළිබද අපරාධ",
-  "2007 අංක 24 දරණ පරිගණක අපරාධ පනත",
-  "ගෙවීම් උපක්‍රම වංචා සංයුක්ත වන ක්‍රියා",
-  "2006 අංක 05 දරණ මුදල් විශුද්ධීකරණය වැලැක්වීමේ පනත යටතේ ගැනෙන වැරදි",
-  "පීඩාකාරි ආයුධ පනත",
-  "ස්වයංක්‍රීය, ස්වයංපූරක ගිණි අවි හෝ රිපීටර් තුවක්කු සන්තකය",
-  "2007 අංක 56 දරන සිවිල් හා දේශපාලන අයිතිවාසිකම් පිළිබද ජාත්‍යන්තර සම්මුතිය (ICCPR) පනත",
-  "1984 අංක 13 සහ 2022 අංක 2022 අංක 41 පනත් වලින් සංශෝධිත විෂ වර්ග, අබිං සහ අන්තරාදායක ඖෂධ ආඥා පනත සහ 2008 අංක 01 දරන මාද ඖෂධ සහ මනෝවර්ථක නිතිවිරෝධි ලෙස ජාවාරම් කිරීමට එරෙහි සම්මුති පනත යටතේ වැරදි",
-  "1979 අංක 48 දරන ත්‍රස්තවාදි වැලැක්වීම පනත යටතේ වැරදි",
-  "2025 අංක 05 දරන අපරාධයකින් උත්පාදිත දේ පිළිබද පනත යටතේ සිදු කෙරෙන වැරදි",
-  "1993 අංක 49 දරන පනතින් සංශෝධිත 1937 අංක 02 දරන වන සත්ත්ව හා වෘක්ෂලතා ආඥා පනත ( 2009 අංක 22 සංශෝධනය දක්වා සියළු සංශෝධන ඇතුලත් )",
-].map((value) => ({ value, label: value }));
+// OFFENCE_OPTIONS array removed in favor of dynamic API loading
 
 const OFFENCE_TYPES = [
   { value: "D", label: "D" },
@@ -551,17 +521,25 @@ export default function CrimeVisitForm({
   );
   const [socoLabs, setSocoLabs] = useState<{ value: string; label: string }[]>(FALLBACK_SOCO_LABS);
   const [stations, setStations] = useState<{ value: string; label: string }[]>(FALLBACK_STATIONS);
+  const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
   const [stationsLoading, setStationsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [userInfo, locations] = await Promise.all([
+        const [userInfo, locations, offences] = await Promise.all([
           userService.getCurrentUserInfo(),
           locationService.getAllLocations(),
+          crimeService.getAllOffences(),
         ]);
         if (cancelled) return;
+
+        const mappedOffences = offences.map((off) => ({
+          value: String(off.OFFENCE_ID ?? off.offenceId ?? ''),
+          label: String(off.OFFENCE_NAME ?? off.offenceName ?? ''),
+        }));
+        setOffenceOptions(mappedOffences);
 
         const userLocId = userInfo.locationId;
         const matchingLab = locations.find(l => l.LOCATION_ID === userLocId);
@@ -747,7 +725,7 @@ export default function CrimeVisitForm({
                         sectionA: { ...f.sectionA, offence: val },
                       }))
                     }
-                    options={OFFENCE_OPTIONS}
+                    options={offenceOptions}
                     placeholder="Select one or more offences"
                   />
                 )}
