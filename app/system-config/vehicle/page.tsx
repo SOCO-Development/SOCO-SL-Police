@@ -17,13 +17,7 @@ const tabs: { label: string; value: FilterTab }[] = [
     { label: 'Add New', value: 'ADD' },
 ];
 
-const driverOptions = [
-    { value: '', label: 'Unassigned' },
-    { value: 'dinesh-perera', label: 'Dinesh Perera' },
-    { value: 'malith-fonseka', label: 'Malith Fonseka' },
-    { value: 'ranga-jayasekara', label: 'Ranga Jayasekara' },
-    { value: 'kasun-silva', label: 'Kasun Silva' },
-];
+
 
 const initialVehicles: VehicleRecord[] = [];
 
@@ -49,7 +43,6 @@ export default function VehicleConfigPage() {
     const [engineNo, setEngineNo] = useState('');
     const [fuelType, setFuelType] = useState('');
     const [assignedLocation, setAssignedLocation] = useState('');
-    const [assignedDriver, setAssignedDriver] = useState('');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
@@ -78,9 +71,6 @@ export default function VehicleConfigPage() {
                 // Match assigned location value from option value
                 const locationVal = locationOptions.find((option) => option.value === String(details.LOCATION_ID))?.value ?? '';
                 setAssignedLocation(locationVal);
-
-                // Driver is not in API, keep it unassigned
-                setAssignedDriver('');
 
                 setFilter('ADD');
             } else {
@@ -164,7 +154,6 @@ export default function VehicleConfigPage() {
                     vehicle.make,
                     vehicle.year,
                     vehicle.assignedLocation,
-                    vehicle.assignedDriver,
                 ]
                     .join(' ')
                     .toLowerCase()
@@ -200,7 +189,6 @@ export default function VehicleConfigPage() {
         setEngineNo('');
         setFuelType('');
         setAssignedLocation('');
-        setAssignedDriver('');
         setEditingVehicleId(null);
     };
 
@@ -248,8 +236,6 @@ export default function VehicleConfigPage() {
 
                 const selectedLocationLabel =
                     locationOptions.find((option) => option.value === assignedLocation)?.label ?? assignedLocation;
-                const selectedDriverLabel =
-                    driverOptions.find((option) => option.value === assignedDriver)?.label ?? '';
 
                 const updatedVehicle: VehicleRecord = {
                     id: editingVehicleId,
@@ -263,7 +249,6 @@ export default function VehicleConfigPage() {
                     engineNo: engineNo.trim(),
                     fuelType: fuelType.trim(),
                     assignedLocation: selectedLocationLabel,
-                    assignedDriver: selectedDriverLabel,
                 };
 
                 setVehicles((prev) =>
@@ -293,8 +278,6 @@ export default function VehicleConfigPage() {
                 // Add the new vehicle to the local list
                 const selectedLocationLabel =
                     locationOptions.find((option) => option.value === assignedLocation)?.label ?? assignedLocation;
-                const selectedDriverLabel =
-                    driverOptions.find((option) => option.value === assignedDriver)?.label ?? '';
 
                 const newVehicle: VehicleRecord = {
                     id: String(response.vehicleId || '') || `VH-${String(vehicles.length + 1).padStart(3, '0')}`,
@@ -308,7 +291,6 @@ export default function VehicleConfigPage() {
                     engineNo: engineNo.trim(),
                     fuelType: fuelType.trim(),
                     assignedLocation: selectedLocationLabel,
-                    assignedDriver: selectedDriverLabel,
                 };
 
                 setVehicles((prev) => [newVehicle, ...prev]);
@@ -469,19 +451,13 @@ export default function VehicleConfigPage() {
                                                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
                                                     Assignment Details
                                                 </h4>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div>
                                                     <CustomSelect
                                                         label="Assigned SOCO Location *"
                                                         options={locationOptions}
                                                         value={assignedLocation}
                                                         onChange={setAssignedLocation}
                                                         disabled={isLoadingLocations}
-                                                    />
-                                                    <CustomSelect
-                                                        label="Assigned Driver (if any)"
-                                                        options={driverOptions}
-                                                        value={assignedDriver}
-                                                        onChange={setAssignedDriver}
                                                     />
                                                 </div>
                                             </div>

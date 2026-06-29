@@ -31,17 +31,6 @@ export default function VehicleList({
             { key: 'year', label: 'Year', sortable: true },
             { key: 'assignedLocation', label: 'Assigned Location', sortable: true },
             {
-                key: 'assignedDriver',
-                label: 'Assigned Driver',
-                sortable: true,
-                render: (value) =>
-                    value ? (
-                        <span className="text-gray-700">{String(value)}</span>
-                    ) : (
-                        <span className="text-gray-600 italic">Not assigned</span>
-                    ),
-            },
-            {
                 key: 'id',
                 label: 'Actions',
                 align: 'right' as const,

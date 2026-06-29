@@ -5,7 +5,6 @@ export type VehicleRecord = {
     make: string;
     year: string;
     assignedLocation: string;
-    assignedDriver: string;
     color?: string;
     type?: string;
     chassisNo?: string;
