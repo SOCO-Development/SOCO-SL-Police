@@ -10,6 +10,7 @@ import type {
   UpdateVisitInDetailsResponse,
   UpdateVehicleRequest,
   ApiVehicle,
+  CourtItem,
 } from './types';
 
 /**
@@ -66,6 +67,15 @@ export async function getVisitById(visitId: number): Promise<GetVisitByIdRespons
  */
 export async function getAllOffences(): Promise<OffenceItem[]> {
   return apiRequest<OffenceItem[]>('Crime/GetAllOffences', {
+    method: 'GET',
+  });
+}
+
+/**
+ * Get all courts
+ */
+export async function getAllCourts(): Promise<CourtItem[]> {
+  return apiRequest<CourtItem[]>('Crime/GetAllCourts', {
     method: 'GET',
   });
 }
