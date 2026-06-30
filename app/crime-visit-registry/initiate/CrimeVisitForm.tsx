@@ -745,7 +745,7 @@ export default function CrimeVisitForm({
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
                           <span className="text-xs font-medium text-violet-900 leading-snug">
-                            {off}
+                            {offenceOptions.find((opt) => opt.value === off)?.label ?? off}
                           </span>
                           {!locked && (
                             <IconButton variant="danger" className="ml-1" aria-label="Remove offence" onClick={() => { const updated = (sA.offence as string[]).filter((_, i) => i !== idx); setFormData((f) => ({ ...f, sectionA: { ...f.sectionA, offence: updated } })); }}>×</IconButton>
