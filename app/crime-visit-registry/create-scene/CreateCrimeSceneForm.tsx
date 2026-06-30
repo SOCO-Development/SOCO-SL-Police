@@ -18,8 +18,8 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService } from '@/lib/api';
-import type { ApiVisit } from '@/lib/api/types';
+import { crimeService, userService, locationService } from '@/lib/api';
+import type { ApiVisit, VisitRecord } from '@/lib/api/types';
 import {
   buildCrimeScenePayloadFromForm,
   crimeSceneToFormData,
@@ -242,30 +242,49 @@ export default function CreateCrimeSceneForm({
   }, []);
 
   useEffect(() => {
-    getLocationRegistry().then(({ locations }) => {
-      if (!locations || locations.length === 0) return;
-      const uniqueDivisionsMap = new Map<string, string>();
-      locations.forEach(loc => {
-        if (loc.division) {
-          uniqueDivisionsMap.set(loc.division, loc.division);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [userInfo, allLocations] = await Promise.all([
+          userService.getCurrentUserInfo(),
+          locationService.getAllLocations(),
+        ]);
+        if (cancelled) return;
+
+        const userLocId = userInfo.locationId;
+        const matchingLab = allLocations.find(l => String(l.LOCATION_ID) === String(userLocId));
+        if (matchingLab) {
+          setDivisions([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
+          setForm((prev) => ({ ...prev, division: matchingLab.LOCATION_NAME }));
         }
-      });
-      const divisionOpts = Array.from(uniqueDivisionsMap.keys()).map(name => ({
-        value: name,
-        label: name,
-      })).sort((a, b) => a.label.localeCompare(b.label));
 
-      const stationOpts = locations.map(loc => ({
-        value: loc.name,
-        label: loc.name,
-        division: loc.division,
-      })).sort((a, b) => a.label.localeCompare(b.label));
-
-      setDivisions(divisionOpts);
-      setStations(stationOpts);
-    }).catch(err => {
-      console.error("Failed to load locations for form dropdowns", err);
-    });
+        const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
+        if (!cancelled && ps.length > 0) {
+          setStations(ps.map(s => ({
+            value: s.POLICE_STATION_NAME,
+            label: s.POLICE_STATION_NAME,
+            division: matchingLab?.LOCATION_NAME ?? '',
+          })));
+        }
+      } catch (err) {
+        console.error('Failed to load location data', err);
+        // Fallback to registry data
+        getLocationRegistry().then(({ locations }) => {
+          if (cancelled || !locations.length) return;
+          const divisionOpts = [...new Set(locations.map(l => l.division))]
+            .filter(Boolean)
+            .map(name => ({ value: name, label: name }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+          setDivisions(divisionOpts);
+          setStations(locations.map(loc => ({
+            value: loc.name,
+            label: loc.name,
+            division: loc.division,
+          })).sort((a, b) => a.label.localeCompare(b.label)));
+        });
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const filteredStationOptions = useMemo(() => {
@@ -280,6 +299,9 @@ export default function CreateCrimeSceneForm({
   const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
   const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
   const [visitsLoading, setVisitsLoading] = useState(false);
+  const [visitDetails, setVisitDetails] = useState<VisitRecord | null>(null);
+  const [visitDetailsLoading, setVisitDetailsLoading] = useState(false);
+  const [visitSaveLoading, setVisitSaveLoading] = useState(false);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
@@ -341,34 +363,79 @@ export default function CreateCrimeSceneForm({
   const selectedVisit = allVisits.find((v) => v.id === form.visitId) ?? null;
   const selectedApiVisit = apiVisits.find((v) => v.VISIT_ID === form.visitId) ?? null;
 
-  // When visit selection changes, sync the in-time state from the visit record
+  // When visit selection changes, load full details from API and check IN_DATE/IN_TIME
   useEffect(() => {
-    if (!selectedVisit) {
+    if (!apiVisits.length || !form.visitId) {
+      setVisitDetails(null);
       setVisitInTime({ date: '', time: '', page: '', para: '' });
       setVisitInTimeSaved(false);
       return;
     }
-    const existingIn = selectedVisit.sectionA?.in;
-    if (existingIn?.date || existingIn?.time) {
-      setVisitInTime({
-        date: existingIn.date ?? '',
-        time: existingIn.time ?? '',
-        page: existingIn.page ?? '',
-        para: existingIn.para ?? '',
+    setVisitDetailsLoading(true);
+    crimeService.getVisitById(Number(form.visitId))
+      .then((res) => {
+        const record = res.visit?.[0] ?? null;
+        setVisitDetails(record);
+        if (record?.IN_DATE && record?.IN_TIME) {
+          // Parse IN_DATE (yyyy-MM-dd) to DD-MM-YYYY for display
+          const dateParts = record.IN_DATE.split('-');
+          const displayDate = dateParts.length === 3 ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}` : record.IN_DATE;
+          setVisitInTime({
+            date: displayDate,
+            time: record.IN_TIME,
+            page: record.IN_PAGE ?? '',
+            para: record.IN_PARA ?? '',
+          });
+          setVisitInTimeSaved(true);
+        } else {
+          setVisitInTime({ date: '', time: '', page: '', para: '' });
+          setVisitInTimeSaved(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load visit details', err);
+        // Fallback to localStorage data if API fails
+        if (selectedVisit) {
+          const existingIn = selectedVisit.sectionA?.in;
+          if (existingIn?.date || existingIn?.time) {
+            setVisitInTime({
+              date: existingIn.date ?? '',
+              time: existingIn.time ?? '',
+              page: existingIn.page ?? '',
+              para: existingIn.para ?? '',
+            });
+            setVisitInTimeSaved(true);
+          }
+        }
+      })
+      .finally(() => {
+        setVisitDetailsLoading(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.visitId, apiVisits.length]);
+
+  const handleSaveVisitInTime = async () => {
+    if (!form.visitId) return;
+    setVisitSaveLoading(true);
+    try {
+      const dateParts = (visitInTime.date ?? '').split('-');
+      const apiDate = dateParts.length === 3 ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}` : (visitInTime.date ?? '');
+      const t = visitInTime.time ?? '';
+      const apiTime = t.includes(':') ? t : `${t}:00:00`;
+
+      await crimeService.updateVisitInDetails({
+        visitId: Number(form.visitId),
+        inDate: apiDate,
+        inTime: apiTime,
+        inPage: Number(visitInTime.page) || 0,
+        inPara: Number(visitInTime.para) || 0,
       });
       setVisitInTimeSaved(true);
-    } else {
-      setVisitInTime({ date: '', time: '', page: '', para: '' });
-      setVisitInTimeSaved(false);
+    } catch (err) {
+      console.error('Failed to save visit in time', err);
+    } finally {
+      setVisitSaveLoading(false);
     }
-  }, [form.visitId, selectedVisit?.id]);
-
-  const handleSaveVisitInTime = () => {
-    if (!selectedVisit) return;
-    crimeVisitService.updateVisitInOut(selectedVisit.id, { in: visitInTime });
-    setVisitInTimeSaved(true);
-    // Refresh visits list so the saved value is reflected
-    setAllVisits(crimeVisitService.getAll());
   };
 
   const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr, label: cvr }));
@@ -606,28 +673,32 @@ export default function CreateCrimeSceneForm({
                   {/* OUT time — from API visit or localStorage visit */}
                   <div className="rounded-lg border border-teal-100 bg-white p-3 space-y-2">
                     <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">Out Time (from visit)</p>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <FieldGroup label="Date">
-                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
-                          {selectedApiVisit?.OUT_DATE || selectedVisit?.sectionA?.out?.date || '—'}
-                        </div>
-                      </FieldGroup>
-                      <FieldGroup label="Time">
-                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
-                          {selectedApiVisit?.OUT_TIME || selectedVisit?.sectionA?.out?.time || '—'}
-                        </div>
-                      </FieldGroup>
-                      <FieldGroup label="Page">
-                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
-                          {selectedVisit?.sectionA?.out?.page || '—'}
-                        </div>
-                      </FieldGroup>
-                      <FieldGroup label="Para">
-                        <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
-                          {selectedVisit?.sectionA?.out?.para || '—'}
-                        </div>
-                      </FieldGroup>
-                    </div>
+                    {visitDetailsLoading ? (
+                      <p className="text-xs text-gray-500">Loading visit details...</p>
+                    ) : (
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <FieldGroup label="Date">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitDetails?.OUT_DATE || selectedApiVisit?.OUT_DATE || selectedVisit?.sectionA?.out?.date || '—'}
+                          </div>
+                        </FieldGroup>
+                        <FieldGroup label="Time">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitDetails?.OUT_TIME || selectedApiVisit?.OUT_TIME || selectedVisit?.sectionA?.out?.time || '—'}
+                          </div>
+                        </FieldGroup>
+                        <FieldGroup label="Page">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitDetails?.OUT_PAGE || selectedVisit?.sectionA?.out?.page || '—'}
+                          </div>
+                        </FieldGroup>
+                        <FieldGroup label="Para">
+                          <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
+                            {visitDetails?.OUT_PARA || selectedVisit?.sectionA?.out?.para || '—'}
+                          </div>
+                        </FieldGroup>
+                      </div>
+                    )}
                   </div>
 
                   {/* IN time — editable if not yet set, read-only if already saved */}
@@ -640,7 +711,9 @@ export default function CreateCrimeSceneForm({
                         </span>
                       )}
                     </div>
-                    {visitInTimeSaved ? (
+                    {visitDetailsLoading ? (
+                      <p className="text-xs text-gray-500">Loading visit details...</p>
+                    ) : visitInTimeSaved ? (
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         <FieldGroup label="Date">
                           <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
@@ -697,10 +770,10 @@ export default function CreateCrimeSceneForm({
                           variant="teal-outline"
                           type="button"
                           onClick={handleSaveVisitInTime}
-                          disabled={!visitInTime.date || !visitInTime.time}
+                          disabled={!visitInTime.date || !visitInTime.time || visitSaveLoading}
                           className="mt-1"
                         >
-                          Save In Time
+                          {visitSaveLoading ? 'Saving...' : 'Save In Time'}
                         </Button>
                       </>
                     )}
@@ -789,7 +862,7 @@ export default function CreateCrimeSceneForm({
               Location
             </h4>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <FieldGroup label="Police Division">
+              <FieldGroup label="SOCO Lab">
                 <CustomSelect
                   value={form.division}
                   onChange={(value) => setForm((prev) => {
@@ -802,7 +875,7 @@ export default function CreateCrimeSceneForm({
                     };
                   })}
                   options={divisions}
-                  placeholder="Select police division"
+                  placeholder="Select SOCO lab"
                 />
               </FieldGroup>
               <FieldGroup label="Police Station">
@@ -2006,7 +2079,7 @@ export default function CreateCrimeSceneForm({
                                   };
                                 })
                               }
-                              options={COURT_NAME_OPTIONAL_SELECT_OPTIONS}
+                              options={courtOptions}
                               placeholder="Select court (optional)"
                               searchable
                               searchPlaceholder="Search…"

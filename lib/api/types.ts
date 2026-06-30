@@ -588,13 +588,22 @@ export interface AddVehicleResponse {
 }
 
 export interface GetVisitByIdResponse {
-  visitId: string;
-  visitDate: string;
-  locationId: string;
-  locationName: string;
-  officerId: string;
-  officerName: string;
-  status: string;
+  visit: VisitRecord[];
+}
+
+export interface VisitRecord {
+  VISIT_ID: string;
+  VISIT_TYPE?: string;
+  OUT_DATE: string;
+  OUT_TIME: string;
+  OUT_PAGE?: string;
+  OUT_PARA?: string;
+  IN_DATE: string | null;
+  IN_TIME: string | null;
+  IN_PAGE: string | null;
+  IN_PARA: string | null;
+  LOCATION_ID?: string;
+  POLICE_STATION_ID?: string;
   [key: string]: unknown;
 }
 
@@ -617,8 +626,15 @@ export interface CourtItem {
 
 export interface InitiateVisitRequest {
   locationId: number;
-  visitDate: string;
-  officerId: number;
+  policeStationId: number;
+  offenceIds: number[];
+  offenceType: string;
+  outDate: string;
+  outTime: string;
+  outPage: number;
+  outPara: number;
+  vehicleId: number;
+  driverId: number;
   [key: string]: unknown;
 }
 
@@ -629,13 +645,14 @@ export interface InitiateVisitResponse {
 
 export interface UpdateVisitInDetailsRequest {
   visitId: number;
-  inDateTime: string;
+  inDate: string;
+  inTime: string;
+  inPage: number;
+  inPara: number;
   [key: string]: unknown;
 }
 
-export interface UpdateVisitInDetailsResponse {
-  message: string;
-}
+export type UpdateVisitInDetailsResponse = string;
 
 export interface UpdateVehicleRequest {
   vehicleId: number;
