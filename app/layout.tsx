@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import {
   Geist,
   Geist_Mono,
@@ -10,6 +11,7 @@ import "./globals.css";
 import AuthGuard from "@/components/auth/AuthGuard";
 import GlobalAlertHost from "@/components/alerts/GlobalAlertHost";
 import PageBackground from "@/components/layout/PageBackground";
+import NavigationProgress from "@/components/layout/NavigationProgress";
 import { publicAssetSrc } from "@/lib/publicAsset";
 
 const logoPath = publicAssetSrc("/logo.png");
@@ -74,6 +76,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${notoSans.variable} ${notoSansSinhala.variable} ${notoSansTamil.variable} antialiased`}
       >
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <AuthGuard>
           <PageBackground>{children}</PageBackground>
           <GlobalAlertHost />
