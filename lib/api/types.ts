@@ -607,6 +607,14 @@ export interface OffenceItem {
   [key: string]: unknown;
 }
 
+export interface CourtItem {
+  courtId?: string;
+  courtName?: string;
+  COURT_ID?: string;
+  COURT_NAME?: string;
+  [key: string]: unknown;
+}
+
 export interface InitiateVisitRequest {
   locationId: number;
   visitDate: string;
