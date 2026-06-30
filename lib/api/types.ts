@@ -666,3 +666,9 @@ export interface ApiVehicle {
   [key: string]: unknown;
 }
 
+export interface ApiVisit {
+  VISIT_ID: string;
+  OUT_DATE: string;
+  OUT_TIME: string;
+}
+

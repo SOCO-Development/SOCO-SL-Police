@@ -19,6 +19,7 @@ import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { crimeService } from '@/lib/api';
+import type { ApiVisit } from '@/lib/api/types';
 import {
   buildCrimeScenePayloadFromForm,
   crimeSceneToFormData,
@@ -272,15 +273,32 @@ export default function CreateCrimeSceneForm({
     return stations.filter(s => s.division === form.division);
   }, [stations, form.division]);
 
+  const [apiVisits, setApiVisits] = useState<ApiVisit[]>([]);
   const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
   const [existingCvrs, setExistingCvrs] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
   const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
+  const [visitsLoading, setVisitsLoading] = useState(false);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
-    setAllVisits(crimeVisitService.getAll());
+    setVisitsLoading(true);
+    // Load visits from API
+    crimeService.getAllVisits()
+      .then((visits) => {
+        setApiVisits(visits);
+      })
+      .catch((err) => {
+        console.error('Failed to load visits from API', err);
+        // Fallback to localStorage visits if API fails
+        setAllVisits(crimeVisitService.getAll());
+      })
+      .finally(() => {
+        setVisitsLoading(false);
+      });
+    
+    // Load existing CVRs
     const cvrs = Array.from(
       new Set(crimeSceneService.getAll().map((scene) => scene.cvrNo))
     ).filter(Boolean);
@@ -303,16 +321,25 @@ export default function CreateCrimeSceneForm({
     return () => window.clearTimeout(t);
   }, [focusSection, editSceneId, form.cvrNo]);
 
-  const visitOptions = allVisits
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .map((visit) => ({
-      value: visit.id,
-      label: `${visit.referenceNo ?? visit.id} - ${formatDateTimeDDMMYYYY(visit.createdAt)}`,
-    }));
+  const visitOptions = apiVisits.length > 0 
+    ? apiVisits
+        .slice()
+        .sort((a, b) => b.VISIT_ID.localeCompare(a.VISIT_ID))
+        .map((visit) => ({
+          value: visit.VISIT_ID,
+          label: `${visit.VISIT_ID} - ${visit.OUT_DATE} ${visit.OUT_TIME}`,
+        }))
+    : allVisits
+        .slice()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map((visit) => ({
+          value: visit.id,
+          label: `${visit.referenceNo ?? visit.id} - ${formatDateTimeDDMMYYYY(visit.createdAt)}`,
+        }));
 
   // Derive the currently selected visit object
   const selectedVisit = allVisits.find((v) => v.id === form.visitId) ?? null;
+  const selectedApiVisit = apiVisits.find((v) => v.VISIT_ID === form.visitId) ?? null;
 
   // When visit selection changes, sync the in-time state from the visit record
   useEffect(() => {
@@ -566,7 +593,8 @@ export default function CreateCrimeSceneForm({
                     value={form.visitId}
                     onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
                     options={visitOptions}
-                    placeholder={visitOptions.length ? 'Select initiated visit' : 'No visits found'}
+                    placeholder={visitsLoading ? 'Loading visits...' : visitOptions.length ? 'Select initiated visit' : 'No visits found'}
+                    disabled={visitsLoading}
                   />
                 </FieldGroup>
               </div>
@@ -575,18 +603,18 @@ export default function CreateCrimeSceneForm({
                 <p className="text-xs text-gray-500">Select a visit above to manage visit times.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* OUT time — always read-only, sourced from the visit record */}
+                  {/* OUT time — from API visit or localStorage visit */}
                   <div className="rounded-lg border border-teal-100 bg-white p-3 space-y-2">
                     <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">Out Time (from visit)</p>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       <FieldGroup label="Date">
                         <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
-                          {selectedVisit?.sectionA?.out?.date || '—'}
+                          {selectedApiVisit?.OUT_DATE || selectedVisit?.sectionA?.out?.date || '—'}
                         </div>
                       </FieldGroup>
                       <FieldGroup label="Time">
                         <div className="w-full min-h-10 px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-600">
-                          {selectedVisit?.sectionA?.out?.time || '—'}
+                          {selectedApiVisit?.OUT_TIME || selectedVisit?.sectionA?.out?.time || '—'}
                         </div>
                       </FieldGroup>
                       <FieldGroup label="Page">

@@ -10,7 +10,8 @@ import type {
   UpdateVisitInDetailsResponse,
   UpdateVehicleRequest,
   ApiVehicle,
-  CourtItem,
+  ApiVisit,
+  CourtItem
 } from './types';
 
 /**
@@ -101,5 +102,14 @@ export async function initiateVisit(
   return apiRequest<InitiateVisitResponse>('Crime/InitiateVisit', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Get all visits
+ */
+export async function getAllVisits(): Promise<ApiVisit[]> {
+  return apiRequest<ApiVisit[]>('Crime/GetAllVisits', {
+    method: 'GET',
   });
 }
