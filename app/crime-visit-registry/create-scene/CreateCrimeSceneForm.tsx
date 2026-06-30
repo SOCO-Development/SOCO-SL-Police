@@ -767,14 +767,14 @@ export default function CreateCrimeSceneForm({
             </div>
           )}
 
-          {/* ── Location ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
+          {/* ── Request Details ── */}
+          <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
-              Location
+              <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
+              Request Details
             </h4>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <FieldGroup label="Police Division">
+              <FieldGroup label="SOCO Lab">
                 <CustomSelect
                   value={form.division}
                   onChange={(value) => setForm((prev) => {
@@ -787,7 +787,7 @@ export default function CreateCrimeSceneForm({
                     };
                   })}
                   options={divisions}
-                  placeholder="Select police division"
+                  placeholder="Select SOCO lab"
                 />
               </FieldGroup>
               <FieldGroup label="Police Station">
