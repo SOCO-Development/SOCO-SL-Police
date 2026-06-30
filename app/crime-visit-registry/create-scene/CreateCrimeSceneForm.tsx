@@ -2006,7 +2006,7 @@ export default function CreateCrimeSceneForm({
                                   };
                                 })
                               }
-                              options={COURT_NAME_OPTIONAL_SELECT_OPTIONS}
+                              options={courtOptions}
                               placeholder="Select court (optional)"
                               searchable
                               searchPlaceholder="Search…"
