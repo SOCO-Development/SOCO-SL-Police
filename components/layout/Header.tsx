@@ -38,7 +38,10 @@ const NAV_LINKS = [
 ] as const;
 
 export default function Header({ userName: _userNameProp, homeTheme, onToggleHomeTheme }: HeaderProps) {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  // trailingSlash:true makes usePathname() return e.g. "/home/" - normalize it
+  // so exact route checks (home theme/toggle, active nav) keep working.
+  const pathname = rawPathname !== '/' ? rawPathname.replace(/\/$/, '') : rawPathname;
   const router = useRouter();
   const [userInfo, setUserInfo] = useState<{ callingName: string; designationName: string } | null>(() => {
     const name = getUserDisplayName();
