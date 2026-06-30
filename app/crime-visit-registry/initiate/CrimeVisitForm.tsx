@@ -128,6 +128,8 @@ function defaultFormData(): CrimeVisitFormData {
     sectionA: {
       requestFromStation: "",
       requestDivision: "",
+      locationId: "",
+      policeStationId: "",
       offence: "",
       offenceType: "",
       offenceTypeOther: "",
@@ -154,6 +156,7 @@ function defaultFormData(): CrimeVisitFormData {
       vehicleNo: "",
       vehicleId: "",
       driver: emptyOfficer(),
+      driverId: "",
       examinedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
       reExaminedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
       investigationOfficer: emptyOfficer(),
@@ -524,10 +527,11 @@ export default function CrimeVisitForm({
   const [stations, setStations] = useState<{ value: string; label: string }[]>(FALLBACK_STATIONS);
   const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
   const [stationsLoading, setStationsLoading] = useState(false);
+  const [stationMap, setStationMap] = useState<Map<string, string>>(new Map());
   const [vehicleOptions, setVehicleOptions] = useState<{ value: string; label: string }[]>([]);
   const [vehicleMap, setVehicleMap] = useState<Map<string, string>>(new Map());
   const [driverOptions, setDriverOptions] = useState<{ value: string; label: string }[]>([]);
-  const [driverMapping, setDriverMapping] = useState<Map<string, { name: string; regNo: string; rank: string }>>(new Map());
+  const [driverMapping, setDriverMapping] = useState<Map<string, { name: string; regNo: string; rank: string; userId: string }>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -544,12 +548,12 @@ export default function CrimeVisitForm({
         try {
           const officers = await officerService.getAllOfficers({ locationIds: [Number(userInfo.locationId)] });
           if (!cancelled) {
-            const locOfficers = officers.filter(o => o.LOCATION_ID === String(userInfo.locationId));
+            const locOfficers = officers.filter(o => String(o.LOCATION_ID) === String(userInfo.locationId));
             setDriverOptions(
               locOfficers.map(o => ({ value: o.USER_REGI_NO, label: `${o.USER_FULL_NAME} (${o.USER_REGI_NO})` })),
             );
             setDriverMapping(new Map(
-              locOfficers.map(o => [o.USER_REGI_NO, { name: o.USER_FULL_NAME, regNo: o.USER_REGI_NO, rank: o.CURRENT_RANK ?? '' }]),
+              locOfficers.map(o => [o.USER_REGI_NO, { name: o.USER_FULL_NAME, regNo: o.USER_REGI_NO, rank: o.CURRENT_RANK ?? '', userId: o.SYSTEM_USER_ID }]),
             ));
           }
         } catch (err) {
@@ -558,12 +562,12 @@ export default function CrimeVisitForm({
 
         setVehicleOptions(
           vehicles
-            .filter(v => v.LOCATION_ID === String(userInfo.locationId))
+            .filter(v => String(v.LOCATION_ID) === String(userInfo.locationId))
             .map(v => ({ value: v.VEHICLE_REGISTRATION_NO, label: v.VEHICLE_REGISTRATION_NO })),
         );
         setVehicleMap(new Map(
           vehicles
-            .filter(v => v.LOCATION_ID === String(userInfo.locationId))
+            .filter(v => String(v.LOCATION_ID) === String(userInfo.locationId))
             .map(v => [v.VEHICLE_REGISTRATION_NO, v.VEHICLE_ID])
         ));
 
@@ -574,18 +578,23 @@ export default function CrimeVisitForm({
         setOffenceOptions(mappedOffences);
 
         const userLocId = userInfo.locationId;
-        const matchingLab = locations.find(l => l.LOCATION_ID === userLocId);
+        const matchingLab = locations.find(l => String(l.LOCATION_ID) === String(userLocId));
         if (matchingLab) {
           setSocoLabs([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
           setFormData((f) => ({
             ...f,
-            sectionA: { ...f.sectionA, requestDivision: matchingLab.LOCATION_NAME },
+            sectionA: {
+              ...f.sectionA,
+              requestDivision: matchingLab.LOCATION_NAME,
+              locationId: matchingLab.LOCATION_ID,
+            },
           }));
           setStationsLoading(true);
           try {
             const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
             if (!cancelled) {
               setStations(ps.map(s => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
+              setStationMap(new Map(ps.map(s => [s.POLICE_STATION_NAME, s.POLICE_STATION_ID])));
             }
           } finally {
             if (!cancelled) setStationsLoading(false);
@@ -714,7 +723,11 @@ export default function CrimeVisitForm({
                     onChange={(val) =>
                       setFormData((f) => ({
                         ...f,
-                        sectionA: { ...f.sectionA, requestFromStation: val },
+                        sectionA: {
+                          ...f.sectionA,
+                          requestFromStation: val,
+                          policeStationId: stationMap.get(val) ?? "",
+                        },
                       }))
                     }
                     options={stations}
@@ -930,8 +943,8 @@ export default function CrimeVisitForm({
                   <CustomSelect
                     value={sC.driver?.regNo ?? ""}
                     onChange={(val) => {
-                      const info = driverMapping.get(val) ?? { name: '', regNo: '', rank: '' };
-                      updateC({ driver: { name: info.name, regNo: info.regNo, rank: info.rank } });
+                      const info = driverMapping.get(val) ?? { name: '', regNo: '', rank: '', userId: '' };
+                      updateC({ driver: { name: info.name, regNo: info.regNo, rank: info.rank }, driverId: info.userId });
                     }}
                     options={driverOptions}
                     placeholder="Select driver"
