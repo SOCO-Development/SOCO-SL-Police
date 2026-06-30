@@ -17,7 +17,7 @@ import Button from "@/components/buttons/Button";
 import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
-import { locationService, userService, crimeService } from "@/lib/api";
+import { locationService, userService, crimeService, officerService } from "@/lib/api";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -526,6 +526,8 @@ export default function CrimeVisitForm({
   const [stationsLoading, setStationsLoading] = useState(false);
   const [vehicleOptions, setVehicleOptions] = useState<{ value: string; label: string }[]>([]);
   const [vehicleMap, setVehicleMap] = useState<Map<string, string>>(new Map());
+  const [driverOptions, setDriverOptions] = useState<{ value: string; label: string }[]>([]);
+  const [driverMapping, setDriverMapping] = useState<Map<string, { name: string; regNo: string; rank: string }>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -538,6 +540,21 @@ export default function CrimeVisitForm({
           crimeService.getAllVehicles(),
         ]);
         if (cancelled) return;
+
+        try {
+          const officers = await officerService.getAllOfficers({ locationIds: [Number(userInfo.locationId)] });
+          if (!cancelled) {
+            const locOfficers = officers.filter(o => o.LOCATION_ID === String(userInfo.locationId));
+            setDriverOptions(
+              locOfficers.map(o => ({ value: o.USER_REGI_NO, label: `${o.USER_FULL_NAME} (${o.USER_REGI_NO})` })),
+            );
+            setDriverMapping(new Map(
+              locOfficers.map(o => [o.USER_REGI_NO, { name: o.USER_FULL_NAME, regNo: o.USER_REGI_NO, rank: o.CURRENT_RANK ?? '' }]),
+            ));
+          }
+        } catch (err) {
+          console.error("Failed to load officers for driver select", err);
+        }
 
         setVehicleOptions(
           vehicles
@@ -904,39 +921,36 @@ export default function CrimeVisitForm({
                   />
                 )}
               </FieldGroup>
-              <FieldGroup label="Driver Name">
-                <TextInput
-                  isReadOnly={ro}
-                  value={sC.driver?.name ?? ""}
-                  onChange={(e) =>
-                    updateC({
-                      driver: { ...(sC.driver ?? emptyOfficer()), name: e.target.value },
-                    })
-                  }
-                  placeholder="Full name"
-                />
+              <FieldGroup label="Select Driver">
+                {ro ? (
+                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
+                    {sC.driver?.name ? `${sC.driver.name} (${sC.driver.regNo})` : "—"}
+                  </div>
+                ) : (
+                  <CustomSelect
+                    value={sC.driver?.regNo ?? ""}
+                    onChange={(val) => {
+                      const info = driverMapping.get(val) ?? { name: '', regNo: '', rank: '' };
+                      updateC({ driver: { name: info.name, regNo: info.regNo, rank: info.rank } });
+                    }}
+                    options={driverOptions}
+                    placeholder="Select driver"
+                    searchable
+                    searchPlaceholder="Search officer..."
+                  />
+                )}
               </FieldGroup>
               <FieldGroup label="Driver Reg. Number">
                 <TextInput
-                  isReadOnly={ro}
+                  isReadOnly
                   value={sC.driver?.regNo ?? ""}
-                  onChange={(e) =>
-                    updateC({
-                      driver: { ...(sC.driver ?? emptyOfficer()), regNo: e.target.value },
-                    })
-                  }
-                  placeholder="Reg. No."
+                  placeholder="Reg. Number"
                 />
               </FieldGroup>
               <FieldGroup label="Driver Rank">
                 <TextInput
-                  isReadOnly={ro}
+                  isReadOnly
                   value={sC.driver?.rank ?? ""}
-                  onChange={(e) =>
-                    updateC({
-                      driver: { ...(sC.driver ?? emptyOfficer()), rank: e.target.value },
-                    })
-                  }
                   placeholder="Rank"
                 />
               </FieldGroup>
