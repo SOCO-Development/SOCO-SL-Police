@@ -2034,14 +2034,14 @@ if (regiNoCheck.isAvailable) {
                                 ) : null}
                                 </fieldset>
 
-                                <SectionActions
+                                {isEditing && <SectionActions
                                     showEdit
                                     isEditingSection={personalFamilyEditing}
                                     onEdit={() => setPersonalFamilyEditing(true)}
                                     onSave={savePersonalFamilySection}
                                     saving={sectionSaving === 'personal-family'}
                                     saveLabel="Save"
-                                />
+                                /> }
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
