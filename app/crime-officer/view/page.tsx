@@ -243,6 +243,7 @@ export default function ViewOfficersPage() {
             setNewPassword('');
             setConfirmPassword('');
             setPrivilegeDesignationId('');
+            setPrivilegeOfficer(null);
             fetchOfficers({ cancelled: false });
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
