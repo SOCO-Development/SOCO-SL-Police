@@ -30,7 +30,7 @@ import {
   ANALYSIS_INSTITUTION_OPTIONS,
   analysisInstitutionIsOthers,
 } from '@/lib/analysisInstitutions';
-import { COURT_NAME_OPTIONAL_SELECT_OPTIONS } from '@/lib/courtNames';
+
 import {
   getProductionPRDisplayLabel,
   PRODUCTION_PR_OPTIONS,
@@ -117,19 +117,7 @@ const VISIT_TYPES: { value: CrimeSceneVisitType; label: string }[] = [
   { value: 'REVISIT', label: 'Revisit' },
 ];
 
-const COURT_DETAILS_NAME_OPTIONS = [
-  'Vavuniya High Court',
-  'Vavuniya MC',
-  'WALAPANE MC',
-  'WALASMULLA MC',
-  'WARAKAPOLA  MC',
-  'Warakapola MC',
-  'WARIYAPOLA MC',
-  'WELISARA MC',
-  'Wellawaya MC',
-]
-  .filter((value, index, arr) => arr.indexOf(value) === index)
-  .map((value) => ({ value, label: value }));
+
 
 const SPECIALIST_ROLE_OPTIONS = [
   'Magistrate', 'GAD', 'JMO', 'Finger Print', 'Kannel',
@@ -225,6 +213,7 @@ export default function CreateCrimeSceneForm({
   const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
   const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
   const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
+  const [courtOptions, setCourtOptions] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     crimeService.getAllOffences()
@@ -237,6 +226,18 @@ export default function CreateCrimeSceneForm({
       })
       .catch((err) => {
         console.error("Failed to load offences from API", err);
+      });
+
+      crimeService.getAllCourts()
+      .then((courts) => {
+        const mapped = courts.map((court) => ({
+          value: String(court.COURT_NAME ?? court.courtName ?? ''),
+          label: String(court.COURT_NAME ?? court.courtName ?? ''),
+        }));
+        setCourtOptions(mapped);
+      })
+      .catch((err) => {
+        console.error("Failed to load courts from API", err);
       });
   }, []);
 
@@ -1124,7 +1125,7 @@ export default function CreateCrimeSceneForm({
                       className="flex items-center gap-2 px-3 py-1.5 bg-white border border-violet-200 rounded-lg shadow-sm"
                     >
                       <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
-                      <span className="text-xs font-medium text-violet-900 leading-snug">{off}</span>
+                      <span className="text-xs font-medium text-violet-900 leading-snug">{offenceOptions.find((opt) => opt.value === off)?.label ?? off}</span>
                       <IconButton variant="danger" type="button" onClick={() => removeOffence(idx)} className="ml-1">
                         ×
                       </IconButton>
@@ -1467,7 +1468,7 @@ export default function CreateCrimeSceneForm({
                       },
                     }))
                   }
-                  options={[{ value: '', label: 'Select court name' }, ...COURT_DETAILS_NAME_OPTIONS]}
+                  options={[{ value: '', label: 'Select court name' }, ...courtOptions]}
                   placeholder="Select court name"
                   searchable
                   searchPlaceholder="Search court name"
