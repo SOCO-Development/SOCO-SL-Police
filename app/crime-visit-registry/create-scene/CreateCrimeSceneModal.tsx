@@ -7,6 +7,7 @@ import DatePicker from '@/components/forms/DatePicker';
 import TimePicker from '@/components/forms/TimePicker';
 import FormInput from '@/components/forms/FormInput';
 import { AddRowButton, RemoveRowButton, Button, IconButton } from '@/components/ui';
+import { crimeService } from '@/lib/api';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import {
@@ -218,6 +219,37 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
   const [form, setForm] = useState<CrimeSceneFormData>(defaultForm());
   const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
   const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
+  const [productionTypes, setProductionTypes] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    crimeService
+      .getAllProductions()
+      .then((response) => {
+        type ProductionOption = { value: string; label: string };
+
+        const rawItems = Array.isArray(response) ? response : [];
+
+        const mappedProductionTypes: ProductionOption[] = rawItems
+          .map((item) => ({
+            value: String(item.PRODUCTION_ID ?? item.productionId ?? ''),
+            label: String(item.PRODUCTION_NAME ?? item.productionName ?? ''),
+          }))
+          .filter((item: ProductionOption) => item.value && item.label);
+
+        if (isMounted) {
+          setProductionTypes(mappedProductionTypes);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load production types', error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1153,7 +1185,9 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                 <>
                   <div
                     className={
-                      productionPRHasOthersSelected(form.courtDetails?.productionPRTypes)
+                      productionPRHasOthersSelected(
+                        form.courtDetails?.productionPRTypes,
+                      )
                         ? ''
                         : 'md:col-span-2'
                     }
@@ -1163,6 +1197,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                       labelClassName="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1"
                       optionRowClassName="text-[15px] leading-relaxed text-gray-800"
                       value={form.courtDetails?.productionPRTypes ?? []}
+                      options={productionTypes}
                       onChange={(next) => {
                         const sel = new Set(next);
                         setForm((prev) => ({
@@ -1183,7 +1218,6 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                           },
                         }));
                       }}
-                      options={PRODUCTION_PR_OPTIONS}
                       placeholder="Select one or more"
                     />
                   </div>

@@ -214,6 +214,7 @@ export default function CreateCrimeSceneForm({
   const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
   const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
   const [courtOptions, setCourtOptions] = useState<{ value: string; label: string }[]>([]);
+  const [productionTypes, setProductionTypes] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     crimeService.getAllOffences()
@@ -239,6 +240,36 @@ export default function CreateCrimeSceneForm({
       .catch((err) => {
         console.error("Failed to load courts from API", err);
       });
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    crimeService
+      .getAllProductions()
+      .then((response) => {
+        type ProductionOption = { value: string; label: string };
+
+        const rawItems = Array.isArray(response) ? response : [];
+
+        const mappedProductionTypes: ProductionOption[] = rawItems
+          .map((item) => ({
+            value: String(item.PRODUCTION_ID ?? item.productionId ?? ''),
+            label: String(item.PRODUCTION_NAME ?? item.productionName ?? ''),
+          }))
+          .filter((item: ProductionOption) => item.value && item.label);
+
+        if (isMounted) {
+          setProductionTypes(mappedProductionTypes);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load production types', error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1668,7 +1699,7 @@ export default function CreateCrimeSceneForm({
                             };
                           })
                         }
-                        options={PRODUCTION_PR_OPTIONS}
+                        options={productionTypes}
                         placeholder="Select one or more"
                       />
                     </div>
