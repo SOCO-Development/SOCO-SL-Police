@@ -23,9 +23,7 @@ function FullScreenSpinner({ label }: { label: string }) {
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
-  const rawPathname = usePathname();
-  // trailingSlash:true returns e.g. "/login/" - normalize before matching.
-  const pathname = rawPathname !== '/' ? rawPathname.replace(/\/$/, '') : rawPathname;
+  const pathname = usePathname();
   const isPublicPage = PUBLIC_PATHS.has(pathname);
 
   // Tracks the auth result for a specific path so we never show a stale

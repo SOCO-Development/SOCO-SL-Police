@@ -9,9 +9,7 @@ const SKIP_PATHS = new Set(['/', '/home', '/login']);
  * Skips routes that define their own full-page background.
  */
 export default function PageBackground({ children }: { children: React.ReactNode }) {
-  const rawPathname = usePathname() ?? '';
-  // trailingSlash:true returns e.g. "/home/" - normalize before matching.
-  const pathname = rawPathname !== '/' ? rawPathname.replace(/\/$/, '') : rawPathname;
+  const pathname = usePathname() ?? '';
 
   if (SKIP_PATHS.has(pathname)) {
     return <>{children}</>;
