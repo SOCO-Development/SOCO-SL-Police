@@ -127,7 +127,6 @@ const TEAM_ROLE_OPTIONS = [
   { value: 'Photographer', label: 'Photographer' },
   { value: 'Sketcher', label: 'Sketcher' },
   { value: 'Evidence Collector', label: 'Evidence Collector' },
-  { value: 'Other', label: 'Other' },
 ];
 
 const CRIME_SCENE_TYPE_OPTIONS = [
@@ -1047,6 +1046,28 @@ export default function CreateCrimeSceneForm({
               />
             </FieldGroup>
 
+            {offenceArray.length > 0 && (
+              <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/65">
+                <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-2 px-1">
+                  Selected Offences
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {offenceArray.map((off, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-white border border-violet-200 rounded-lg shadow-sm"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                      <span className="text-xs font-medium text-violet-900 leading-snug">{offenceOptions.find((opt) => opt.value === off)?.label ?? off}</span>
+                      <IconButton variant="danger" type="button" onClick={() => removeOffence(idx)} className="ml-1">
+                        ×
+                      </IconButton>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Offence Type */}
             <FieldGroup label="Offence Type">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1244,27 +1265,6 @@ export default function CreateCrimeSceneForm({
               )}
             </div>
 
-            {offenceArray.length > 0 && (
-              <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/65">
-                <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-2 px-1">
-                  Selected Offences
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {offenceArray.map((off, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-white border border-violet-200 rounded-lg shadow-sm"
-                    >
-                      <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
-                      <span className="text-xs font-medium text-violet-900 leading-snug">{offenceOptions.find((opt) => opt.value === off)?.label ?? off}</span>
-                      <IconButton variant="danger" type="button" onClick={() => removeOffence(idx)} className="ml-1">
-                        ×
-                      </IconButton>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* ── In-Charge Officer ── */}
@@ -1354,17 +1354,6 @@ export default function CreateCrimeSceneForm({
                               </label>
                             ))}
                           </div>
-                        </div>
-                        <div className="min-w-0 w-full">
-                          {(officer.teamRole ?? 'Other') === 'Other' ? (
-                            <TextInput
-                              value={officer.teamRoleOther ?? ''}
-                              onChange={(e) => updateOfficer(index, { teamRoleOther: e.target.value })}
-                              placeholder="Specify team role"
-                            />
-                          ) : (
-                            <div className="min-h-10" />
-                          )}
                         </div>
                       </div>
                     </FieldGroup>
