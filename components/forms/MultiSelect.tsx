@@ -85,6 +85,14 @@ export default function MultiSelect({
     if (!isOpen) setSearchQuery('');
   }, [isOpen]);
 
+  const selectedLabels = useMemo(() => {
+    if (!value.length) return [];
+    return value.map((selectedValue) => {
+      const match = options.find((option) => option.value === selectedValue);
+      return match?.label ?? selectedValue;
+    });
+  }, [options, value]);
+
   useEffect(() => {
     const handleMouseDown = (event: MouseEvent) => {
       const t = event.target as Node;
@@ -125,10 +133,11 @@ export default function MultiSelect({
     onChange(value.filter((v) => !filteredValues.includes(v)));
   };
 
-  const displayText =
-    value.length === 0
-      ? placeholder
-      : `${value.length} item${value.length !== 1 ? 's' : ''} selected`;
+  const displayText = (() => {
+    if (value.length === 0) return placeholder;
+    if (selectedLabels.length <= 2) return selectedLabels.join(', ');
+    return `${selectedLabels.slice(0, 2).join(', ')} +${selectedLabels.length - 2} more`;
+  })();
 
   const dropdown =
     isOpen &&

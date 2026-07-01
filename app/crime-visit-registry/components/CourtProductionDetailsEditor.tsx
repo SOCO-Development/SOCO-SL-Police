@@ -1,7 +1,7 @@
 'use client';
 
 import { AddRowButton, RemoveRowButton, FileUploadButton, FileAttachmentSlot } from '@/components/ui';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import MultiSelect from '@/components/forms/MultiSelect';
@@ -12,10 +12,11 @@ import {
 import { COURT_NAME_OPTIONAL_SELECT_OPTIONS } from '@/lib/courtNames';
 import {
   getProductionPRDisplayLabel,
-  PRODUCTION_PR_OPTIONS,
   PRODUCTION_PR_OTHERS_VALUE,
+  loadProductionTypeOptions,
   productionOptionsForSelection,
   productionPRHasOthersSelected,
+  type ProductionOption,
 } from '@/lib/productionPROptions';
 import {
   emptyCrimeSceneCourtDetails,
@@ -151,6 +152,22 @@ export default function CourtProductionDetailsEditor({
   mode = 'full',
   readOnly = false,
 }: CourtProductionDetailsEditorProps) {
+  const [productionTypes, setProductionTypes] = useState<ProductionOption[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadProductionTypeOptions()
+      .then((options) => {
+        if (!cancelled) setProductionTypes(options);
+      })
+      .catch((error) => {
+        console.error('Failed to load production types', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const patch = (partial: Partial<CrimeSceneCourtDetails>) => {
     if (readOnly) return;
     onChange({
@@ -222,7 +239,7 @@ export default function CourtProductionDetailsEditor({
                     ),
                   });
                 }}
-                options={PRODUCTION_PR_OPTIONS}
+                options={productionTypes}
                 placeholder="Select one or more"
               />
             </div>
@@ -247,7 +264,7 @@ export default function CourtProductionDetailsEditor({
                   key={t}
                   className="inline-flex items-center rounded-full border border-amber-200 bg-white px-2.5 py-0.5 text-xs font-medium text-amber-900"
                 >
-                  {getProductionPRDisplayLabel(t)}
+                  {getProductionPRDisplayLabel(t, productionTypes)}
                 </span>
               ))}
             </div>
@@ -309,7 +326,7 @@ export default function CourtProductionDetailsEditor({
                       };
                       patch({ sentToAnalysisRows: rows });
                     }}
-                    options={productionOptionsForSelection(courtDetails.productionPRTypes)}
+                    options={productionOptionsForSelection(courtDetails.productionPRTypes, productionTypes)}
                     placeholder={
                       (courtDetails.productionPRTypes ?? []).length
                         ? 'Select production'
@@ -612,7 +629,7 @@ export default function CourtProductionDetailsEditor({
                       };
                       patch({ productionSentToCourtRows: rows });
                     }}
-                    options={productionOptionsForSelection(courtDetails.productionPRTypes)}
+                    options={productionOptionsForSelection(courtDetails.productionPRTypes, productionTypes)}
                     placeholder={
                       (courtDetails.productionPRTypes ?? []).length
                         ? 'Select production'

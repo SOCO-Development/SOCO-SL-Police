@@ -11,7 +11,8 @@ import type {
   UpdateVehicleRequest,
   ApiVehicle,
   ApiVisit,
-  CourtItem
+  CourtItem,
+  ProductionItem,
 } from './types';
 
 /**
@@ -77,6 +78,15 @@ export async function getAllOffences(): Promise<OffenceItem[]> {
  */
 export async function getAllCourts(): Promise<CourtItem[]> {
   return apiRequest<CourtItem[]>('Crime/GetAllCourts', {
+    method: 'GET',
+  });
+}
+
+/**
+ * Get all production types
+ */
+export async function getAllProductions(): Promise<ProductionItem[]> {
+  return apiRequest<ProductionItem[]>('Crime/GetAllProductions', {
     method: 'GET',
   });
 }

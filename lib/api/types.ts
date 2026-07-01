@@ -624,6 +624,14 @@ export interface CourtItem {
   [key: string]: unknown;
 }
 
+export interface ProductionItem {
+  productionId?: string | number;
+  productionName?: string;
+  PRODUCTION_ID?: string | number;
+  PRODUCTION_NAME?: string;
+  [key: string]: unknown;
+}
+
 export interface InitiateVisitRequest {
   locationId: number;
   policeStationId: number;

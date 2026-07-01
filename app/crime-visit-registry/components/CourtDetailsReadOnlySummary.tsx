@@ -1,7 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { CrimeSceneCourtDetails } from '@/types/crimeScene';
-import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
+import {
+  getProductionPRDisplayLabel,
+  loadProductionTypeOptions,
+  productionPRHasOthersSelected,
+  type ProductionOption,
+} from '@/lib/productionPROptions';
 import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
 
 function hasAnyCourtData(cd: CrimeSceneCourtDetails | undefined): boolean {
@@ -54,6 +60,22 @@ export default function CourtDetailsReadOnlySummary({
   scope?: CourtDetailsReadOnlyScope;
   readOnlySubtext?: string;
 }) {
+  const [productionTypes, setProductionTypes] = useState<ProductionOption[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadProductionTypeOptions()
+      .then((options) => {
+        if (!cancelled) setProductionTypes(options);
+      })
+      .catch((error) => {
+        console.error('Failed to load production types', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (!courtDetails || !hasDataForScope(courtDetails, scope)) {
     return (
       <div
@@ -97,7 +119,7 @@ export default function CourtDetailsReadOnlySummary({
                 key={t}
                 className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-900"
               >
-                {getProductionPRDisplayLabel(t)}
+                {getProductionPRDisplayLabel(t, productionTypes)}
               </span>
             ))}
           </div>
@@ -116,7 +138,7 @@ export default function CourtDetailsReadOnlySummary({
           <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
             {(cd.sentToAnalysisRows ?? []).map((row, idx) => (
               <li key={`sa-${idx}-${row.productionRef}`} className="border-l-2 border-sky-400 pl-2">
-                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef)}</span>
+                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef, productionTypes)}</span>
                 {row.sentToAnalysis === 'Yes' ? (
                   <span className="text-gray-600">
                     {' '}
@@ -139,7 +161,7 @@ export default function CourtDetailsReadOnlySummary({
           <ul className="mt-1.5 space-y-1.5 text-xs text-gray-800">
             {(cd.productionSentToCourtRows ?? []).map((row, idx) => (
               <li key={`psc-${idx}-${row.productionRef}`} className="border-l-2 border-teal-400 pl-2">
-                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef)}</span>
+                <span className="font-medium">{getProductionPRDisplayLabel(row.productionRef, productionTypes)}</span>
                 {row.sentToCourt === 'Yes' ? (
                   <span className="text-gray-600">
                     {' '}
