@@ -1275,10 +1275,31 @@ export default function CreateCrimeSceneForm({
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Name">
-                <TextInput
+                <CustomSelect
                   value={form.inChargeOfficer.name}
-                  onChange={(e) => setForm((prev) => ({ ...prev, inChargeOfficer: { ...prev.inChargeOfficer, name: e.target.value } }))}
-                  placeholder="Full name"
+                  onChange={(value) => {
+                    const selected = teamLeaders.find(t => t.value === value);
+                    if (selected) {
+                      setForm((prev) => ({
+                        ...prev,
+                        inChargeOfficer: {
+                          ...prev.inChargeOfficer,
+                          name: selected.value,
+                          regNo: selected.regNo,
+                          rank: selected.rank,
+                        }
+                      }));
+                    } else {
+                      setForm((prev) => ({
+                        ...prev,
+                        inChargeOfficer: { ...prev.inChargeOfficer, name: value }
+                      }));
+                    }
+                  }}
+                  options={[{ value: '', label: 'Select Team Leader' }, ...teamLeaders]}
+                  placeholder="Select Team Leader"
+                  searchable
+                  searchPlaceholder="Search Name"
                 />
               </FieldGroup>
               <FieldGroup label="Reg. Number">
@@ -1350,10 +1371,24 @@ export default function CreateCrimeSceneForm({
 
                     <div className="flex items-end gap-3">
                       <FieldGroup label="Name" className="flex-1">
-                        <TextInput
+                        <CustomSelect
                           value={officer.name}
-                          onChange={(e) => updateOfficer(index, { name: e.target.value })}
-                          placeholder="Full name"
+                          onChange={(value) => {
+                            const selected = teamLeaders.find(t => t.value === value);
+                            if (selected) {
+                              updateOfficer(index, {
+                                name: selected.value,
+                                regNo: selected.regNo,
+                                rank: selected.rank,
+                              });
+                            } else {
+                              updateOfficer(index, { name: value });
+                            }
+                          }}
+                          options={[{ value: '', label: 'Select Officer' }, ...teamLeaders]}
+                          placeholder="Select Officer"
+                          searchable
+                          searchPlaceholder="Search Name"
                         />
                       </FieldGroup>
                       <FieldGroup label="Reg. No" className="flex-1">
