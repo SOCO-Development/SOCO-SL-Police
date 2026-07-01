@@ -127,7 +127,6 @@ const TEAM_ROLE_OPTIONS = [
   { value: 'Photographer', label: 'Photographer' },
   { value: 'Sketcher', label: 'Sketcher' },
   { value: 'Evidence Collector', label: 'Evidence Collector' },
-  { value: 'Other', label: 'Other' },
 ];
 
 const CRIME_SCENE_TYPE_OPTIONS = [
@@ -1315,17 +1314,6 @@ export default function CreateCrimeSceneForm({
                               </label>
                             ))}
                           </div>
-                        </div>
-                        <div className="min-w-0 w-full">
-                          {(officer.teamRole ?? 'Other') === 'Other' ? (
-                            <TextInput
-                              value={officer.teamRoleOther ?? ''}
-                              onChange={(e) => updateOfficer(index, { teamRoleOther: e.target.value })}
-                              placeholder="Specify team role"
-                            />
-                          ) : (
-                            <div className="min-h-10" />
-                          )}
                         </div>
                       </div>
                     </FieldGroup>
