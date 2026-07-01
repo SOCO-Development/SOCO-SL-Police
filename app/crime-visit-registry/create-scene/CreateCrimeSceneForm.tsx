@@ -18,7 +18,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService, userService, locationService } from '@/lib/api';
+import { crimeService, userService, locationService, officerService } from '@/lib/api';
 import type { ApiVisit, VisitRecord } from '@/lib/api/types';
 import {
   buildCrimeScenePayloadFromForm,
@@ -287,6 +287,24 @@ export default function CreateCrimeSceneForm({
         if (cancelled) return;
 
         const userLocId = userInfo.locationId;
+
+        try {
+          if (userLocId) {
+            const officers = await officerService.getAllOfficers({ locationIds: [Number(userLocId)] });
+            if (!cancelled) {
+              const mappedOfficers = officers.map(o => ({
+                value: o.USER_FULL_NAME || o.USER_CALLING_NAME || o.USERNAME || '',
+                label: o.USER_FULL_NAME || o.USER_CALLING_NAME || o.USERNAME || '',
+                regNo: o.USER_REGI_NO || '',
+                rank: o.CURRENT_RANK || o.RANK_ID || '',
+              }));
+              setTeamLeaders(mappedOfficers);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load team leaders', err);
+        }
+
         const matchingLab = allLocations.find(l => String(l.LOCATION_ID) === String(userLocId));
         if (matchingLab) {
           setDivisions([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
@@ -337,6 +355,7 @@ export default function CreateCrimeSceneForm({
   const [visitDetails, setVisitDetails] = useState<VisitRecord | null>(null);
   const [visitDetailsLoading, setVisitDetailsLoading] = useState(false);
   const [visitSaveLoading, setVisitSaveLoading] = useState(false);
+  const [teamLeaders, setTeamLeaders] = useState<{ value: string; label: string; regNo: string; rank: string }[]>([]);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
@@ -1256,10 +1275,31 @@ export default function CreateCrimeSceneForm({
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Name">
-                <TextInput
+                <CustomSelect
                   value={form.inChargeOfficer.name}
-                  onChange={(e) => setForm((prev) => ({ ...prev, inChargeOfficer: { ...prev.inChargeOfficer, name: e.target.value } }))}
-                  placeholder="Full name"
+                  onChange={(value) => {
+                    const selected = teamLeaders.find(t => t.value === value);
+                    if (selected) {
+                      setForm((prev) => ({
+                        ...prev,
+                        inChargeOfficer: {
+                          ...prev.inChargeOfficer,
+                          name: selected.value,
+                          regNo: selected.regNo,
+                          rank: selected.rank,
+                        }
+                      }));
+                    } else {
+                      setForm((prev) => ({
+                        ...prev,
+                        inChargeOfficer: { ...prev.inChargeOfficer, name: value }
+                      }));
+                    }
+                  }}
+                  options={[{ value: '', label: 'Select Team Leader' }, ...teamLeaders]}
+                  placeholder="Select Team Leader"
+                  searchable
+                  searchPlaceholder="Search Name"
                 />
               </FieldGroup>
               <FieldGroup label="Reg. Number">
