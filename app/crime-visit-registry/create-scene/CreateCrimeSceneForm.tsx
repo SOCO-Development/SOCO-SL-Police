@@ -18,7 +18,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService, userService, locationService } from '@/lib/api';
+import { crimeService, userService, locationService, officerService } from '@/lib/api';
 import type { ApiVisit, VisitRecord } from '@/lib/api/types';
 import {
   buildCrimeScenePayloadFromForm,
@@ -287,6 +287,24 @@ export default function CreateCrimeSceneForm({
         if (cancelled) return;
 
         const userLocId = userInfo.locationId;
+
+        try {
+          if (userLocId) {
+            const officers = await officerService.getAllOfficers({ locationIds: [Number(userLocId)] });
+            if (!cancelled) {
+              const mappedOfficers = officers.map(o => ({
+                value: o.USER_FULL_NAME || o.USER_CALLING_NAME || o.USERNAME || '',
+                label: o.USER_FULL_NAME || o.USER_CALLING_NAME || o.USERNAME || '',
+                regNo: o.USER_REGI_NO || '',
+                rank: o.CURRENT_RANK || o.RANK_ID || '',
+              }));
+              setTeamLeaders(mappedOfficers);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load team leaders', err);
+        }
+
         const matchingLab = allLocations.find(l => String(l.LOCATION_ID) === String(userLocId));
         if (matchingLab) {
           setDivisions([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
@@ -337,6 +355,7 @@ export default function CreateCrimeSceneForm({
   const [visitDetails, setVisitDetails] = useState<VisitRecord | null>(null);
   const [visitDetailsLoading, setVisitDetailsLoading] = useState(false);
   const [visitSaveLoading, setVisitSaveLoading] = useState(false);
+  const [teamLeaders, setTeamLeaders] = useState<{ value: string; label: string; regNo: string; rank: string }[]>([]);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
@@ -1462,10 +1481,24 @@ export default function CreateCrimeSceneForm({
               {(form.investigationOfficers ?? []).map((officer, index) => (
                 <div key={`inv-officer-${index}`} className="flex items-end gap-3">
                   <FieldGroup label="Name" className="mb-0 flex-1">
-                    <TextInput
+                    <CustomSelect
                       value={officer.name}
-                      onChange={(e) => updateInvestigationOfficer(index, { name: e.target.value })}
-                      placeholder="Officer name"
+                      onChange={(value) => {
+                        const selected = teamLeaders.find(t => t.value === value);
+                        if (selected) {
+                          updateInvestigationOfficer(index, {
+                            name: selected.value,
+                            regNo: selected.regNo,
+                            rank: selected.rank,
+                          });
+                        } else {
+                          updateInvestigationOfficer(index, { name: value });
+                        }
+                      }}
+                      options={[{ value: '', label: 'Select Officer' }, ...teamLeaders]}
+                      placeholder="Select Officer"
+                      searchable
+                      searchPlaceholder="Search Name"
                     />
                   </FieldGroup>
                   <FieldGroup label="Reg. Number" className="mb-0 flex-1">
@@ -1521,10 +1554,24 @@ export default function CreateCrimeSceneForm({
               {(form.sceneGuards ?? []).map((guard, index) => (
                 <div key={`snc-guard-${index}`} className="flex items-end gap-3">
                   <FieldGroup label="Name" className="mb-0 flex-1">
-                    <TextInput
+                    <CustomSelect
                       value={guard.name}
-                      onChange={(e) => updateSceneGuard(index, { name: e.target.value })}
-                      placeholder="Guard name"
+                      onChange={(value) => {
+                        const selected = teamLeaders.find(t => t.value === value);
+                        if (selected) {
+                          updateSceneGuard(index, {
+                            name: selected.value,
+                            regNo: selected.regNo,
+                            rank: selected.rank,
+                          });
+                        } else {
+                          updateSceneGuard(index, { name: value });
+                        }
+                      }}
+                      options={[{ value: '', label: 'Select Guard' }, ...teamLeaders]}
+                      placeholder="Select Guard"
+                      searchable
+                      searchPlaceholder="Search Name"
                     />
                   </FieldGroup>
                   <FieldGroup label="Reg. Number" className="mb-0 flex-1">
