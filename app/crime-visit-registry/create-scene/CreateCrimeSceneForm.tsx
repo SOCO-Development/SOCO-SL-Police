@@ -33,7 +33,6 @@ import {
 
 import {
   getProductionPRDisplayLabel,
-  PRODUCTION_PR_OPTIONS,
   PRODUCTION_PR_OTHERS_VALUE,
   productionOptionsForSelection,
   productionPRHasOthersSelected,
@@ -215,6 +214,11 @@ export default function CreateCrimeSceneForm({
   const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
   const [courtOptions, setCourtOptions] = useState<{ value: string; label: string }[]>([]);
   const [productionTypes, setProductionTypes] = useState<{ value: string; label: string }[]>([]);
+
+  const productionTypeLabelMap = useMemo(
+    () => new Map(productionTypes.map((option) => [option.value, option.label])),
+    [productionTypes],
+  );
 
   useEffect(() => {
     crimeService.getAllOffences()
@@ -482,6 +486,10 @@ export default function CreateCrimeSceneForm({
   const incidentMode = form.incidentDateExactlyKnown;
   const showIncidentExact = incidentMode === true || incidentMode === null;
   const showIncidentDuration = incidentMode === false || incidentMode === null;
+  const getProductionTypeLabel = useCallback(
+    (value: string) => productionTypeLabelMap.get(value) ?? getProductionPRDisplayLabel(value),
+    [productionTypeLabelMap],
+  );
 
   // ── Update helpers ────────────────────────────────────────────────────────
 
@@ -1736,7 +1744,7 @@ export default function CreateCrimeSceneForm({
                         key={t}
                         className="inline-flex items-center rounded-full border border-amber-200 bg-white px-2.5 py-0.5 text-xs font-medium text-amber-900"
                       >
-                        {getProductionPRDisplayLabel(t)}
+                          {getProductionTypeLabel(t)}
                       </span>
                     ))}
                   </div>
@@ -1807,7 +1815,7 @@ export default function CreateCrimeSceneForm({
                                 };
                               })
                             }
-                            options={productionOptionsForSelection(form.courtDetails?.productionPRTypes)}
+                            options={productionOptionsForSelection(form.courtDetails?.productionPRTypes, productionTypes)}
                             placeholder={
                               (form.courtDetails?.productionPRTypes ?? []).length
                                 ? 'Select production'
@@ -2023,7 +2031,7 @@ export default function CreateCrimeSceneForm({
                                 };
                               })
                             }
-                            options={productionOptionsForSelection(form.courtDetails?.productionPRTypes)}
+                            options={productionOptionsForSelection(form.courtDetails?.productionPRTypes, productionTypes)}
                             placeholder={
                               (form.courtDetails?.productionPRTypes ?? []).length
                                 ? 'Select production'

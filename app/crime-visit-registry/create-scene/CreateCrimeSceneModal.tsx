@@ -18,7 +18,6 @@ import { COURT_NAME_OPTIONAL_SELECT_OPTIONS } from '@/lib/courtNames';
 import MultiSelect from '@/components/forms/MultiSelect';
 import {
   getProductionPRDisplayLabel,
-  PRODUCTION_PR_OPTIONS,
   PRODUCTION_PR_OTHERS_VALUE,
   productionOptionsForSelection,
   productionPRHasOthersSelected,
@@ -1250,7 +1249,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                       key={t}
                       className="inline-flex items-center rounded-full border border-amber-200 bg-white px-2.5 py-0.5 text-xs font-medium text-amber-900"
                     >
-                      {getProductionPRDisplayLabel(t)}
+                      {getProductionPRDisplayLabel(t, productionTypes)}
                     </span>
                   ))}
                 </div>
@@ -1317,7 +1316,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                               };
                             })
                           }
-                          options={productionOptionsForSelection(form.courtDetails?.productionPRTypes)}
+                          options={productionOptionsForSelection(form.courtDetails?.productionPRTypes, productionTypes)}
                           placeholder="Select production"
                           searchable
                           searchPlaceholder="Search…"
@@ -1558,7 +1557,7 @@ export default function CreateCrimeSceneModal({ isOpen, onClose, onSaved }: Crea
                               };
                             })
                           }
-                          options={productionOptionsForSelection(form.courtDetails?.productionPRTypes)}
+                          options={productionOptionsForSelection(form.courtDetails?.productionPRTypes, productionTypes)}
                           placeholder="Select production"
                           searchable
                           searchPlaceholder="Search…"

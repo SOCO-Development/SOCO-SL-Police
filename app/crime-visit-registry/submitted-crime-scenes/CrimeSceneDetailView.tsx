@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { AnalysisReportReceived, CrimeScene } from '@/types/crimeScene';
 import {
   crimeSceneUsesRevisitFields,
@@ -7,7 +8,12 @@ import {
   normalizeCourtVisitUpdate,
 } from '@/types/crimeScene';
 import { formatIncidentDuration } from '@/lib/dateUtils';
-import { getProductionPRDisplayLabel, productionPRHasOthersSelected } from '@/lib/productionPROptions';
+import {
+  getProductionPRDisplayLabel,
+  loadProductionTypeOptions,
+  productionPRHasOthersSelected,
+  type ProductionOption,
+} from '@/lib/productionPROptions';
 import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
 import { COURT_REWARD_CATEGORY_LABELS, getCourtRewardTypesForCategory } from '@/lib/courtRewardUtils';
 import { registryWorkflowDisplayEntries } from '@/lib/registryWorkflowDisplay';
@@ -61,6 +67,22 @@ function SectionTitle({ stripeClass, children }: { stripeClass: string; children
 }
 
 export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProps) {
+  const [productionTypes, setProductionTypes] = useState<ProductionOption[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadProductionTypeOptions()
+      .then((options) => {
+        if (!cancelled) setProductionTypes(options);
+      })
+      .catch((error) => {
+        console.error('Failed to load production types', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const offenceList = Array.isArray(scene.offence)
     ? scene.offence
     : scene.offence
@@ -468,7 +490,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                   key={t}
                   className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-sm leading-snug font-medium text-amber-900"
                 >
-                  {getProductionPRDisplayLabel(t)}
+                  {getProductionPRDisplayLabel(t, productionTypes)}
                 </span>
               ))}
             </div>
@@ -508,7 +530,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                   >
                     <DisplayField
                       label="Production"
-                      value={readValue(getProductionPRDisplayLabel(row.productionRef))}
+                      value={readValue(getProductionPRDisplayLabel(row.productionRef, productionTypes))}
                     />
                     <DisplayField label="Sent for analysis?" value={readValue(sent === '—' ? '' : sent)} />
                     <DisplayField
@@ -546,7 +568,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                   >
                     <DisplayField
                       label="Production"
-                      value={readValue(getProductionPRDisplayLabel(row.productionRef))}
+                      value={readValue(getProductionPRDisplayLabel(row.productionRef, productionTypes))}
                     />
                     <DisplayField label="Sent to court?" value={readValue(sent === '—' ? '' : sent)} />
                     <DisplayField
