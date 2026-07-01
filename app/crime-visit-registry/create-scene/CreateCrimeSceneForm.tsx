@@ -1296,7 +1296,7 @@ export default function CreateCrimeSceneForm({
                       }));
                     }
                   }}
-                  options={[{ value: '', label: 'Select Team Leader' }, ...teamLeaders]}
+                  options={teamLeaders}
                   placeholder="Select Team Leader"
                   searchable
                   searchPlaceholder="Search Name"
@@ -1374,8 +1374,8 @@ export default function CreateCrimeSceneForm({
                               updateOfficer(index, { name: value });
                             }
                           }}
-                          options={[{ value: '', label: 'Select Officer' }, ...teamLeaders]}
-                          placeholder="Select Officer"
+                          options={teamLeaders}
+                          placeholder="Select Support Officers"
                           searchable
                           searchPlaceholder="Search Name"
                         />
@@ -1519,8 +1519,8 @@ export default function CreateCrimeSceneForm({
                           updateInvestigationOfficer(index, { name: value });
                         }
                       }}
-                      options={[{ value: '', label: 'Select Officer' }, ...teamLeaders]}
-                      placeholder="Select Officer"
+                      options={teamLeaders}
+                      placeholder="Select Investigation Officer"
                       searchable
                       searchPlaceholder="Search Name"
                     />
@@ -1592,8 +1592,8 @@ export default function CreateCrimeSceneForm({
                           updateSceneGuard(index, { name: value });
                         }
                       }}
-                      options={[{ value: '', label: 'Select Guard' }, ...teamLeaders]}
-                      placeholder="Select Guard"
+                      options={teamLeaders}
+                      placeholder="Select Scene Guard"
                       searchable
                       searchPlaceholder="Search Name"
                     />
