@@ -8,14 +8,15 @@ import { Button } from "@/components/ui";
 import { Lock, Shield, User, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { authService, userService } from "@/lib/api";
 import { clearAuthSession, isAuthenticated as hasValidSession, saveUserDisplayInfo } from "@/lib/api/authStorage";
-import { getErrorMessage, showErrorAlert } from "@/lib/alerts";
+import { getErrorMessage } from "@/lib/alerts";
+import ResultPopup, { useResultPopup } from "@/components/modals/ResultPopup";
 
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [popup, showPopup, closePopup] = useResultPopup();
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,7 +30,6 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
@@ -42,8 +42,7 @@ export default function LoginPage() {
       router.replace("/crime-visit-registry");
     } catch (err) {
       const message = getErrorMessage(err, "Invalid username or password. Please try again.");
-      setError(message);
-      showErrorAlert("Login Failed", message);
+      showPopup('error', 'Login Failed', message);
       setIsLoading(false);
     }
   };
@@ -262,25 +261,6 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {error && (
-                    <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-r-lg text-sm font-noto animate-fade-in">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {error}
-                      </div>
-                    </div>
-                  )}
-
                   <Button
                     type="submit"
                     disabled={isLoading}
@@ -333,6 +313,7 @@ export default function LoginPage() {
           {new Date().getFullYear()} Sri Lanka Police
         </p>
       </div>
+      <ResultPopup {...popup} onClose={closePopup} />
     </div>
   );
 }
