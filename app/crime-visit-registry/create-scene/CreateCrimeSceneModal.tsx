@@ -136,6 +136,15 @@ const CRIME_SCENE_TYPE_OPTIONS = [
   { value: 'Buildings', label: 'Buildings' },
   { value: 'Shop', label: 'Shop' },
   { value: 'Highway', label: 'Highway' },
+  { value: 'Beach', label: 'Beach' },
+  { value: 'Ground', label: 'Ground' },
+  { value: 'Forest', label: 'Forest' },
+  { value: 'Canal', label: 'Canal' },
+  { value: 'Vehicles', label: 'Vehicles' },
+  { value: 'Aircraft', label: 'Aircraft' },
+  { value: 'Ships', label: 'Ships' },
+  { value: 'Train', label: 'Train' },
+  { value: 'Mines', label: 'Mines' },
   { value: 'Others', label: 'Others' },
 ];
 
