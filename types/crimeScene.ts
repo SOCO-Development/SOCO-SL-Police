@@ -383,7 +383,7 @@ export interface CrimeScene {
   offenceType: string;
   offenceTypeOther?: string;
   placeOfCrimeScene: string;
-  /** House, Institutions, Buildings, Shop, Highway, Others — use crimeSceneTypeOther when Others. */
+  /** House, Institutions, Buildings, Shop, Highway, Beach, Ground, Forest, Canal, Vehicles, Aircraft, Ships, Train, Mines, Others — use crimeSceneTypeOther when Others. */
   crimeSceneType?: string;
   crimeSceneTypeOther?: string;
   /** If true, only incidentKnown is used; if false, only From/To range; omit for legacy records (both used). */
