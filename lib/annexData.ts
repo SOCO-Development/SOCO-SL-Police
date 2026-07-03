@@ -54,12 +54,13 @@ export const ANNEX_01_SOCO_LABS = [
 export const ANNEX_06_CIVIL_STATUS = ['Married', 'Unmarried'] as const;
 
 export const ANNEX_07_SPOUSE_DESIGNATION = [
-    'Police Office',
+    'Police Officer',
     'Doctor',
     'Lawyer',
     'Engineer',
     'Nurse',
     'Teacher',
+    'Banker',
     'Private Sector',
     'Unemployed',
     'Other',
