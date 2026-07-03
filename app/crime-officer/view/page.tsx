@@ -13,6 +13,7 @@ import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { MagnifyingGlass } from 'phosphor-react';
 import { Plus, Eye, EyeOff, Pencil, Shield } from 'lucide-react';
+import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
 
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
 
@@ -86,15 +87,12 @@ export default function ViewOfficersPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [privilegeDesignationId, setPrivilegeDesignationId] = useState('');
     const [privilegeLoading, setPrivilegeLoading] = useState(false);
-    const [privilegeError, setPrivilegeError] = useState<string | null>(null);
-    const [privilegeSuccess, setPrivilegeSuccess] = useState<string | null>(null);
+    const [popup, showPopup, closePopup] = useResultPopup();
     const [showPrivilegePassword, setShowPrivilegePassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [officers, setOfficers] = useState<OfficerRow[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
-    const [validationError, setValidationError] = useState<string | null>(null);
     const [designations, setDesignations] = useState<{ id: string; name: string }[]>([
         { id: '1', name: 'OIC' },
         { id: '5', name: 'Acting OIC' },
@@ -139,7 +137,6 @@ export default function ViewOfficersPage() {
 
     const fetchOfficers = useCallback(async (signal?: { cancelled: boolean }) => {
         setLoading(true);
-        setError(null);
         try {
             const locationIds = appliedLocations
                 .map((id) => parseInt(id, 10))
@@ -171,7 +168,7 @@ export default function ViewOfficersPage() {
         } catch (err) {
             if (signal?.cancelled) return;
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
-            setError(apiError.message || 'Failed to load officers');
+            showPopup('error', 'Error', apiError.message || 'Failed to load officers');
         } finally {
             if (!signal?.cancelled) setLoading(false);
         }
@@ -196,12 +193,10 @@ export default function ViewOfficersPage() {
     const handleGrantPrivilege = async () => {
         if (!privilegeOfficer) return;
         if (newPassword.trim() && newPassword !== confirmPassword) {
-            setPrivilegeError('Passwords do not match.');
+            showPopup('error', 'Error', 'Passwords do not match.');
             return;
         }
         setPrivilegeLoading(true);
-        setPrivilegeError(null);
-        setPrivilegeSuccess(null);
         try {
             const messages: string[] = [];
             const desId = privilegeDesignationId ? parseInt(privilegeDesignationId, 10) : undefined;
@@ -239,7 +234,7 @@ export default function ViewOfficersPage() {
                 }
             }
 
-            setPrivilegeSuccess(messages.join(' ') || 'No changes made.');
+            showPopup('success', 'Privilege Updated', messages.join(' ') || 'No changes made.');
             setNewPassword('');
             setConfirmPassword('');
             setPrivilegeDesignationId('');
@@ -247,7 +242,7 @@ export default function ViewOfficersPage() {
             fetchOfficers({ cancelled: false });
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
-            setPrivilegeError(apiError.message || 'An error occurred.');
+            showPopup('error', 'Error', apiError.message || 'An error occurred.');
         } finally {
             setPrivilegeLoading(false);
         }
@@ -255,10 +250,9 @@ export default function ViewOfficersPage() {
 
     const handleView = () => {
         if (filterLocations.length === 0 || filterDesignations.length === 0) {
-            setValidationError('Please select both SOCO Location and Designation to view the records.');
+            showPopup('error', 'Error', 'Please select both SOCO Location and Designation to view the records.');
             return;
         }
-        setValidationError(null);
         setAppliedLocations(filterLocations);
         setAppliedDesignations(filterDesignations);
         setHasSearched(true);
@@ -272,7 +266,6 @@ export default function ViewOfficersPage() {
         setAppliedDesignations([]);
         setSearch('');
         setHasSearched(false);
-        setValidationError(null);
         setPage(1);
     };
 
@@ -382,7 +375,7 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); }}>
+                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); }}>
                             <Shield className="w-3 h-3" /> Privilege
                         </ActionChipButton>
                     </div>
@@ -407,18 +400,6 @@ export default function ViewOfficersPage() {
                     </Button>
                 }
             />
-
-            {error && (
-                <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                    {error}
-                </div>
-            )}
-
-            {validationError && (
-                <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 animate-fade-in flex items-center gap-2">
-                    <span className="font-semibold">Error:</span> {validationError}
-                </div>
-            )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
                 <div className="flex gap-3 flex-wrap items-center justify-between">
@@ -608,7 +589,7 @@ export default function ViewOfficersPage() {
             {privilegeOfficer && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-                    onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                    onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                 >
                     <div
                         className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto border border-gray-200 animate-fade-in"
@@ -622,7 +603,7 @@ export default function ViewOfficersPage() {
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                                 className="!min-h-9 !w-9 !p-2"
                                 aria-label="Close"
                             >
@@ -638,18 +619,6 @@ export default function ViewOfficersPage() {
                                 </div>
                             </div>
 
-                            {privilegeSuccess && (
-                                <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                                    {privilegeSuccess}
-                                </div>
-                            )}
-
-                            {privilegeError && (
-                                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                                    {privilegeError}
-                                </div>
-                            )}
-
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                                     New Password / User Key <span className="text-gray-400 normal-case">(optional)</span>
@@ -660,7 +629,6 @@ export default function ViewOfficersPage() {
                                         value={newPassword}
                                         onChange={(e) => {
                                             setNewPassword(e.target.value);
-                                            setPrivilegeError(null);
                                         }}
                                         placeholder="Enter new password"
                                         className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors pr-10"
@@ -685,7 +653,6 @@ export default function ViewOfficersPage() {
                                         value={confirmPassword}
                                         onChange={(e) => {
                                             setConfirmPassword(e.target.value);
-                                            setPrivilegeError(null);
                                         }}
                                         placeholder="Re-enter new password"
                                         className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors pr-10"
@@ -717,7 +684,7 @@ export default function ViewOfficersPage() {
                             <Button
                                 type="button"
                                 variant="secondary"
-                                onClick={() => { setPrivilegeOfficer(null); setPrivilegeError(null); setPrivilegeSuccess(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                             >
                                 Cancel
                             </Button>
@@ -733,6 +700,7 @@ export default function ViewOfficersPage() {
                     </div>
                 </div>
             )}
+        <ResultPopup {...popup} onClose={closePopup} />
         </>
     );
 }
