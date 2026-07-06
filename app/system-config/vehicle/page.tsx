@@ -208,14 +208,16 @@ export default function VehicleConfigPage() {
         setError('');
         setSuccessMessage('');
 
-        if (!vehicleNumber.trim() || !model.trim() || !assignedLocation) {
-            setError('Vehicle number, model and assigned location are required.');
+        if (!assignedLocation) {
+            setError('Assigned location is required.');
             return;
         }
 
-        const hasDuplicateVehicleNo = vehicles.some(
-            (vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.trim().toLowerCase() && vehicle.id !== editingVehicleId
-        );
+        const hasDuplicateVehicleNo = vehicleNumber.trim()
+            ? vehicles.some(
+                (vehicle) => vehicle.vehicleNumber.toLowerCase() === vehicleNumber.trim().toLowerCase() && vehicle.id !== editingVehicleId
+            )
+            : false;
 
         if (hasDuplicateVehicleNo) {
             setError('This vehicle number already exists. Please use a unique vehicle number.');
@@ -370,14 +372,14 @@ export default function VehicleConfigPage() {
                                                 </h4>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     <FormInput
-                                                        label="Vehicle Number *"
+                                                        label="Vehicle Number"
                                                         placeholder="e.g. CAB-4587"
                                                         value={vehicleNumber}
                                                         onChange={(e) => setVehicleNumber(e.target.value)}
                                                         className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
                                                     />
                                                     <FormInput
-                                                        label="Model *"
+                                                        label="Model"
                                                         placeholder="e.g. Hilux"
                                                         value={model}
                                                         onChange={(e) => setModel(e.target.value)}
