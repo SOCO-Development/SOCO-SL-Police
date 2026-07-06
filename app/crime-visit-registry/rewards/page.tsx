@@ -147,7 +147,16 @@ export default function RewardsPage() {
           title="Court Rewards"
         />
 
-        <>
+        {scenes.length === 0 ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            No crime scenes yet. Create one from{' '}
+            <Link href="/crime-visit-registry/create-scene" className="font-semibold underline">
+              Create crime scene
+            </Link>
+            .
+          </div>
+        ) : (
+          <>
             <div className="mb-6 rounded-xl border border-sky-200 bg-sky-50/80 p-4 sm:p-5 space-y-4 shadow-sm">
               <p className="text-sm font-semibold text-sky-950 flex items-center gap-2">
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-500" />
@@ -181,6 +190,11 @@ export default function RewardsPage() {
                     Update Court Details
                   </h3>
 
+                  {!selectedScene ? (
+                    <p className="text-sm text-gray-500 py-4">
+                      Choose a crime scene in the <strong>Select crime scene</strong> dropdown above.
+                    </p>
+                  ) : (
                     <div
                       id="court-update-rewards"
                       className="p-4 sm:p-5 rounded-xl border border-teal-200 bg-teal-50/65 space-y-4"
@@ -223,10 +237,12 @@ export default function RewardsPage() {
                         </div>
                       </div>
                     </div>
+                  )}
                 </div>
               </div>
             </div>
           </>
+        )}
       </PageLayout>
 
       <ResultPopup {...popup} onClose={closePopup} />
