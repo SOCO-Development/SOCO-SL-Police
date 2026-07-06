@@ -66,6 +66,22 @@ export default function CrimeVisitRegistryPage() {
       icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
       href: '/crime-visit-registry/update-court-details',
     },
+    {
+      title: 'Court Visits',
+      subtitle: 'අධිකරණ සංචාර',
+      description:
+        'Record officer court visits with testified officer, date, description, and attachments.',
+      icon: <Scale className="w-12 h-12" style={{ color: '#d946ef' }} />,
+      href: '/crime-visit-registry/court-visits',
+    },
+    {
+      title: 'Rewards',
+      subtitle: 'අධිකරණ ත්‍යාග',
+      description:
+        'Nominate court rewards for Police, D/CRD, and Division categories.',
+      icon: <Scale className="w-12 h-12" style={{ color: '#14b8a6' }} />,
+      href: '/crime-visit-registry/rewards',
+    },
   ];
 
   return (
