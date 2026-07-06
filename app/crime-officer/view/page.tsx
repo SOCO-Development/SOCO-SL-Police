@@ -157,10 +157,10 @@ export default function ViewOfficersPage() {
                 regNo: o.USER_REGI_NO || '',
                 status: o.STATUS,
                 locationId: o.LOCATION_ID,
-                rankId: o.RANK_ID || '',
+                rankId: o.RANK_ID || o.CURRENT_RANK || '',
                 mobile: o.PHONE_MOBILE || '',
                 socoLab: locationIdToName.get(o.LOCATION_ID) || `Lab #${o.LOCATION_ID}`,
-                rank: rankIdToName.get(o.RANK_ID || '') || '',
+                rank: rankIdToName.get(o.RANK_ID || o.CURRENT_RANK || '') || '',
                 designationId: o.USER_DESIGNATION_ID || '',
                 designation: o.USER_DESIGNATION_ID ? (designationMap.get(o.USER_DESIGNATION_ID) || o.USER_DESIGNATION_ID) : '',
             }));

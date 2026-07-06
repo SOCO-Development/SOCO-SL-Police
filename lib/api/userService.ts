@@ -42,6 +42,36 @@ export async function getCurrentUserInfo(): Promise<CurrentUserInfo> {
 }
 
 /**
+ * Fetch a single rank by ID (User/GetUserRankById)
+ * Returns the rank details or null if not found.
+ */
+export async function getUserRankById(rankId: string): Promise<UserRank | null> {
+  try {
+    const result = await apiRequest<unknown>(`User/GetUserRankById?rankId=${encodeURIComponent(rankId)}`);
+    if (!result) {
+      console.warn(`[getUserRankById] rankId=${rankId}: no result`);
+      return null;
+    }
+    const items = Array.isArray(result) ? result : [result];
+    for (const item of items) {
+      if (!item || typeof item !== 'object') continue;
+      const obj = item as Record<string, unknown>;
+      const id = obj.RANK_ID ?? obj.rankId ?? obj.rank_id ?? obj.id ?? null;
+      const name = obj.RANK_NAME ?? obj.rankName ?? obj.rank_name ?? obj.name ?? null;
+      if (id && name) {
+        console.log(`[getUserRankById] rankId=${rankId}: found id=${id}, name=${name}`);
+        return { RANK_ID: String(id), RANK_NAME: String(name) };
+      }
+    }
+    console.warn(`[getUserRankById] rankId=${rankId}: no matching fields in`, JSON.stringify(result).slice(0, 500));
+    return null;
+  } catch (err) {
+    console.warn(`[getUserRankById] rankId=${rankId}: error`, err);
+    return null;
+  }
+}
+
+/**
  * Fetch profile image for a given registration number (File/GetProfileImage)
  * Returns a data URL (e.g. data:image/png;base64,...) or null if no image.
  */

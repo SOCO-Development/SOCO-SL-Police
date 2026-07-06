@@ -614,8 +614,8 @@ export default function AddOfficerPage() {
                     // Section 1
                     socoLab: locationIdToName.get(p.LOCATION_ID) || '',
                     socoLabId: p.LOCATION_ID,
-                    rankDropdown: rankIdToName.get(p.RANK_ID || '') || '',
-                    rankDesignationId: p.RANK_ID || '',
+                    rankDropdown: rankIdToName.get(p.RANK_ID || p.CURRENT_RANK || '') || '',
+                    rankDesignationId: p.RANK_ID || p.CURRENT_RANK || '',
                     regNo: p.USER_REGI_NO || '',
                     fullName: p.USER_FULL_NAME || '',
                     callingName: p.USER_CALLING_NAME || '',
@@ -2022,7 +2022,7 @@ if (regiNoCheck.isAvailable) {
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
                                 <SectionHeader sectionNo={2} title="Promotions  " titleSi="උසස්වීම්" />
 
-                                {/* <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
                                         <FieldLabel label="Date Joined Police Dept. / පොලිස් දෙපාර්තමේන්තු" />
                                         <DatePicker value={form.dateJoinedPolice} onChange={(v) => set('dateJoinedPolice', v)} />
@@ -2053,7 +2053,7 @@ if (regiNoCheck.isAvailable) {
                                              <p className="text-xs text-red-600 mt-1">{ranksError}</p>
                                          )}
                                      </div>
-                                </div> */}
+                                </div>
 
                                 {/* Promotions */}
                                 <div className="mt-6">
