@@ -68,19 +68,19 @@ export default function CrimeVisitRegistryPage() {
     },
     {
       title: 'Court Visits',
-      subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
+      subtitle: 'අධිකරණ සංචාර',
       description:
-        'Select a CVR visit: update production sent to court, record a court visit, or nominate court rewards.',
-      icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
-      href: '/crime-visit-registry/update-court-details',
+        'Record officer court visits with testified officer, date, description, and attachments.',
+      icon: <Scale className="w-12 h-12" style={{ color: '#d946ef' }} />,
+      href: '/crime-visit-registry/court-visits',
     },
     {
       title: 'Rewards',
-      subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
+      subtitle: 'අධිකරණ ත්‍යාග',
       description:
-        'Select a CVR visit: update production sent to court, record a court visit, or nominate court rewards.',
-      icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
-      href: '/crime-visit-registry/update-court-details',
+        'Nominate court rewards for Police, D/CRD, and Division categories.',
+      icon: <Scale className="w-12 h-12" style={{ color: '#14b8a6' }} />,
+      href: '/crime-visit-registry/rewards',
     },
   ];
 
