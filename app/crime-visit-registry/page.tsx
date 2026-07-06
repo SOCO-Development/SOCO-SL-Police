@@ -66,6 +66,22 @@ export default function CrimeVisitRegistryPage() {
       icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
       href: '/crime-visit-registry/update-court-details',
     },
+    {
+      title: 'Court Visits',
+      subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
+      description:
+        'Select a CVR visit: update production sent to court, record a court visit, or nominate court rewards.',
+      icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
+      href: '/crime-visit-registry/update-court-details',
+    },
+    {
+      title: 'Rewards',
+      subtitle: 'අධිකරණ තොරතුරු යාවත්කාලීන කිරීම',
+      description:
+        'Select a CVR visit: update production sent to court, record a court visit, or nominate court rewards.',
+      icon: <Scale className="w-12 h-12" style={{ color: '#0e7490' }} />,
+      href: '/crime-visit-registry/update-court-details',
+    },
   ];
 
   return (
