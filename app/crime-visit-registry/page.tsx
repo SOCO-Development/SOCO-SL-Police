@@ -4,7 +4,7 @@ import { useState } from 'react';
 import FeatureCard from '@/components/cards/FeatureCard';
 import { PageHeader, PageLayout } from '@/components/ui';
 import { Clipboard, FileText, MapPin } from 'phosphor-react';
-import { CheckCircle, FileEdit, ListChecks, Scale, UserSearch } from 'lucide-react';
+import { CheckCircle, FileEdit, ListChecks, Scale, UserSearch, Gavel, Award } from 'lucide-react';
 
 export default function CrimeVisitRegistryPage() {
   const [toast, setToast] = useState<string>('');
@@ -71,7 +71,7 @@ export default function CrimeVisitRegistryPage() {
       subtitle: 'අධිකරණ සංචාර',
       description:
         'Record officer court visits with testified officer, date, description, and attachments.',
-      icon: <Scale className="w-12 h-12" style={{ color: '#d946ef' }} />,
+      icon: <Gavel className="w-12 h-12" style={{ color: '#d946ef' }} />,
       href: '/crime-visit-registry/court-visits',
     },
     {
@@ -79,7 +79,7 @@ export default function CrimeVisitRegistryPage() {
       subtitle: 'අධිකරණ ත්‍යාග',
       description:
         'Nominate court rewards for Police, D/CRD, and Division categories.',
-      icon: <Scale className="w-12 h-12" style={{ color: '#14b8a6' }} />,
+      icon: <Award className="w-12 h-12" style={{ color: '#14b8a6' }} />,
       href: '/crime-visit-registry/rewards',
     },
   ];
