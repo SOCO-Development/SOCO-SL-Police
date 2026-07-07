@@ -697,3 +697,85 @@ export interface ApiVisit {
   OUT_TIME: string;
 }
 
+// ─── CVR Creation (SOCO_CVR1) ──────────────────────────────────────────
+
+export interface SocoTeamMemberApi {
+  systemUserId: number;
+  teamRoleId: number;
+}
+
+export interface ExpertTeamMemberApi {
+  expertTeamMemberName: string;
+  expertTeamMemberRole: string;
+}
+
+export interface ExpertTeamApi {
+  expertTeamRole: string;
+  members: ExpertTeamMemberApi[];
+}
+
+export interface InvestigationOfficerApi {
+  investigationOfficerName: string;
+  investigationOfficerRank: string;
+  investigationOfficerRegiNo: number;
+}
+
+export interface SceneGuardApi {
+  sceneGuardName: string;
+  sceneGuardRank: string;
+  sceneGuardRegiNo: number;
+}
+
+export interface ProductionSentAnalysisApi {
+  productionId: number;
+  sentStatus: boolean;
+  institutionName: string;
+  sentDate: string;
+  referenceNo: string;
+}
+
+export interface CourtDetailApi {
+  courtId: number;
+  courtCaseNo: string;
+  bNumber: string;
+}
+
+export interface CreateCvrRequest {
+  cvrNo: string;
+  visitId: number;
+  visitTypeId: number;
+  locationId: number;
+  policeStationId: number;
+  reportedPoliceDate: string;
+  reportedPoliceTime: string;
+  reportedSocoDate: string;
+  reportedSocoTime: string;
+  sceneIn: string;
+  sceneOut: string;
+  sceneDuration: string;
+  offenceType: string;
+  placeDetail: string;
+  typeCrimeScene: string;
+  isExactTime: boolean;
+  incidentFromDate: string;
+  incidentFromTime: string;
+  incidentToDate: string;
+  incidentToTime: string;
+  offenceIds: number[];
+  socoTeamMembers: SocoTeamMemberApi[];
+  expertTeams: ExpertTeamApi[];
+  investigationOfficers: InvestigationOfficerApi[];
+  sceneGuards: SceneGuardApi[];
+  productionStatus: boolean;
+  productionsSentAnalysis: ProductionSentAnalysisApi[];
+  courtDetails: CourtDetailApi[];
+}
+
+export interface CreateCvrResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: unknown;
+}
+
