@@ -19,6 +19,7 @@ import type {
   UpdateProductionSentAnalysisResponse,
   AddProductionSentCourtRequest,
   AddProductionSentCourtResponse,
+  ProductionAnalysisItemApi,
 } from './types';
 
 /**
@@ -163,5 +164,17 @@ export async function addProductionSentCourt(
   return apiRequest<AddProductionSentCourtResponse>('Cvr/AddProductionSentCourt', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Get production analysis list by CVR ID (SOCO_CVR4)
+ */
+export async function getProductionAnalysisByCvrId(
+  cvrId: number,
+): Promise<ProductionAnalysisItemApi[]> {
+  return apiRequest<ProductionAnalysisItemApi[]>('Cvr/GetProductionAnalysisByCvrId', {
+    method: 'GET',
+    params: { cvrId },
   });
 }

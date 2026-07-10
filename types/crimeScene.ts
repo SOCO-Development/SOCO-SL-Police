@@ -285,6 +285,7 @@ export interface ProductionSentToCourtRow {
 /** One production sent to an analysis institute (repeatable). */
 export interface SentToAnalysisRow {
   productionRef: string;
+  productionSentAnalysisId?: number;
   /** Whether this production was sent for analysis; if Yes, institute, date, etc. apply. */
   sentToAnalysis?: '' | 'Yes' | 'No';
   institution?: string;

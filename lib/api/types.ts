@@ -823,5 +823,26 @@ export interface AddProductionSentCourtResponse {
   dataBundle: string;
 }
 
+export interface ProductionAnalysisItemApi {
+  PRODUCTION_SENT_ANALYSIS_ID: string;
+  PRODUCTION_ID: string;
+  SENT_STATUS: string;
+  INSTITUTION_NAME: string;
+  SENT_DATE: string;
+  REFERENCE_NO: string;
+  RESULT_RECIEVED_STATUS?: string;
+  RESULT_STATUS?: string;
+  RESULT_ATTACHEMENT_URL?: string;
+}
+
+export interface GetProductionAnalysisByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionAnalysisItemApi[];
+}
+
+
 
 

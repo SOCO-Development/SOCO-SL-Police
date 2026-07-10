@@ -98,6 +98,38 @@ export default function ProductionAnalysisPage() {
     setCourtDetailsDraft(mergeCourtDetails(scene.courtDetails));
     setCourtDetailsError('');
     setIsEditingSentToAnalysis(false);
+
+    if (scene.cvrId) {
+      crimeService.getProductionAnalysisByCvrId(Number(scene.cvrId))
+        .then((backendRows) => {
+          if (backendRows && backendRows.length > 0) {
+            const mappedRows = backendRows.map((item) => {
+              let resultReceived: 'Positive' | 'Negative' | '' = '';
+              if (item.RESULT_RECIEVED_STATUS === 'True') {
+                resultReceived = item.RESULT_STATUS === 'True' ? 'Positive' : 'Negative';
+              }
+              return {
+                productionRef: item.PRODUCTION_ID,
+                productionSentAnalysisId: Number(item.PRODUCTION_SENT_ANALYSIS_ID),
+                sentToAnalysis: (item.SENT_STATUS === 'True' ? 'Yes' : 'No') as 'Yes' | 'No' | '',
+                institution: item.INSTITUTION_NAME || '',
+                institutionOtherDetail: '',
+                date: item.SENT_DATE || '',
+                refNo: item.REFERENCE_NO || '',
+                resultReceived,
+                attachmentFileName: item.RESULT_ATTACHEMENT_URL || '',
+              };
+            });
+            setCourtDetailsDraft((prev) => ({
+              ...prev,
+              sentToAnalysisRows: mappedRows,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load production analysis from backend', err);
+        });
+    }
   }, [selectedSceneId, scenes]);
 
   function selectScene(id: string) {
@@ -130,7 +162,7 @@ export default function ProductionAnalysisPage() {
       await Promise.all(
         rows.map((row) =>
           crimeService.updateProductionSentAnalysis({
-            productionSentAnalysisId: Number(row.productionRef) || 1,
+            productionSentAnalysisId: row.productionSentAnalysisId || Number(row.productionRef) || 1,
             cvrId: numericCvrId,
             referenceNo: row.refNo || '',
             resultReceivedStatus: row.resultReceived === 'Positive' || row.resultReceived === 'Negative',
