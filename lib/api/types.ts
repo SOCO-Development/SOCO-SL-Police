@@ -893,6 +893,30 @@ export interface AddCourtVisitResponse {
   dataBundle: string;
 }
 
+export interface CrimeSceneByVisitItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+  CVR_ID: string;
+  VISIT_ID: string;
+  VISIT_TYPE_ID: string;
+  LOCATION_ID: string;
+  OFFENCE_TYPE: string;
+  PLACE_DETAIL: string;
+  TYPE_CRIME_SCENE: string;
+  SCENE_IN: string;
+  SCENE_OUT: string;
+  CREATED_DTM: string;
+}
+
+export interface GetCrimeScenesByVisitIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: CrimeSceneByVisitItemApi[];
+}
+
+
 
 
 

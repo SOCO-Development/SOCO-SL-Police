@@ -24,6 +24,7 @@ import type {
   ProductionSentCourtItemGetResponseApi,
   AddCourtVisitRequest,
   AddCourtVisitResponse,
+  CrimeSceneByVisitItemApi,
 } from './types';
 
 /**
@@ -216,5 +217,17 @@ export async function addCourtVisit(
   return apiRequest<AddCourtVisitResponse>('Cvr/AddCourtVisit', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Get crime scenes by visit ID (SOCO_CVR7)
+ */
+export async function getCrimeScenesByVisitId(
+  visitId: number,
+): Promise<CrimeSceneByVisitItemApi[]> {
+  return apiRequest<CrimeSceneByVisitItemApi[]>('Cvr/GetCrimeScenesByVisitId', {
+    method: 'GET',
+    params: { visitId },
   });
 }
