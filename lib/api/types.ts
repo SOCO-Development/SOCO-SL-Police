@@ -876,6 +876,48 @@ export interface GetCvrsByLocationIdResponse {
   dataBundle: LocationCvrItemApi[];
 }
 
+export interface AddCourtVisitRequest {
+  initiateCvrId: number;
+  courtId: number;
+  testifiedOfficerName: string;
+  officerId: number;
+  visitDescription: string;
+  courtVisitAttachmentUrl: string;
+}
+
+export interface AddCourtVisitResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: string;
+}
+
+export interface CrimeSceneByVisitItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+  CVR_ID: string;
+  VISIT_ID: string;
+  VISIT_TYPE_ID: string;
+  LOCATION_ID: string;
+  OFFENCE_TYPE: string;
+  PLACE_DETAIL: string;
+  TYPE_CRIME_SCENE: string;
+  SCENE_IN: string;
+  SCENE_OUT: string;
+  CREATED_DTM: string;
+}
+
+export interface GetCrimeScenesByVisitIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: CrimeSceneByVisitItemApi[];
+}
+
+
+
 
 
 

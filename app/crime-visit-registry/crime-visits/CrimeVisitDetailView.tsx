@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
 import type { CrimeVisit, DateTimeEntry } from '@/types/crimeVisit';
+import { crimeService } from '@/lib/api';
+import type { CrimeSceneByVisitItemApi } from '@/lib/api/types';
 
 interface CrimeVisitDetailViewProps {
   visit: CrimeVisit;
@@ -51,6 +54,24 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
     : sectionA?.offence
       ? [sectionA.offence as string]
       : [];
+
+  const [cvrList, setCvrList] = useState<CrimeSceneByVisitItemApi[]>([]);
+  const [cvrLoading, setCvrLoading] = useState(false);
+
+  useEffect(() => {
+    if (!visit.id) return;
+    setCvrLoading(true);
+    crimeService.getCrimeScenesByVisitId(Number(visit.id))
+      .then((data) => {
+        if (data) setCvrList(data);
+      })
+      .catch((err) => {
+        console.error('Failed to load associated CVRs', err);
+      })
+      .finally(() => {
+        setCvrLoading(false);
+      });
+  }, [visit.id]);
 
   return (
     <div className="space-y-5">
@@ -179,6 +200,53 @@ export default function CrimeVisitDetailView({ visit }: CrimeVisitDetailViewProp
           <DisplayField label="Driver Rank" value={readValue(sectionC?.driver?.rank)} />
         </div>
       </div>
+
+      {cvrLoading ? (
+        <div className="p-5 flex items-center justify-center">
+          <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+        </div>
+      ) : cvrList.length > 0 ? (
+        <div className="p-5 rounded-xl border border-violet-200 bg-violet-50/50 space-y-3">
+          <h4 className="text-sm font-semibold text-violet-950 uppercase tracking-wide pb-2 border-b border-violet-200 flex items-center gap-2">
+            <span className="w-1.5 h-4 rounded-full bg-violet-600 inline-block flex-shrink-0" />
+            Associated CVRs (Crime Scenes)
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {cvrList.map((cvr) => (
+              <div key={cvr.CVR_ID} className="p-4 rounded-xl border border-gray-200 bg-white shadow-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5">
+                    {cvr.CVR_NO}
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">
+                    ID: {cvr.CVR_ID}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-500 font-semibold">Offence:</span> {cvr.OFFENCE_TYPE || '—'}
+                  </div>
+                  <div>
+                    <span className="text-gray-500 font-semibold">Type:</span> {cvr.TYPE_CRIME_SCENE || '—'}
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 font-semibold">Place:</span> {cvr.PLACE_DETAIL || '—'}
+                  </div>
+                  <div>
+                    <span className="text-gray-500 font-semibold">In Time:</span> {cvr.SCENE_IN || '—'}
+                  </div>
+                  <div>
+                    <span className="text-gray-500 font-semibold">Out Time:</span> {cvr.SCENE_OUT || '—'}
+                  </div>
+                  <div className="col-span-2 text-[10px] text-gray-400">
+                    Created: {cvr.CREATED_DTM}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

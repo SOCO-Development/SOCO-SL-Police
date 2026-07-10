@@ -8,6 +8,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import Button from '@/components/buttons/Button';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { crimeService, officerService } from '@/lib/api';
 import { COURT_NAME_OPTIONAL_SELECT_OPTIONS } from '@/lib/courtNames';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene, CourtVisitOfficerDetailRow, CourtVisitUpdateDetails, CrimeSceneCourtDetails } from '@/types/crimeScene';
@@ -234,8 +235,8 @@ export default function CourtVisitsPage() {
     return validateCourtVisitRows(filled);
   }
 
-  function handleSaveCourtVisit() {
-    if (!selectedSceneId) {
+  async function handleSaveCourtVisit() {
+    if (!selectedSceneId || !selectedScene) {
       showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
       return;
     }
@@ -257,6 +258,47 @@ export default function CourtVisitsPage() {
           officerRoleLabel: p.officerRoleLabel || row.officerRoleLabel,
         };
       });
+
+    const numericCvrId = Number(selectedScene.cvrId) || 1;
+
+    try {
+      const [courts, allOfficers] = await Promise.all([
+        crimeService.getAllCourts(),
+        officerService.getAllOfficers(),
+      ]);
+
+      const foundCourt = courts.find(c => c.COURT_NAME === courtDraft.courtName);
+      const courtId = foundCourt ? Number(foundCourt.COURT_ID) : 1;
+
+      await Promise.all(
+        filled.map(async (row) => {
+          const matchingOfficer = allOfficers.find(
+            (o) =>
+              o.USER_FULL_NAME === row.officerName ||
+              o.USER_CALLING_NAME === row.officerName ||
+              o.USER_REGI_NO === row.officerRegNo
+          );
+          const officerId = matchingOfficer ? Number(matchingOfficer.SYSTEM_USER_ID) : 1;
+
+          await crimeService.addCourtVisit({
+            initiateCvrId: numericCvrId,
+            courtId,
+            testifiedOfficerName: row.testifiedOfficer || '',
+            officerId,
+            visitDescription: row.visitDescription || '',
+            courtVisitAttachmentUrl: row.attachmentFileName || 'string',
+          });
+        })
+      );
+    } catch (err) {
+      console.error('Failed to add court visits to backend', err);
+      const msg = err instanceof Error ? err.message : 'Backend API update failed.';
+      setError(msg);
+      setSavedOk(false);
+      showPopup('error', 'API Update Failed', msg);
+      return;
+    }
+
     const payload: CourtVisitUpdateDetails = { rows: filled };
     const updated = crimeSceneService.updateCourtVisitDetails(selectedSceneId, payload, courtDraft);
     if (!updated) {

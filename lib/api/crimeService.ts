@@ -22,6 +22,9 @@ import type {
   ProductionAnalysisItemApi,
   LocationCvrItemApi,
   ProductionSentCourtItemGetResponseApi,
+  AddCourtVisitRequest,
+  AddCourtVisitResponse,
+  CrimeSceneByVisitItemApi,
 } from './types';
 
 /**
@@ -202,5 +205,29 @@ export async function getCvrsByLocationId(
   return apiRequest<LocationCvrItemApi[]>('Cvr/GetCvrsByLocationId', {
     method: 'GET',
     params: { locationId },
+  });
+}
+
+/**
+ * Add court visit details (SOCO_CVR6)
+ */
+export async function addCourtVisit(
+  payload: AddCourtVisitRequest,
+): Promise<AddCourtVisitResponse> {
+  return apiRequest<AddCourtVisitResponse>('Cvr/AddCourtVisit', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Get crime scenes by visit ID (SOCO_CVR7)
+ */
+export async function getCrimeScenesByVisitId(
+  visitId: number,
+): Promise<CrimeSceneByVisitItemApi[]> {
+  return apiRequest<CrimeSceneByVisitItemApi[]>('Cvr/GetCrimeScenesByVisitId', {
+    method: 'GET',
+    params: { visitId },
   });
 }
