@@ -978,6 +978,24 @@ export interface GetProductionAnalysisHistoryByCvrIdResponse {
   dataBundle: ProductionAnalysisHistoryItemApi[];
 }
 
+export interface ProductionCourtHistoryItemApi {
+  COURT_HISTORY_ID: string;
+  PRODUCTION_SENT_COURT_ID: string;
+  CVR_ID: string;
+  CREATED_DTM: string;
+  CREATED_BY: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetProductionCourtHistoryByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionCourtHistoryItemApi[];
+}
+
+
 
 
 

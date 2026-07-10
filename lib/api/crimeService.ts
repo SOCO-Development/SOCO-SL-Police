@@ -28,6 +28,7 @@ import type {
   LocationVisitItemApi,
   VisitHistoryItemApi,
   ProductionAnalysisHistoryItemApi,
+  ProductionCourtHistoryItemApi,
 } from './types';
 
 /**
@@ -266,6 +267,18 @@ export async function getProductionAnalysisHistoryByCvrId(
   cvrId: number,
 ): Promise<ProductionAnalysisHistoryItemApi[]> {
   return apiRequest<ProductionAnalysisHistoryItemApi[]>('Cvr/GetProductionAnalysisHistoryByCvrId', {
+    method: 'GET',
+    params: { cvrId },
+  });
+}
+
+/**
+ * Get production court history by CVR ID (SOCO_CVR12)
+ */
+export async function getProductionCourtHistoryByCvrId(
+  cvrId: number,
+): Promise<ProductionCourtHistoryItemApi[]> {
+  return apiRequest<ProductionCourtHistoryItemApi[]>('Cvr/GetProductionCourtHistoryByCvrId', {
     method: 'GET',
     params: { cvrId },
   });
