@@ -916,6 +916,110 @@ export interface GetCrimeScenesByVisitIdResponse {
   dataBundle: CrimeSceneByVisitItemApi[];
 }
 
+export interface LocationVisitItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+  CVR_ID: string;
+  VISIT_ID: string;
+  VISIT_TYPE_ID: string;
+  REPORTED_SOCO_DATE: string;
+  REPORTED_SOCO_TIME: string;
+  OFFENCE_TYPE: string;
+  PLACE_DETAIL: string;
+  SCENE_IN: string;
+  SCENE_OUT: string;
+  CREATED_DTM?: string;
+}
+
+export interface GetVisitsByCvrLocationIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: LocationVisitItemApi[];
+}
+
+export interface VisitHistoryItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+  CVR_ID: string;
+  VISIT_ID: string;
+  VISIT_TYPE_ID: string;
+  OFFENCE_TYPE: string;
+  PLACE_DETAIL: string;
+  SCENE_IN: string;
+  SCENE_OUT: string;
+  CREATED_DTM: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetVisitHistoryByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: VisitHistoryItemApi[];
+}
+
+export interface ProductionAnalysisHistoryItemApi {
+  ANALYSIS_HISTORY_ID: string;
+  PRODUCTION_SENT_ANALYSIS_ID: string;
+  CVR_ID: string;
+  CREATED_DTM: string;
+  CREATED_BY: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetProductionAnalysisHistoryByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionAnalysisHistoryItemApi[];
+}
+
+export interface ProductionCourtHistoryItemApi {
+  COURT_HISTORY_ID: string;
+  PRODUCTION_SENT_COURT_ID: string;
+  CVR_ID: string;
+  CREATED_DTM: string;
+  CREATED_BY: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetProductionCourtHistoryByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionCourtHistoryItemApi[];
+}
+
+export interface CourtVisitDetailItemApi {
+  COURT_VISIT_DETAILS_ID: string;
+  INITIATE_COURT_VISIT_ID: string;
+  COURT_ID: string;
+  TESTIFIED_OFFICER_NAME: string;
+  OFFICER_ID: string;
+  VISIT_DESCRIPTION: string;
+  COURT_VISIT_ATTACHEMENT_URL: string;
+  CREATED_DTM: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetCourtVisitsByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: CourtVisitDetailItemApi[];
+}
+
+
+
+
+
+
 
 
 

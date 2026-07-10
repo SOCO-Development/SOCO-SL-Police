@@ -44,6 +44,8 @@ export default function UpdateCourtDetailsPage() {
   const [error, setError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
   const [isEditingProductionSentToCourt, setIsEditingProductionSentToCourt] = useState(false);
+  const [historyList, setHistoryList] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [popup, showPopup, closePopup] = useResultPopup();
 
   useEffect(() => {
@@ -94,6 +96,7 @@ export default function UpdateCourtDetailsPage() {
     if (!selectedSceneId) {
       setCourtDraft(emptyCrimeSceneCourtDetails());
       setIsEditingProductionSentToCourt(false);
+      setHistoryList([]);
       return;
     }
     const scene = scenes.find((s) => s.id === selectedSceneId);
@@ -102,6 +105,7 @@ export default function UpdateCourtDetailsPage() {
     setError('');
     setSavedOk(false);
     setIsEditingProductionSentToCourt(false);
+    setHistoryList([]);
 
     if (scene.cvrId) {
       crimeService.getProductionSentCourtByCvrId(Number(scene.cvrId))
@@ -125,6 +129,19 @@ export default function UpdateCourtDetailsPage() {
         })
         .catch((err) => {
           console.error('Failed to load production sent court from backend', err);
+        });
+
+      // Fetch history log
+      setHistoryLoading(true);
+      crimeService.getProductionCourtHistoryByCvrId(Number(scene.cvrId))
+        .then((data) => {
+          if (data) setHistoryList(data);
+        })
+        .catch((err) => {
+          console.error('Failed to load CVR production court history', err);
+        })
+        .finally(() => {
+          setHistoryLoading(false);
         });
     }
   }, [selectedSceneId, scenes]);
@@ -344,11 +361,49 @@ export default function UpdateCourtDetailsPage() {
                       />
                       {isEditingProductionSentToCourt ? (
                         <>
-                          {error ? <p className="text-sm text-red-600">{error}</p> : null}
                           <div className="flex justify-center">
                             <Button variant="success" type="button" onClick={handleSaveProduction}>
-                              Save production details
+                              Save production sent to court (court details)
+                              {savedOk && ' - Saved!'}
                             </Button>
+                          </div>
+
+                          {/* Production Court History Section */}
+                          <div className="mt-8 pt-6 border-t border-gray-200 space-y-4">
+                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                              <span className="w-1.5 h-4 rounded-full bg-blue-600 inline-block flex-shrink-0" />
+                              Production Court History Log
+                            </h4>
+                            {historyLoading ? (
+                              <div className="flex items-center justify-center p-4">
+                                <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+                              </div>
+                            ) : historyList.length > 0 ? (
+                              <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+                                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-4 py-2 text-left font-bold text-gray-500 uppercase tracking-wider">History ID</th>
+                                      <th className="px-4 py-2 text-left font-bold text-gray-500 uppercase tracking-wider">Sent Court ID</th>
+                                      <th className="px-4 py-2 text-left font-bold text-gray-500 uppercase tracking-wider">Updated By</th>
+                                      <th className="px-4 py-2 text-left font-bold text-gray-500 uppercase tracking-wider">Date & Time</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white divide-y divide-gray-200">
+                                    {historyList.map((hist, idx) => (
+                                      <tr key={idx} className="hover:bg-gray-50">
+                                        <td className="px-4 py-2 font-mono font-bold text-blue-700">{hist.COURT_HISTORY_ID}</td>
+                                        <td className="px-4 py-2 font-mono">{hist.PRODUCTION_SENT_COURT_ID}</td>
+                                        <td className="px-4 py-2 text-gray-700">{hist.CREATED_BY_NAME || hist.CREATED_BY || '—'}</td>
+                                        <td className="px-4 py-2 text-gray-500 tabular-nums">{hist.CREATED_DTM}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400">No production court history log entries found.</p>
+                            )}
                           </div>
                         </>
                       ) : null}

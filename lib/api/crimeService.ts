@@ -25,6 +25,11 @@ import type {
   AddCourtVisitRequest,
   AddCourtVisitResponse,
   CrimeSceneByVisitItemApi,
+  LocationVisitItemApi,
+  VisitHistoryItemApi,
+  ProductionAnalysisHistoryItemApi,
+  ProductionCourtHistoryItemApi,
+  CourtVisitDetailItemApi,
 } from './types';
 
 /**
@@ -229,5 +234,65 @@ export async function getCrimeScenesByVisitId(
   return apiRequest<CrimeSceneByVisitItemApi[]>('Cvr/GetCrimeScenesByVisitId', {
     method: 'GET',
     params: { visitId },
+  });
+}
+
+/**
+ * Get visits by CVR location ID (SOCO_CVR9)
+ */
+export async function getVisitsByCvrLocationId(
+  locationId: number,
+): Promise<LocationVisitItemApi[]> {
+  return apiRequest<LocationVisitItemApi[]>('Cvr/GetVisitsByCvrLocationId', {
+    method: 'GET',
+    params: { locationId },
+  });
+}
+
+/**
+ * Get visit history by CVR ID (SOCO_CVR10)
+ */
+export async function getVisitHistoryByCvrId(
+  initiateCvrId: number,
+): Promise<VisitHistoryItemApi[]> {
+  return apiRequest<VisitHistoryItemApi[]>('Cvr/GetVisitHistoryByCvrId', {
+    method: 'GET',
+    params: { initiateCvrId },
+  });
+}
+
+/**
+ * Get production analysis history by CVR ID (SOCO_CVR11)
+ */
+export async function getProductionAnalysisHistoryByCvrId(
+  cvrId: number,
+): Promise<ProductionAnalysisHistoryItemApi[]> {
+  return apiRequest<ProductionAnalysisHistoryItemApi[]>('Cvr/GetProductionAnalysisHistoryByCvrId', {
+    method: 'GET',
+    params: { cvrId },
+  });
+}
+
+/**
+ * Get production court history by CVR ID (SOCO_CVR12)
+ */
+export async function getProductionCourtHistoryByCvrId(
+  cvrId: number,
+): Promise<ProductionCourtHistoryItemApi[]> {
+  return apiRequest<ProductionCourtHistoryItemApi[]>('Cvr/GetProductionCourtHistoryByCvrId', {
+    method: 'GET',
+    params: { cvrId },
+  });
+}
+
+/**
+ * Get court visits by CVR ID (SOCO_CVR13)
+ */
+export async function getCourtVisitsByCvrId(
+  initiateCvrId: number,
+): Promise<CourtVisitDetailItemApi[]> {
+  return apiRequest<CourtVisitDetailItemApi[]>('Cvr/GetCourtVisitsByCvrId', {
+    method: 'GET',
+    params: { initiateCvrId },
   });
 }
