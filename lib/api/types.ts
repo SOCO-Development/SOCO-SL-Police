@@ -961,6 +961,24 @@ export interface GetVisitHistoryByCvrIdResponse {
   dataBundle: VisitHistoryItemApi[];
 }
 
+export interface ProductionAnalysisHistoryItemApi {
+  ANALYSIS_HISTORY_ID: string;
+  PRODUCTION_SENT_ANALYSIS_ID: string;
+  CVR_ID: string;
+  CREATED_DTM: string;
+  CREATED_BY: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetProductionAnalysisHistoryByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionAnalysisHistoryItemApi[];
+}
+
+
 
 
 

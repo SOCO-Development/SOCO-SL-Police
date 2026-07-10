@@ -27,6 +27,7 @@ import type {
   CrimeSceneByVisitItemApi,
   LocationVisitItemApi,
   VisitHistoryItemApi,
+  ProductionAnalysisHistoryItemApi,
 } from './types';
 
 /**
@@ -255,5 +256,17 @@ export async function getVisitHistoryByCvrId(
   return apiRequest<VisitHistoryItemApi[]>('Cvr/GetVisitHistoryByCvrId', {
     method: 'GET',
     params: { initiateCvrId },
+  });
+}
+
+/**
+ * Get production analysis history by CVR ID (SOCO_CVR11)
+ */
+export async function getProductionAnalysisHistoryByCvrId(
+  cvrId: number,
+): Promise<ProductionAnalysisHistoryItemApi[]> {
+  return apiRequest<ProductionAnalysisHistoryItemApi[]>('Cvr/GetProductionAnalysisHistoryByCvrId', {
+    method: 'GET',
+    params: { cvrId },
   });
 }
