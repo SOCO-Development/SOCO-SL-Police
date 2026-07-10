@@ -995,6 +995,27 @@ export interface GetProductionCourtHistoryByCvrIdResponse {
   dataBundle: ProductionCourtHistoryItemApi[];
 }
 
+export interface CourtVisitDetailItemApi {
+  COURT_VISIT_DETAILS_ID: string;
+  INITIATE_COURT_VISIT_ID: string;
+  COURT_ID: string;
+  TESTIFIED_OFFICER_NAME: string;
+  OFFICER_ID: string;
+  VISIT_DESCRIPTION: string;
+  COURT_VISIT_ATTACHEMENT_URL: string;
+  CREATED_DTM: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetCourtVisitsByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: CourtVisitDetailItemApi[];
+}
+
+
 
 
 

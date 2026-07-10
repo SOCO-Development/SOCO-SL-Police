@@ -122,6 +122,8 @@ export default function CourtVisitsPage() {
   const [courtVisitDraft, setCourtVisitDraft] = useState<CourtVisitUpdateDetails>(() => emptyCourtVisitUpdate());
   const [error, setError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
+  const [prevVisits, setPrevVisits] = useState<any[]>([]);
+  const [prevVisitsLoading, setPrevVisitsLoading] = useState(false);
   const [popup, showPopup, closePopup] = useResultPopup();
 
   useEffect(() => {
@@ -200,6 +202,7 @@ export default function CourtVisitsPage() {
     if (!selectedSceneId) {
       setCourtDraft(emptyCrimeSceneCourtDetails());
       setCourtVisitDraft(emptyCourtVisitUpdate());
+      setPrevVisits([]);
       return;
     }
     const scene = scenes.find((s) => s.id === selectedSceneId);
@@ -208,6 +211,21 @@ export default function CourtVisitsPage() {
     setCourtVisitDraft(mergeCourtVisit(scene.courtVisitUpdate));
     setError('');
     setSavedOk(false);
+    setPrevVisits([]);
+
+    if (scene.cvrId) {
+      setPrevVisitsLoading(true);
+      crimeService.getCourtVisitsByCvrId(Number(scene.cvrId))
+        .then((data) => {
+          if (data) setPrevVisits(data);
+        })
+        .catch((err) => {
+          console.error('Failed to load CVR court visits', err);
+        })
+        .finally(() => {
+          setPrevVisitsLoading(false);
+        });
+    }
   }, [selectedSceneId, scenes]);
 
   function selectScene(id: string) {
@@ -542,6 +560,46 @@ export default function CourtVisitsPage() {
                               Save court visit
                             </Button>
                           </div>
+                        </div>
+
+                        {/* Previous Court Visits History Section */}
+                        <div className="mt-8 pt-6 border-t border-fuchsia-200/80 space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                            <span className="w-1.5 h-4 rounded-full bg-fuchsia-600 inline-block flex-shrink-0" />
+                            Previous Court Visits Log (Database)
+                          </h4>
+                          {prevVisitsLoading ? (
+                            <div className="flex items-center justify-center p-4">
+                              <div className="animate-spin w-5 h-5 border-2 border-fuchsia-600 border-t-transparent rounded-full" />
+                            </div>
+                          ) : prevVisits.length > 0 ? (
+                            <div className="rounded-xl border border-fuchsia-200 bg-white overflow-hidden shadow-sm">
+                              <table className="min-w-full divide-y divide-fuchsia-100 text-xs">
+                                <thead className="bg-fuchsia-50/50">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Visit ID</th>
+                                    <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Testified Officer</th>
+                                    <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Description</th>
+                                    <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Created By</th>
+                                    <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Date & Time</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-fuchsia-100">
+                                  {prevVisits.map((visit, idx) => (
+                                    <tr key={idx} className="hover:bg-fuchsia-50/20">
+                                      <td className="px-4 py-2 font-mono font-bold text-blue-700">{visit.COURT_VISIT_DETAILS_ID}</td>
+                                      <td className="px-4 py-2 text-gray-900 font-medium">{visit.TESTIFIED_OFFICER_NAME}</td>
+                                      <td className="px-4 py-2 text-gray-600 max-w-xs truncate" title={visit.VISIT_DESCRIPTION}>{visit.VISIT_DESCRIPTION}</td>
+                                      <td className="px-4 py-2 text-gray-700">{visit.CREATED_BY_NAME || '—'}</td>
+                                      <td className="px-4 py-2 text-gray-500 tabular-nums">{visit.CREATED_DTM}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400">No previous court visits found on the backend for this CVR.</p>
+                          )}
                         </div>
                       </div>
                     </>

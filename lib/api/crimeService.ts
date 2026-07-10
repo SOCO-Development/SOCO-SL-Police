@@ -29,6 +29,7 @@ import type {
   VisitHistoryItemApi,
   ProductionAnalysisHistoryItemApi,
   ProductionCourtHistoryItemApi,
+  CourtVisitDetailItemApi,
 } from './types';
 
 /**
@@ -281,5 +282,17 @@ export async function getProductionCourtHistoryByCvrId(
   return apiRequest<ProductionCourtHistoryItemApi[]>('Cvr/GetProductionCourtHistoryByCvrId', {
     method: 'GET',
     params: { cvrId },
+  });
+}
+
+/**
+ * Get court visits by CVR ID (SOCO_CVR13)
+ */
+export async function getCourtVisitsByCvrId(
+  initiateCvrId: number,
+): Promise<CourtVisitDetailItemApi[]> {
+  return apiRequest<CourtVisitDetailItemApi[]>('Cvr/GetCourtVisitsByCvrId', {
+    method: 'GET',
+    params: { initiateCvrId },
   });
 }
