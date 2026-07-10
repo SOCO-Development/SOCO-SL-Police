@@ -22,6 +22,8 @@ import type {
   ProductionAnalysisItemApi,
   LocationCvrItemApi,
   ProductionSentCourtItemGetResponseApi,
+  AddCourtVisitRequest,
+  AddCourtVisitResponse,
 } from './types';
 
 /**
@@ -202,5 +204,17 @@ export async function getCvrsByLocationId(
   return apiRequest<LocationCvrItemApi[]>('Cvr/GetCvrsByLocationId', {
     method: 'GET',
     params: { locationId },
+  });
+}
+
+/**
+ * Add court visit details (SOCO_CVR6)
+ */
+export async function addCourtVisit(
+  payload: AddCourtVisitRequest,
+): Promise<AddCourtVisitResponse> {
+  return apiRequest<AddCourtVisitResponse>('Cvr/AddCourtVisit', {
+    method: 'POST',
+    body: payload,
   });
 }

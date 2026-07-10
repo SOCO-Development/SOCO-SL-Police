@@ -876,6 +876,24 @@ export interface GetCvrsByLocationIdResponse {
   dataBundle: LocationCvrItemApi[];
 }
 
+export interface AddCourtVisitRequest {
+  initiateCvrId: number;
+  courtId: number;
+  testifiedOfficerName: string;
+  officerId: number;
+  visitDescription: string;
+  courtVisitAttachmentUrl: string;
+}
+
+export interface AddCourtVisitResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: string;
+}
+
+
 
 
 
