@@ -19,9 +19,8 @@ import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeVisitService } from '@/lib/crimeVisitService';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { crimeService, userService, locationService, officerService } from '@/lib/api';
-import type { ApiVisit, VisitRecord } from '@/lib/api/types';
+import type { ApiVisit, VisitRecord, CreateCvrRequest } from '@/lib/api/types';
 import {
-  buildCrimeScenePayloadFromForm,
   crimeSceneToFormData,
   validateIncidentTimingSection,
 } from '@/lib/crimeSceneFormMapping';
@@ -85,13 +84,13 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FALLBACK_STATIONS = [
-  { value: 'Colombo Fort Police Station', label: 'Colombo Fort Police Station', division: 'Colombo Division' },
-  { value: 'Borella Police Station', label: 'Borella Police Station', division: 'Colombo Division' },
-  { value: 'Kandy Police Station', label: 'Kandy Police Station', division: 'Kandy Division' },
-  { value: 'Galle Police Station', label: 'Galle Police Station', division: 'Galle Division' },
-  { value: 'Kurunegala Police Station', label: 'Kurunegala Police Station', division: 'Kurunegala Division' },
-  { value: 'Jaffna Police Station', label: 'Jaffna Police Station', division: 'Jaffna Division' },
+const FALLBACK_STATIONS: { value: string; label: string; division: string; id: string }[] = [
+  { value: 'Colombo Fort Police Station', label: 'Colombo Fort Police Station', division: 'Colombo Division', id: '' },
+  { value: 'Borella Police Station', label: 'Borella Police Station', division: 'Colombo Division', id: '' },
+  { value: 'Kandy Police Station', label: 'Kandy Police Station', division: 'Kandy Division', id: '' },
+  { value: 'Galle Police Station', label: 'Galle Police Station', division: 'Galle Division', id: '' },
+  { value: 'Kurunegala Police Station', label: 'Kurunegala Police Station', division: 'Kurunegala Division', id: '' },
+  { value: 'Jaffna Police Station', label: 'Jaffna Police Station', division: 'Jaffna Division', id: '' },
 ];
 
 const FALLBACK_DIVISIONS = [
@@ -218,7 +217,7 @@ export default function CreateCrimeSceneForm({
 }: CreateCrimeSceneFormProps) {
   const [form, setForm] = useState<CrimeSceneFormData>(defaultForm());
   const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
-  const [stations, setStations] = useState<{ value: string; label: string; division: string }[]>(FALLBACK_STATIONS);
+  const [stations, setStations] = useState<{ value: string; label: string; division: string; id: string }[]>(FALLBACK_STATIONS);
   const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
   const [courtOptions, setCourtOptions] = useState<{ value: string; label: string }[]>([]);
   const [productionTypes, setProductionTypes] = useState<{ value: string; label: string }[]>([]);
@@ -295,6 +294,7 @@ export default function CreateCrimeSceneForm({
         if (cancelled) return;
 
         const userLocId = userInfo.locationId;
+        setUserLocationId(userLocId);
 
         try {
           if (userLocId) {
@@ -305,6 +305,7 @@ export default function CreateCrimeSceneForm({
                 label: o.USER_FULL_NAME || o.USER_CALLING_NAME || o.USERNAME || '',
                 regNo: o.USER_REGI_NO || '',
                 rank: o.CURRENT_RANK || o.RANK_ID || '',
+                systemUserId: o.SYSTEM_USER_ID || '',
               }));
               setTeamLeaders(mappedOfficers);
             }
@@ -325,6 +326,7 @@ export default function CreateCrimeSceneForm({
             value: s.POLICE_STATION_NAME,
             label: s.POLICE_STATION_NAME,
             division: matchingLab?.LOCATION_NAME ?? '',
+            id: s.POLICE_STATION_ID,
           })));
         }
       } catch (err) {
@@ -341,6 +343,7 @@ export default function CreateCrimeSceneForm({
             value: loc.name,
             label: loc.name,
             division: loc.division,
+            id: loc.id ?? '',
           })).sort((a, b) => a.label.localeCompare(b.label)));
         });
       }
@@ -363,7 +366,8 @@ export default function CreateCrimeSceneForm({
   const [visitDetails, setVisitDetails] = useState<VisitRecord | null>(null);
   const [visitDetailsLoading, setVisitDetailsLoading] = useState(false);
   const [visitSaveLoading, setVisitSaveLoading] = useState(false);
-  const [teamLeaders, setTeamLeaders] = useState<{ value: string; label: string; regNo: string; rank: string }[]>([]);
+  const [userLocationId, setUserLocationId] = useState<string>('');
+  const [teamLeaders, setTeamLeaders] = useState<{ value: string; label: string; regNo: string; rank: string; systemUserId: string }[]>([]);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
@@ -656,14 +660,20 @@ export default function CreateCrimeSceneForm({
     return '';
   };
 
-  const handleSave = () => {
+  const toApiDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    if (parts[0].length === 4) return dateStr;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
+  const handleSave = async () => {
     const validation = validate();
     if (validation) {
       setError(validation);
       return;
     }
-
-    const payload = buildCrimeScenePayloadFromForm(form);
 
     if (editSceneId && amendmentMode) {
       const updated = crimeSceneService.submitRevisionForApproval(editSceneId, form);
@@ -683,10 +693,118 @@ export default function CreateCrimeSceneForm({
       return;
     }
 
-    const created = crimeSceneService.create({ ...form, ...payload } as CrimeSceneFormData);
-    onSaved?.({ cvrNo: created.cvrNo });
-    setError('');
-    setForm(defaultForm());
+    const policeStationId = stations.find(s => s.value === form.policeStation)?.id || '';
+    const offenceIds = offenceArray
+      .map(name => {
+        const found = offenceOptions.find(o => o.value === name || o.label === name);
+        return found ? Number(found.value) : NaN;
+      })
+      .filter(id => !Number.isNaN(id));
+
+    const incidentDateExactlyKnown = form.incidentDateExactlyKnown !== false;
+    const incidentFrom = form.incidentDateExactlyKnown === false
+      ? { date: form.incidentFrom?.date || '', time: form.incidentFrom?.time || '' }
+      : { date: '', time: '' };
+    const incidentTo = form.incidentDateExactlyKnown === false
+      ? { date: form.incidentTo?.date || '', time: form.incidentTo?.time || '' }
+      : { date: '', time: '' };
+
+    const sceneDuration = (() => {
+      const inMin = toMinutes(form.sceneInTime);
+      const outMin = toMinutes(form.sceneOutTime);
+      if (inMin == null || outMin == null) return '';
+      let diff = outMin - inMin;
+      if (diff < 0) diff += 24 * 60;
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+    })();
+
+    const isNewVisit = form.visitType === 'NEW_VISIT';
+    const apiPayload: CreateCvrRequest = {
+      cvrNo: form.cvrNo?.trim() || '',
+      visitId: isNewVisit ? (Number(form.visitId) || 0) : 0,
+      visitTypeId: isNewVisit ? 1 : 2,
+      locationId: Number(userLocationId) || 0,
+      policeStationId: Number(policeStationId) || 0,
+      reportedPoliceDate: toApiDate(form.reportedToPoliceStation.date),
+      reportedPoliceTime: form.reportedToPoliceStation.time || '',
+      reportedSocoDate: toApiDate(form.reportedToSocoLab.date),
+      reportedSocoTime: form.reportedToSocoLab.time || '',
+      sceneIn: form.sceneInTime || '',
+      sceneOut: form.sceneOutTime || '',
+      sceneDuration,
+      offenceType: form.offenceTypeOther || form.offenceType || '',
+      placeDetail: form.placeOfCrimeScene || '',
+      typeCrimeScene: form.crimeSceneTypeOther || form.crimeSceneType || '',
+      isExactTime: incidentDateExactlyKnown,
+      incidentFromDate: toApiDate(incidentFrom.date),
+      incidentFromTime: incidentFrom.time,
+      incidentToDate: toApiDate(incidentTo.date),
+      incidentToTime: incidentTo.time,
+      offenceIds,
+      socoTeamMembers: form.socoOfficers
+        .filter(o => o.name.trim())
+        .map(o => {
+          const found = teamLeaders.find(t => t.value === o.name || t.regNo === o.regNo);
+          return {
+            systemUserId: Number(found?.systemUserId) || 0,
+            teamRoleId: o.teamRole === 'Photographer' ? 1 : o.teamRole === 'Sketcher' ? 2 : 3,
+          };
+        }),
+      expertTeams: form.specialistTeams
+        .filter(t => t.role.trim())
+        .map(t => ({
+          expertTeamRole: t.role,
+          members: (t.members || [])
+            .filter(m => m.name.trim())
+            .map(m => ({
+              expertTeamMemberName: m.name,
+              expertTeamMemberRole: m.role,
+            })),
+        })),
+      investigationOfficers: (form.investigationOfficers ?? [])
+        .filter(o => o.name.trim())
+        .map(o => ({
+          investigationOfficerName: o.name,
+          investigationOfficerRank: o.rank || '',
+          investigationOfficerRegiNo: Number(o.regNo) || 0,
+        })),
+      sceneGuards: (form.sceneGuards ?? [])
+        .filter(g => g.name.trim())
+        .map(g => ({
+          sceneGuardName: g.name,
+          sceneGuardRank: g.rank || '',
+          sceneGuardRegiNo: Number(g.regNo) || 0,
+        })),
+      productionStatus: (form.courtDetails?.sentToAnalysisRows ?? []).some(r => r.productionRef?.trim()),
+      productionsSentAnalysis: (form.courtDetails?.sentToAnalysisRows ?? [])
+        .filter(r => r.productionRef?.trim() && r.sentToAnalysis === 'Yes')
+        .map(r => ({
+          productionId: Number(r.productionRef) || 0,
+          sentStatus: true,
+          institutionName: r.institutionOtherDetail || r.institution || '',
+          sentDate: toApiDate(r.date || ''),
+          referenceNo: r.refNo || '',
+        })),
+      courtDetails: (form.courtDetails?.productionSentToCourtRows ?? [])
+        .filter(r => r.productionRef?.trim() && r.sentToCourt === 'Yes')
+        .map(r => ({
+          courtId: Number(r.courtName) || 0,
+          courtCaseNo: r.courtCaseNo || '',
+          bNumber: r.courtName || '',
+        })),
+    };
+
+    try {
+      await crimeService.createCvr(apiPayload);
+      onSaved?.({ cvrNo: apiPayload.cvrNo });
+      setError('');
+      setForm(defaultForm());
+    } catch (err) {
+      console.error('CVR API call failed', err);
+      setError(err instanceof Error ? err.message : 'Failed to create CVR');
+    }
   };
 
   // ── Offence helpers ───────────────────────────────────────────────────────

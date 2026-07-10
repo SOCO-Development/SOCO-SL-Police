@@ -13,6 +13,8 @@ import type {
   ApiVisit,
   CourtItem,
   ProductionItem,
+  CreateCvrRequest,
+  CreateCvrResponse,
 } from './types';
 
 /**
@@ -121,5 +123,17 @@ export async function initiateVisit(
 export async function getAllVisits(): Promise<ApiVisit[]> {
   return apiRequest<ApiVisit[]>('Crime/GetAllVisits', {
     method: 'GET',
+  });
+}
+
+/**
+ * Create a new CVR (Crime Visit Report) (SOCO_CVR1)
+ */
+export async function createCvr(
+  payload: CreateCvrRequest,
+): Promise<CreateCvrResponse> {
+  return apiRequest<CreateCvrResponse>('Cvr/CreateCvr', {
+    method: 'POST',
+    body: payload,
   });
 }
