@@ -8,6 +8,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import Button from '@/components/buttons/Button';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { crimeService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
 import type { CrimeScene, CrimeSceneCourtDetails } from '@/types/crimeScene';
@@ -112,8 +113,16 @@ export default function UpdateCourtDetailsPage() {
     }
   }
 
-  function handleSaveProduction() {
-    if (!selectedSceneId) {
+  const toApiDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    if (parts[0].length === 4) return dateStr;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
+  async function handleSaveProduction() {
+    if (!selectedSceneId || !selectedScene) {
       setError('Select a crime scene first.');
       setSavedOk(false);
       showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
@@ -126,6 +135,36 @@ export default function UpdateCourtDetailsPage() {
       showPopup('error', 'Validation Error', v);
       return;
     }
+
+    const numericCvrId = Number(selectedScene.cvrId) || 5;
+    const rows = (courtDraft.productionSentToCourtRows ?? []).filter(
+      (row) => row.productionRef?.trim() && row.sentToCourt === 'Yes'
+    );
+
+    const productionsSentCourt = rows.map((row) => ({
+      productionId: Number(row.productionRef) || 1,
+      sentStatus: true,
+      courtName: row.courtName || 'Colombo',
+      sentDate: toApiDate(row.date || ''),
+      caseNo: row.courtCaseNo || '',
+      affidavitAttachmentUrl: row.divurumaFileName || 'string',
+      questionaireAttachmentUrl: row.prashnavalyaFileName || 'string',
+    }));
+
+    try {
+      await crimeService.addProductionSentCourt({
+        cvrId: numericCvrId,
+        productionsSentCourt,
+      });
+    } catch (err) {
+      console.error('Failed to save productions to court in backend', err);
+      const msg = err instanceof Error ? err.message : 'Backend API update failed.';
+      setError(msg);
+      setSavedOk(false);
+      showPopup('error', 'API Save Failed', msg);
+      return;
+    }
+
     const updated = crimeSceneService.updateCourtDetailsProduction(selectedSceneId, courtDraft);
     if (!updated) {
       const msg = 'Could not save. The visit record may have been removed.';

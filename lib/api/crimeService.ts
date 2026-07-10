@@ -17,6 +17,8 @@ import type {
   CreateCvrResponse,
   UpdateProductionSentAnalysisRequest,
   UpdateProductionSentAnalysisResponse,
+  AddProductionSentCourtRequest,
+  AddProductionSentCourtResponse,
 } from './types';
 
 /**
@@ -147,6 +149,18 @@ export async function updateProductionSentAnalysis(
   payload: UpdateProductionSentAnalysisRequest,
 ): Promise<UpdateProductionSentAnalysisResponse> {
   return apiRequest<UpdateProductionSentAnalysisResponse>('Cvr/UpdateProductionSentAnalysis', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Add productions sent to court (SOCO_CVR3)
+ */
+export async function addProductionSentCourt(
+  payload: AddProductionSentCourtRequest,
+): Promise<AddProductionSentCourtResponse> {
+  return apiRequest<AddProductionSentCourtResponse>('Cvr/AddProductionSentCourt', {
     method: 'POST',
     body: payload,
   });

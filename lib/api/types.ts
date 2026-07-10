@@ -800,4 +800,28 @@ export interface UpdateProductionSentAnalysisResponse {
   dataBundle: string;
 }
 
+export interface ProductionSentCourtItemApi {
+  productionId: number;
+  sentStatus: boolean;
+  courtName: string;
+  sentDate: string;
+  caseNo: string;
+  affidavitAttachmentUrl: string;
+  questionaireAttachmentUrl: string;
+}
+
+export interface AddProductionSentCourtRequest {
+  cvrId: number;
+  productionsSentCourt: ProductionSentCourtItemApi[];
+}
+
+export interface AddProductionSentCourtResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: string;
+}
+
+
 
