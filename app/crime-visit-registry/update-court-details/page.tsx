@@ -102,6 +102,31 @@ export default function UpdateCourtDetailsPage() {
     setError('');
     setSavedOk(false);
     setIsEditingProductionSentToCourt(false);
+
+    if (scene.cvrId) {
+      crimeService.getProductionSentCourtByCvrId(Number(scene.cvrId))
+        .then((backendRows) => {
+          if (backendRows && backendRows.length > 0) {
+            const mappedRows = backendRows.map((item) => ({
+              productionRef: item.PRODUCTION_ID,
+              productionSentCourtId: Number(item.PRODUCTION_SENT_COURT_ID),
+              sentToCourt: (item.SENT_STATUS === 'True' ? 'Yes' : 'No') as 'Yes' | 'No' | '',
+              courtName: item.COURT_NAME || '',
+              date: item.SENT_DATE || '',
+              courtCaseNo: item.CASE_NO || '',
+              divurumaFileName: item.AFFIDAVIT_ATTACHEMENT_URL || '',
+              prashnavalyaFileName: item.QUESTIONAIRE_ATTACHEMENT_URL || '',
+            }));
+            setCourtDraft((prev) => ({
+              ...prev,
+              productionSentToCourtRows: mappedRows,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load production sent court from backend', err);
+        });
+    }
   }, [selectedSceneId, scenes]);
 
   function selectScene(id: string) {

@@ -299,6 +299,17 @@ export default function CreateCrimeSceneForm({
 
         try {
           if (userLocId) {
+            const locCvrs = await crimeService.getCvrsByLocationId(Number(userLocId));
+            if (!cancelled) {
+              setExistingCvrs(locCvrs.map(c => ({ cvrNo: c.CVR_NO, initiateCvrId: c.INITIATE_CVR_ID })));
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load CVRs by location ID', err);
+        }
+
+        try {
+          if (userLocId) {
             const officers = await officerService.getAllOfficers({ locationIds: [Number(userLocId)] });
             if (!cancelled) {
               const mappedOfficers = officers.map(o => ({
@@ -359,7 +370,7 @@ export default function CreateCrimeSceneForm({
 
   const [apiVisits, setApiVisits] = useState<ApiVisit[]>([]);
   const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
-  const [existingCvrs, setExistingCvrs] = useState<string[]>([]);
+  const [existingCvrs, setExistingCvrs] = useState<{ cvrNo: string; initiateCvrId: string }[]>([]);
   const [error, setError] = useState('');
   const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
   const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
@@ -391,7 +402,7 @@ export default function CreateCrimeSceneForm({
     const cvrs = Array.from(
       new Set(crimeSceneService.getAll().map((scene) => scene.cvrNo))
     ).filter(Boolean);
-    setExistingCvrs(cvrs);
+    setExistingCvrs(cvrs.map(c => ({ cvrNo: c, initiateCvrId: '0' })));
   }, []);
 
   useEffect(() => {
@@ -505,7 +516,7 @@ export default function CreateCrimeSceneForm({
     }
   };
 
-  const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr, label: cvr }));
+  const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr.cvrNo, label: cvr.cvrNo }));
   const sceneDuration = formatDuration(form.sceneInTime, form.sceneOutTime);
   const incidentDuration = useMemo(
     () =>
@@ -723,7 +734,8 @@ export default function CreateCrimeSceneForm({
 
     const isNewVisit = form.visitType === 'NEW_VISIT';
     const apiPayload: CreateCvrRequest = {
-      cvrNo: form.cvrNo?.trim() || '',
+      cvrNo: isNewVisit ? (form.cvrNo?.trim() || '') : (form.revisitCvrNo?.trim() || ''),
+      initiateCvrId: isNewVisit ? 0 : Number(existingCvrs.find(c => c.cvrNo === form.revisitCvrNo)?.initiateCvrId) || 0,
       visitId: isNewVisit ? (Number(form.visitId) || 0) : 0,
       visitTypeId: isNewVisit ? 1 : 2,
       locationId: Number(userLocationId) || 0,

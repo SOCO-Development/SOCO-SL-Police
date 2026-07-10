@@ -267,6 +267,7 @@ export function courtVisitUpdateHasDisplayableData(
 export interface ProductionSentToCourtRow {
   /** Value from Production Availability selection. */
   productionRef: string;
+  productionSentCourtId?: number;
   /** Whether this production was sent to court; if Yes, date is required; court name and case no. are optional. */
   sentToCourt?: '' | 'Yes' | 'No';
   date?: string;

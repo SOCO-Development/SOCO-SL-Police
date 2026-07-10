@@ -20,6 +20,8 @@ import type {
   AddProductionSentCourtRequest,
   AddProductionSentCourtResponse,
   ProductionAnalysisItemApi,
+  LocationCvrItemApi,
+  ProductionSentCourtItemGetResponseApi,
 } from './types';
 
 /**
@@ -176,5 +178,29 @@ export async function getProductionAnalysisByCvrId(
   return apiRequest<ProductionAnalysisItemApi[]>('Cvr/GetProductionAnalysisByCvrId', {
     method: 'GET',
     params: { cvrId },
+  });
+}
+
+/**
+ * Get production sent to court list by CVR ID (SOCO_CVR5)
+ */
+export async function getProductionSentCourtByCvrId(
+  cvrId: number,
+): Promise<ProductionSentCourtItemGetResponseApi[]> {
+  return apiRequest<ProductionSentCourtItemGetResponseApi[]>('Cvr/GetProductionSentCourtByCvrId', {
+    method: 'GET',
+    params: { cvrId },
+  });
+}
+
+/**
+ * Get CVRs list by location ID (SOCO_CVR8)
+ */
+export async function getCvrsByLocationId(
+  locationId: number,
+): Promise<LocationCvrItemApi[]> {
+  return apiRequest<LocationCvrItemApi[]>('Cvr/GetCvrsByLocationId', {
+    method: 'GET',
+    params: { locationId },
   });
 }

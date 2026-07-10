@@ -742,6 +742,7 @@ export interface CourtDetailApi {
 
 export interface CreateCvrRequest {
   cvrNo: string;
+  initiateCvrId?: number;
   visitId: number;
   visitTypeId: number;
   locationId: number;
@@ -842,6 +843,39 @@ export interface GetProductionAnalysisByCvrIdResponse {
   exceptionDetail: string | null;
   dataBundle: ProductionAnalysisItemApi[];
 }
+
+export interface ProductionSentCourtItemGetResponseApi {
+  PRODUCTION_SENT_COURT_ID: string;
+  PRODUCTION_ID: string;
+  SENT_STATUS: string;
+  COURT_NAME: string;
+  SENT_DATE: string;
+  CASE_NO: string;
+  AFFIDAVIT_ATTACHEMENT_URL?: string;
+  QUESTIONAIRE_ATTACHEMENT_URL?: string;
+}
+
+export interface GetProductionSentCourtByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionSentCourtItemGetResponseApi[];
+}
+
+export interface LocationCvrItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+}
+
+export interface GetCvrsByLocationIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: LocationCvrItemApi[];
+}
+
 
 
 
