@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { crimeService, userService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import { normalizeCourtVisitUpdate } from '@/types/crimeScene';
@@ -225,7 +226,52 @@ export default function SubmittedCrimeScenesPage() {
   const detailCvrParam = (searchParams.get('cvrNo') ?? '').trim();
 
   useEffect(() => {
-    setScenes(crimeSceneService.getAll());
+    // 1. Initial load from local storage
+    const localScenes = crimeSceneService.getAll();
+    setScenes(localScenes);
+
+    // 2. Fetch and merge backend CVR visits by location ID
+    userService.getCurrentUserInfo()
+      .then((userInfo) => {
+        if (userInfo && userInfo.locationId) {
+          return crimeService.getVisitsByCvrLocationId(Number(userInfo.locationId));
+        }
+        return [];
+      })
+      .then((backendVisits) => {
+        if (backendVisits && backendVisits.length > 0) {
+          const mapped = backendVisits.map((item) => ({
+            id: String(item.CVR_ID || item.INITIATE_CVR_ID),
+            cvrNo: item.CVR_NO,
+            cvrId: Number(item.CVR_ID),
+            visitId: item.VISIT_ID,
+            visitType: item.VISIT_TYPE_ID === '1' ? ('NEW_VISIT' as const) : ('REVISIT' as const),
+            policeStation: '',
+            reportedToPoliceStation: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
+            reportedToSocoLab: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
+            sceneInTime: item.SCENE_IN,
+            sceneOutTime: item.SCENE_OUT,
+            division: '',
+            offence: {},
+            offenceType: item.OFFENCE_TYPE,
+            placeOfCrimeScene: item.PLACE_DETAIL,
+            createdAt: item.CREATED_DTM || new Date().toISOString(),
+            updatedAt: item.CREATED_DTM || new Date().toISOString(),
+            inChargeOfficer: { name: '' },
+            socoOfficers: [],
+            specialistTeams: [],
+            courtDetails: { sentToAnalysisRows: [], productionSentToCourtRows: [] },
+          }));
+
+          const latestLocal = crimeSceneService.getAll();
+          const backendIds = new Set(mapped.map(s => String(s.cvrId)));
+          const uniqueLocal = latestLocal.filter(s => !s.cvrId || !backendIds.has(String(s.cvrId)));
+          setScenes([...mapped, ...uniqueLocal]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load CVR visits from backend location', err);
+      });
   }, []);
 
   const allGroups = useMemo(() => groupScenesByCvr(scenes), [scenes]);

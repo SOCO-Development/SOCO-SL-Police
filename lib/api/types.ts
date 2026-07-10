@@ -916,6 +916,30 @@ export interface GetCrimeScenesByVisitIdResponse {
   dataBundle: CrimeSceneByVisitItemApi[];
 }
 
+export interface LocationVisitItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+  CVR_ID: string;
+  VISIT_ID: string;
+  VISIT_TYPE_ID: string;
+  REPORTED_SOCO_DATE: string;
+  REPORTED_SOCO_TIME: string;
+  OFFENCE_TYPE: string;
+  PLACE_DETAIL: string;
+  SCENE_IN: string;
+  SCENE_OUT: string;
+  CREATED_DTM?: string;
+}
+
+export interface GetVisitsByCvrLocationIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: LocationVisitItemApi[];
+}
+
+
 
 
 
