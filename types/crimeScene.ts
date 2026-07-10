@@ -267,6 +267,7 @@ export function courtVisitUpdateHasDisplayableData(
 export interface ProductionSentToCourtRow {
   /** Value from Production Availability selection. */
   productionRef: string;
+  productionSentCourtId?: number;
   /** Whether this production was sent to court; if Yes, date is required; court name and case no. are optional. */
   sentToCourt?: '' | 'Yes' | 'No';
   date?: string;
@@ -285,6 +286,7 @@ export interface ProductionSentToCourtRow {
 /** One production sent to an analysis institute (repeatable). */
 export interface SentToAnalysisRow {
   productionRef: string;
+  productionSentAnalysisId?: number;
   /** Whether this production was sent for analysis; if Yes, institute, date, etc. apply. */
   sentToAnalysis?: '' | 'Yes' | 'No';
   institution?: string;
@@ -369,6 +371,7 @@ export function emptyCrimeSceneCourtDetails(): CrimeSceneCourtDetails {
 export interface CrimeScene {
   id: string;
   cvrNo: string;
+  cvrId?: string | number;
   visitType: CrimeSceneVisitType;
   visitId?: string;
   revisitCvrNo?: string;

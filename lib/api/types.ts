@@ -742,6 +742,7 @@ export interface CourtDetailApi {
 
 export interface CreateCvrRequest {
   cvrNo: string;
+  initiateCvrId?: number;
   visitId: number;
   visitTypeId: number;
   locationId: number;
@@ -776,6 +777,106 @@ export interface CreateCvrResponse {
   errorShow: string | null;
   errorMessage: string | null;
   exceptionDetail: string | null;
-  dataBundle: unknown;
+  dataBundle?: {
+    cvrId?: string | number;
+    initiateCvrId?: string | number;
+    message?: string;
+  };
 }
+
+export interface UpdateProductionSentAnalysisRequest {
+  productionSentAnalysisId: number;
+  cvrId: number;
+  referenceNo: string;
+  resultReceivedStatus: boolean;
+  resultStatus: boolean;
+  resultAttachmentUrl: string;
+}
+
+export interface UpdateProductionSentAnalysisResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: string;
+}
+
+export interface ProductionSentCourtItemApi {
+  productionId: number;
+  sentStatus: boolean;
+  courtName: string;
+  sentDate: string;
+  caseNo: string;
+  affidavitAttachmentUrl: string;
+  questionaireAttachmentUrl: string;
+}
+
+export interface AddProductionSentCourtRequest {
+  cvrId: number;
+  productionsSentCourt: ProductionSentCourtItemApi[];
+}
+
+export interface AddProductionSentCourtResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: string;
+}
+
+export interface ProductionAnalysisItemApi {
+  PRODUCTION_SENT_ANALYSIS_ID: string;
+  PRODUCTION_ID: string;
+  SENT_STATUS: string;
+  INSTITUTION_NAME: string;
+  SENT_DATE: string;
+  REFERENCE_NO: string;
+  RESULT_RECIEVED_STATUS?: string;
+  RESULT_STATUS?: string;
+  RESULT_ATTACHEMENT_URL?: string;
+}
+
+export interface GetProductionAnalysisByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionAnalysisItemApi[];
+}
+
+export interface ProductionSentCourtItemGetResponseApi {
+  PRODUCTION_SENT_COURT_ID: string;
+  PRODUCTION_ID: string;
+  SENT_STATUS: string;
+  COURT_NAME: string;
+  SENT_DATE: string;
+  CASE_NO: string;
+  AFFIDAVIT_ATTACHEMENT_URL?: string;
+  QUESTIONAIRE_ATTACHEMENT_URL?: string;
+}
+
+export interface GetProductionSentCourtByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: ProductionSentCourtItemGetResponseApi[];
+}
+
+export interface LocationCvrItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+}
+
+export interface GetCvrsByLocationIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: LocationCvrItemApi[];
+}
+
+
+
+
 

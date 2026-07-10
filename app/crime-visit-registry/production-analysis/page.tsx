@@ -6,6 +6,7 @@ import Link from 'next/link';
 import CustomSelect from '@/components/forms/CustomSelect';
 import Button from '@/components/buttons/Button';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { crimeService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import { PageHeader, PageLayout } from '@/components/ui';
@@ -97,6 +98,38 @@ export default function ProductionAnalysisPage() {
     setCourtDetailsDraft(mergeCourtDetails(scene.courtDetails));
     setCourtDetailsError('');
     setIsEditingSentToAnalysis(false);
+
+    if (scene.cvrId) {
+      crimeService.getProductionAnalysisByCvrId(Number(scene.cvrId))
+        .then((backendRows) => {
+          if (backendRows && backendRows.length > 0) {
+            const mappedRows = backendRows.map((item) => {
+              let resultReceived: 'Positive' | 'Negative' | '' = '';
+              if (item.RESULT_RECIEVED_STATUS === 'True') {
+                resultReceived = item.RESULT_STATUS === 'True' ? 'Positive' : 'Negative';
+              }
+              return {
+                productionRef: item.PRODUCTION_ID,
+                productionSentAnalysisId: Number(item.PRODUCTION_SENT_ANALYSIS_ID),
+                sentToAnalysis: (item.SENT_STATUS === 'True' ? 'Yes' : 'No') as 'Yes' | 'No' | '',
+                institution: item.INSTITUTION_NAME || '',
+                institutionOtherDetail: '',
+                date: item.SENT_DATE || '',
+                refNo: item.REFERENCE_NO || '',
+                resultReceived,
+                attachmentFileName: item.RESULT_ATTACHEMENT_URL || '',
+              };
+            });
+            setCourtDetailsDraft((prev) => ({
+              ...prev,
+              sentToAnalysisRows: mappedRows,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load production analysis from backend', err);
+        });
+    }
   }, [selectedSceneId, scenes]);
 
   function selectScene(id: string) {
@@ -108,8 +141,8 @@ export default function ProductionAnalysisPage() {
     }
   }
 
-  function handleSaveCourtDetails() {
-    if (!selectedSceneId) {
+  async function handleSaveCourtDetails() {
+    if (!selectedSceneId || !selectedScene) {
       setCourtDetailsError('Select a crime scene first.');
       return;
     }
@@ -119,6 +152,33 @@ export default function ProductionAnalysisPage() {
       showPopup('error', 'Validation Error', v);
       return;
     }
+
+    const numericCvrId = Number(selectedScene.cvrId) || 11;
+    const rows = (courtDetailsDraft.sentToAnalysisRows ?? []).filter(
+      (row) => row.productionRef?.trim() && row.sentToAnalysis === 'Yes'
+    );
+
+    try {
+      await Promise.all(
+        rows.map((row) =>
+          crimeService.updateProductionSentAnalysis({
+            productionSentAnalysisId: row.productionSentAnalysisId || Number(row.productionRef) || 1,
+            cvrId: numericCvrId,
+            referenceNo: row.refNo || '',
+            resultReceivedStatus: row.resultReceived === 'Positive' || row.resultReceived === 'Negative',
+            resultStatus: row.resultReceived === 'Positive',
+            resultAttachmentUrl: row.attachmentFileName || 'string',
+          })
+        )
+      );
+    } catch (err) {
+      console.error('Failed to update production analysis in backend', err);
+      const msg = err instanceof Error ? err.message : 'Backend API update failed.';
+      setCourtDetailsError(msg);
+      showPopup('error', 'API Update Failed', msg);
+      return;
+    }
+
     const updated = crimeSceneService.updateCourtDetailsProduction(
       selectedSceneId,
       courtDetailsDraft,

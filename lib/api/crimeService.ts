@@ -15,6 +15,13 @@ import type {
   ProductionItem,
   CreateCvrRequest,
   CreateCvrResponse,
+  UpdateProductionSentAnalysisRequest,
+  UpdateProductionSentAnalysisResponse,
+  AddProductionSentCourtRequest,
+  AddProductionSentCourtResponse,
+  ProductionAnalysisItemApi,
+  LocationCvrItemApi,
+  ProductionSentCourtItemGetResponseApi,
 } from './types';
 
 /**
@@ -135,5 +142,65 @@ export async function createCvr(
   return apiRequest<CreateCvrResponse>('Cvr/CreateCvr', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Update production analysis details (result) on backend (SOCO_CVR2)
+ */
+export async function updateProductionSentAnalysis(
+  payload: UpdateProductionSentAnalysisRequest,
+): Promise<UpdateProductionSentAnalysisResponse> {
+  return apiRequest<UpdateProductionSentAnalysisResponse>('Cvr/UpdateProductionSentAnalysis', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Add productions sent to court (SOCO_CVR3)
+ */
+export async function addProductionSentCourt(
+  payload: AddProductionSentCourtRequest,
+): Promise<AddProductionSentCourtResponse> {
+  return apiRequest<AddProductionSentCourtResponse>('Cvr/AddProductionSentCourt', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Get production analysis list by CVR ID (SOCO_CVR4)
+ */
+export async function getProductionAnalysisByCvrId(
+  cvrId: number,
+): Promise<ProductionAnalysisItemApi[]> {
+  return apiRequest<ProductionAnalysisItemApi[]>('Cvr/GetProductionAnalysisByCvrId', {
+    method: 'GET',
+    params: { cvrId },
+  });
+}
+
+/**
+ * Get production sent to court list by CVR ID (SOCO_CVR5)
+ */
+export async function getProductionSentCourtByCvrId(
+  cvrId: number,
+): Promise<ProductionSentCourtItemGetResponseApi[]> {
+  return apiRequest<ProductionSentCourtItemGetResponseApi[]>('Cvr/GetProductionSentCourtByCvrId', {
+    method: 'GET',
+    params: { cvrId },
+  });
+}
+
+/**
+ * Get CVRs list by location ID (SOCO_CVR8)
+ */
+export async function getCvrsByLocationId(
+  locationId: number,
+): Promise<LocationCvrItemApi[]> {
+  return apiRequest<LocationCvrItemApi[]>('Cvr/GetCvrsByLocationId', {
+    method: 'GET',
+    params: { locationId },
   });
 }
