@@ -21,6 +21,7 @@ import { crimeSceneService } from '@/lib/crimeSceneService';
 import { crimeService, userService, locationService, officerService } from '@/lib/api';
 import type { ApiVisit, VisitRecord, CreateCvrRequest } from '@/lib/api/types';
 import {
+  buildCrimeScenePayloadFromForm,
   crimeSceneToFormData,
   validateIncidentTimingSection,
 } from '@/lib/crimeSceneFormMapping';
@@ -797,7 +798,13 @@ export default function CreateCrimeSceneForm({
     };
 
     try {
-      await crimeService.createCvr(apiPayload);
+      const res = await crimeService.createCvr(apiPayload);
+      const cvrId = res.dataBundle?.cvrId;
+
+      // Save locally to localStorage so it shows up in local lists
+      const payload = buildCrimeScenePayloadFromForm(form);
+      crimeSceneService.create({ ...form, ...payload, cvrId } as CrimeSceneFormData);
+
       onSaved?.({ cvrNo: apiPayload.cvrNo });
       setError('');
       setForm(defaultForm());

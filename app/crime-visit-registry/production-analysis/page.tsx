@@ -6,6 +6,7 @@ import Link from 'next/link';
 import CustomSelect from '@/components/forms/CustomSelect';
 import Button from '@/components/buttons/Button';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { crimeService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import { PageHeader, PageLayout } from '@/components/ui';
@@ -108,8 +109,8 @@ export default function ProductionAnalysisPage() {
     }
   }
 
-  function handleSaveCourtDetails() {
-    if (!selectedSceneId) {
+  async function handleSaveCourtDetails() {
+    if (!selectedSceneId || !selectedScene) {
       setCourtDetailsError('Select a crime scene first.');
       return;
     }
@@ -119,6 +120,33 @@ export default function ProductionAnalysisPage() {
       showPopup('error', 'Validation Error', v);
       return;
     }
+
+    const numericCvrId = Number(selectedScene.cvrId) || 11;
+    const rows = (courtDetailsDraft.sentToAnalysisRows ?? []).filter(
+      (row) => row.productionRef?.trim() && row.sentToAnalysis === 'Yes'
+    );
+
+    try {
+      await Promise.all(
+        rows.map((row) =>
+          crimeService.updateProductionSentAnalysis({
+            productionSentAnalysisId: Number(row.productionRef) || 1,
+            cvrId: numericCvrId,
+            referenceNo: row.refNo || '',
+            resultReceivedStatus: row.resultReceived === 'Positive' || row.resultReceived === 'Negative',
+            resultStatus: row.resultReceived === 'Positive',
+            resultAttachmentUrl: row.attachmentFileName || 'string',
+          })
+        )
+      );
+    } catch (err) {
+      console.error('Failed to update production analysis in backend', err);
+      const msg = err instanceof Error ? err.message : 'Backend API update failed.';
+      setCourtDetailsError(msg);
+      showPopup('error', 'API Update Failed', msg);
+      return;
+    }
+
     const updated = crimeSceneService.updateCourtDetailsProduction(
       selectedSceneId,
       courtDetailsDraft,

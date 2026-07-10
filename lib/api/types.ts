@@ -776,6 +776,28 @@ export interface CreateCvrResponse {
   errorShow: string | null;
   errorMessage: string | null;
   exceptionDetail: string | null;
-  dataBundle: unknown;
+  dataBundle?: {
+    cvrId?: string | number;
+    initiateCvrId?: string | number;
+    message?: string;
+  };
 }
+
+export interface UpdateProductionSentAnalysisRequest {
+  productionSentAnalysisId: number;
+  cvrId: number;
+  referenceNo: string;
+  resultReceivedStatus: boolean;
+  resultStatus: boolean;
+  resultAttachmentUrl: string;
+}
+
+export interface UpdateProductionSentAnalysisResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: string;
+}
+
 

@@ -15,6 +15,8 @@ import type {
   ProductionItem,
   CreateCvrRequest,
   CreateCvrResponse,
+  UpdateProductionSentAnalysisRequest,
+  UpdateProductionSentAnalysisResponse,
 } from './types';
 
 /**
@@ -133,6 +135,18 @@ export async function createCvr(
   payload: CreateCvrRequest,
 ): Promise<CreateCvrResponse> {
   return apiRequest<CreateCvrResponse>('Cvr/CreateCvr', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Update production analysis details (result) on backend (SOCO_CVR2)
+ */
+export async function updateProductionSentAnalysis(
+  payload: UpdateProductionSentAnalysisRequest,
+): Promise<UpdateProductionSentAnalysisResponse> {
+  return apiRequest<UpdateProductionSentAnalysisResponse>('Cvr/UpdateProductionSentAnalysis', {
     method: 'POST',
     body: payload,
   });

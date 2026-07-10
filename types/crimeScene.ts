@@ -369,6 +369,7 @@ export function emptyCrimeSceneCourtDetails(): CrimeSceneCourtDetails {
 export interface CrimeScene {
   id: string;
   cvrNo: string;
+  cvrId?: string | number;
   visitType: CrimeSceneVisitType;
   visitId?: string;
   revisitCvrNo?: string;
