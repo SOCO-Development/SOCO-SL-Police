@@ -939,6 +939,29 @@ export interface GetVisitsByCvrLocationIdResponse {
   dataBundle: LocationVisitItemApi[];
 }
 
+export interface VisitHistoryItemApi {
+  INITIATE_CVR_ID: string;
+  CVR_NO: string;
+  CVR_ID: string;
+  VISIT_ID: string;
+  VISIT_TYPE_ID: string;
+  OFFENCE_TYPE: string;
+  PLACE_DETAIL: string;
+  SCENE_IN: string;
+  SCENE_OUT: string;
+  CREATED_DTM: string;
+  CREATED_BY_NAME?: string;
+}
+
+export interface GetVisitHistoryByCvrIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: VisitHistoryItemApi[];
+}
+
+
 
 
 
