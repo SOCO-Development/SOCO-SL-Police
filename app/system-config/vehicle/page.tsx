@@ -356,11 +356,6 @@ export default function VehicleConfigPage() {
                 backHref="/system-config"
                 title="Vehicle Configuration"
                 description="Manage SOCO vehicles — add and view vehicle assignments."
-                actions={
-                    <Button variant="primary" onClick={() => setFilter('ADD')}>
-                        <Plus className="w-4 h-4" /> Add New Vehicle
-                    </Button>
-                }
             />
 
             <TabBar
