@@ -218,10 +218,23 @@ export default function CreateCrimeSceneForm({
 }: CreateCrimeSceneFormProps) {
   const [form, setForm] = useState<CrimeSceneFormData>(defaultForm());
   const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
+  const [allLabs, setAllLabs] = useState<any[]>([]);
   const [stations, setStations] = useState<{ value: string; label: string; division: string; id: string }[]>(FALLBACK_STATIONS);
   const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
   const [courtOptions, setCourtOptions] = useState<{ value: string; label: string }[]>([]);
   const [productionTypes, setProductionTypes] = useState<{ value: string; label: string }[]>([]);
+  const [apiVisits, setApiVisits] = useState<ApiVisit[]>([]);
+  const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
+  const [existingCvrs, setExistingCvrs] = useState<{ cvrNo: string; initiateCvrId: string }[]>([]);
+  const [error, setError] = useState('');
+  const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
+  const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
+  const [visitsLoading, setVisitsLoading] = useState(false);
+  const [visitDetails, setVisitDetails] = useState<VisitRecord | null>(null);
+  const [visitDetailsLoading, setVisitDetailsLoading] = useState(false);
+  const [visitSaveLoading, setVisitSaveLoading] = useState(false);
+  const [userLocationId, setUserLocationId] = useState<string>('');
+  const [teamLeaders, setTeamLeaders] = useState<{ value: string; label: string; regNo: string; rank: string; systemUserId: string }[]>([]);
 
   const productionTypeLabelMap = useMemo(
     () => new Map(productionTypes.map((option) => [option.value, option.label])),
@@ -287,6 +300,7 @@ export default function CreateCrimeSceneForm({
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      let userLocId = '';
       try {
         const [userInfo, allLocations] = await Promise.all([
           userService.getCurrentUserInfo(),
@@ -294,7 +308,7 @@ export default function CreateCrimeSceneForm({
         ]);
         if (cancelled) return;
 
-        const userLocId = userInfo.locationId;
+        userLocId = userInfo.locationId;
         setUserLocationId(userLocId);
 
         try {
@@ -326,60 +340,71 @@ export default function CreateCrimeSceneForm({
           console.error('Failed to load team leaders', err);
         }
 
+        setAllLabs(allLocations);
+        const labOptions = allLocations.map(l => ({
+          value: l.LOCATION_NAME,
+          label: l.LOCATION_NAME,
+        }));
+        setDivisions(labOptions);
+
         const matchingLab = allLocations.find(l => String(l.LOCATION_ID) === String(userLocId));
         if (matchingLab) {
-          setDivisions([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
-          setForm((prev) => ({ ...prev, division: matchingLab.LOCATION_NAME }));
-        }
-
-        const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
-        if (!cancelled && ps.length > 0) {
-          setStations(ps.map(s => ({
-            value: s.POLICE_STATION_NAME,
-            label: s.POLICE_STATION_NAME,
-            division: matchingLab?.LOCATION_NAME ?? '',
-            id: s.POLICE_STATION_ID,
-          })));
+          setForm((prev) => ({ ...prev, division: prev.division || matchingLab.LOCATION_NAME }));
         }
       } catch (err) {
         console.error('Failed to load location data', err);
         // Fallback to registry data
         getLocationRegistry().then(({ locations }) => {
           if (cancelled || !locations.length) return;
-          const divisionOpts = [...new Set(locations.map(l => l.division))]
-            .filter(Boolean)
-            .map(name => ({ value: name, label: name }))
-            .sort((a, b) => a.label.localeCompare(b.label));
-          setDivisions(divisionOpts);
-          setStations(locations.map(loc => ({
-            value: loc.name,
-            label: loc.name,
-            division: loc.division,
-            id: loc.id ?? '',
-          })).sort((a, b) => a.label.localeCompare(b.label)));
+          setAllLabs(locations.map(l => ({
+            LOCATION_ID: l.id,
+            LOCATION_NAME: l.name,
+            DIVISION_ID: l.divisionId,
+          })));
+          const labOpts = locations.map(l => ({
+            value: l.name,
+            label: l.name,
+          }));
+          setDivisions(labOpts);
+          const matchingLab = locations.find(l => String(l.id) === String(userLocId));
+          if (matchingLab) {
+            setForm((prev) => ({ ...prev, division: prev.division || matchingLab.name }));
+          }
         });
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (!form.division || allLabs.length === 0) return;
+    const matchingLab = allLabs.find(l => l.LOCATION_NAME === form.division);
+    if (!matchingLab) return;
+
+    let cancelled = false;
+    locationService.getPoliceStationsBySocoLab(matchingLab.LOCATION_ID)
+      .then((ps) => {
+        if (!cancelled) {
+          setStations(ps.map(s => ({
+            value: s.POLICE_STATION_NAME,
+            label: s.POLICE_STATION_NAME,
+            division: form.division,
+            id: s.POLICE_STATION_ID,
+          })));
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load police stations for SOCO Lab', err);
+      });
+
+    return () => { cancelled = true; };
+  }, [form.division, allLabs]);
+
   const filteredStationOptions = useMemo(() => {
     if (!form.division) return stations;
     return stations.filter(s => s.division === form.division);
   }, [stations, form.division]);
 
-  const [apiVisits, setApiVisits] = useState<ApiVisit[]>([]);
-  const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
-  const [existingCvrs, setExistingCvrs] = useState<{ cvrNo: string; initiateCvrId: string }[]>([]);
-  const [error, setError] = useState('');
-  const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
-  const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
-  const [visitsLoading, setVisitsLoading] = useState(false);
-  const [visitDetails, setVisitDetails] = useState<VisitRecord | null>(null);
-  const [visitDetailsLoading, setVisitDetailsLoading] = useState(false);
-  const [visitSaveLoading, setVisitSaveLoading] = useState(false);
-  const [userLocationId, setUserLocationId] = useState<string>('');
-  const [teamLeaders, setTeamLeaders] = useState<{ value: string; label: string; regNo: string; rank: string; systemUserId: string }[]>([]);
   const isEditMode = Boolean(editSceneId);
 
   useEffect(() => {
