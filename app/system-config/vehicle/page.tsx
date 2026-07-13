@@ -5,7 +5,7 @@ import FormInput from '@/components/forms/FormInput';
 import CustomSelect from '@/components/forms/CustomSelect';
 import VehicleList from './VehicleList';
 import type { VehicleRecord } from './types';
-import { PageHeader, PageLayout, Button, TabBar } from '@/components/ui';
+import { PageHeader, PageLayout, Button, TabBar, MultiSelect } from '@/components/ui';
 import { Plus } from 'lucide-react';
 import { crimeService, locationService } from '@/lib/api';
 import { getErrorMessage, showErrorAlert, showSuccessAlert } from '@/lib/alerts';
@@ -24,7 +24,6 @@ const initialVehicles: VehicleRecord[] = [];
 export default function VehicleConfigPage() {
     const [filter, setFilter] = useState<FilterTab>('ALL');
     const [vehicles, setVehicles] = useState<VehicleRecord[]>(initialVehicles);
-    const [searchTerm, setSearchTerm] = useState('');
     const [sortKey, setSortKey] = useState<keyof VehicleRecord | string | null>('vehicleNumber');
     const [sortAsc, setSortAsc] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +31,12 @@ export default function VehicleConfigPage() {
     const [locationOptions, setLocationOptions] = useState<Array<{ value: string; label: string }>>([
         { value: '', label: 'Select Location' },
     ]);
+    const [locationMultiOptions, setLocationMultiOptions] = useState<Array<{ value: string; label: string }>>([]);
+    const [filterLocations, setFilterLocations] = useState<string[]>([]);
+    const [searchVehicleNo, setSearchVehicleNo] = useState('');
+    const [appliedLocations, setAppliedLocations] = useState<string[]>([]);
+    const [appliedVehicleNo, setAppliedVehicleNo] = useState('');
+    const [hasSearched, setHasSearched] = useState(false);
 
     const [vehicleNumber, setVehicleNumber] = useState('');
     const [model, setModel] = useState('');
@@ -109,6 +114,13 @@ export default function VehicleConfigPage() {
                 ];
                 setLocationOptions(options);
 
+                setLocationMultiOptions(
+                    locations.map((loc) => ({
+                        value: String(loc.LOCATION_ID),
+                        label: loc.LOCATION_NAME,
+                    }))
+                );
+
                 // Create helper lookup map
                 const locMap = new Map<string, string>();
                 locations.forEach((loc) => {
@@ -140,6 +152,7 @@ export default function VehicleConfigPage() {
                     engineNo: v.ENGINE_NO || '',
                     fuelType: v.FUEL_TYPE || '',
                     assignedLocation: locMap.get(String(v.LOCATION_ID)) || `Lab #${v.LOCATION_ID}`,
+                    locationId: String(v.LOCATION_ID),
                 }));
 
                 setVehicles(mappedVehicles);
@@ -156,29 +169,29 @@ export default function VehicleConfigPage() {
     }, []);
 
     const filteredVehicles = useMemo(() => {
-        const term = searchTerm.trim().toLowerCase();
-        const searched = term
-            ? vehicles.filter((vehicle) =>
-                [
-                    vehicle.vehicleNumber,
-                    vehicle.model,
-                    vehicle.make,
-                    vehicle.year,
-                    vehicle.assignedLocation,
-                ]
-                    .join(' ')
-                    .toLowerCase()
-                    .includes(term)
-            )
-            : vehicles;
+        let searched = [...vehicles];
+
+        if (appliedVehicleNo.trim()) {
+            const vNo = appliedVehicleNo.trim().toLowerCase();
+            searched = searched.filter((vehicle) =>
+                vehicle.vehicleNumber.toLowerCase().includes(vNo)
+            );
+        }
+
+        if (appliedLocations.length > 0) {
+            searched = searched.filter((vehicle) =>
+                vehicle.locationId && appliedLocations.includes(vehicle.locationId)
+            );
+        }
+
         const key = String(sortKey ?? 'vehicleNumber');
-        return [...searched].sort((a, b) => {
+        return searched.sort((a, b) => {
             const aVal = String((a as Record<string, string>)[key] ?? '').toLowerCase();
             const bVal = String((b as Record<string, string>)[key] ?? '').toLowerCase();
             const cmp = aVal.localeCompare(bVal);
             return sortAsc ? cmp : -cmp;
         });
-    }, [vehicles, searchTerm, sortKey, sortAsc]);
+    }, [vehicles, appliedVehicleNo, appliedLocations, sortKey, sortAsc]);
 
     const handleSort = (key: keyof VehicleRecord | string) => {
         if (sortKey === key) {
@@ -187,6 +200,20 @@ export default function VehicleConfigPage() {
             setSortKey(key);
             setSortAsc(true);
         }
+    };
+
+    const handleView = () => {
+        setAppliedLocations(filterLocations);
+        setAppliedVehicleNo(searchVehicleNo);
+        setHasSearched(true);
+    };
+
+    const handleClearFilters = () => {
+        setFilterLocations([]);
+        setSearchVehicleNo('');
+        setAppliedLocations([]);
+        setAppliedVehicleNo('');
+        setHasSearched(false);
     };
 
     const resetForm = () => {
@@ -502,17 +529,58 @@ export default function VehicleConfigPage() {
 
             {filter === 'ALL' && (
                 <>
-                    <div className="mb-4 flex items-center gap-2">
-                        <label className="text-sm font-medium text-gray-700">Search:</label>
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Search vehicles..."
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm max-w-xs"
-                        />
+                    {/* Search & Filter Card */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
+                        <div className="flex gap-3 flex-wrap items-center justify-between">
+                            <div className="flex gap-3 flex-wrap items-end flex-1 min-w-[200px]">
+                                <div className="min-w-[200px] flex-1 max-w-xs">
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Vehicle Number</label>
+                                    <input
+                                        type="text"
+                                        value={searchVehicleNo}
+                                        onChange={(e) => setSearchVehicleNo(e.target.value)}
+                                        placeholder="e.g. CAB-4587"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm min-h-[38px]"
+                                    />
+                                </div>
+                                <div className="min-w-[250px] flex-1 max-w-xs">
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Select SOCO Lab</label>
+                                    <MultiSelect
+                                        value={filterLocations}
+                                        onChange={setFilterLocations}
+                                        options={locationMultiOptions}
+                                        placeholder="Select SOCO Lab"
+                                    />
+                                </div>
+                                <div className="shrink-0 flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="primary"
+                                        onClick={handleView}
+                                        className="!min-h-[38px] !py-2 !text-sm px-4"
+                                    >
+                                        View
+                                    </Button>
+                                    {(filterLocations.length > 0 || searchVehicleNo || appliedLocations.length > 0 || appliedVehicleNo || hasSearched) && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={handleClearFilters}
+                                            className="!min-h-[38px] !px-3 !text-sm !text-red-500 hover:!text-red-700"
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    {isLoading ? (
+
+                    {!hasSearched ? (
+                        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
+                            Please enter the vehicle number, select SOCO Lab, and click View to search.
+                        </div>
+                    ) : isLoading ? (
                         <div className="text-center py-12 text-gray-400">Loading vehicles...</div>
                     ) : (
                         <VehicleList
