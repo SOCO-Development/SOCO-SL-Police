@@ -45,7 +45,7 @@ loadEnvFile(".env.local");
 
 const PROXY_PREFIX = "/soco-api";
 const API_BACKEND_URL = (
-  process.env.API_BACKEND_URL ?? "http://220.247.224.226:8409/SocoApi/api"
+  process.env.API_BACKEND_URL ?? "http://124.43.216.136:3852/SocoApi/api"
 ).replace(/\/+$/, "");
 const publicPort = Number(process.env.PORT || 3000);
 const nextPort = Number(process.env.NEXT_INTERNAL_PORT || publicPort + 1);
