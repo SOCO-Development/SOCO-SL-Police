@@ -30,6 +30,13 @@ export async function getDivisionById(divisionId: number): Promise<ApiDivision[]
   });
 }
 
+export async function getProvinceById(provinceId: number): Promise<ApiProvince[]> {
+  return apiRequest<ApiProvince[]>('Location/GetProvinceById', {
+    params: { provinceId },
+  });
+}
+
+
 export async function insertNewDivision(payload: InsertDivisionRequest): Promise<number> {
   return apiRequest<number>('Location/InsertNewDivision', {
     method: 'POST',
