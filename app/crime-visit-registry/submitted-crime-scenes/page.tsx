@@ -1,5 +1,6 @@
 'use client';
 import { Fragment, useEffect, useMemo, useState, useCallback } from 'react';
+import { jsPDF } from 'jspdf';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
@@ -21,7 +22,7 @@ import {
   registryWorkflowListRowClasses,
   registryWorkflowBadgeClasses,
 } from '@/lib/registryWorkflowDisplay';
-import { CheckCircle, ExternalLink, ChevronDown, ChevronRight, Eye } from 'lucide-react';
+import { CheckCircle, ExternalLink, ChevronDown, ChevronRight, Eye, Table, FileText } from 'lucide-react';
 import { appTableClasses } from '@/lib/ui/styles';
 
 type FilterTab = 'ALL' | 'TODAY';
@@ -257,6 +258,292 @@ function courtVisitEntriesForGroup(group: CrimeSceneCvrGroup): CourtVisitEntry[]
     }
   }
   return entries;
+}
+
+// ── Export Helpers ────────────────────────────────────────────────────────────
+
+function exportToCSV(scenes: CrimeScene[]) {
+  const cvrNo = scenes[0]?.cvrNo || '—';
+  const fileName = `Visit_Details_${cvrNo.replace(/[\/\\?%*:|"<>]/g, '_') || 'cvr'}.xls`;
+
+  const headers = [
+    'Visit Number',
+    'Visit Type',
+    'CVR No',
+    'Police Station',
+    'Division',
+    'Reported to Police Date',
+    'Reported to Police Time',
+    'Reported to SOCO Date',
+    'Reported to SOCO Time',
+    'Scene In Time',
+    'Scene Out Time',
+    'Offence Type',
+    'Place of Crime Scene',
+    'Crime Scene Type',
+    'In Charge Officer',
+    'SOCO Officers',
+    'Court Name',
+    'Court Case No',
+    'B Number',
+    'Created At',
+  ];
+
+  let tableRows = '';
+  scenes.forEach((s, idx) => {
+    const visitNo = idx + 1;
+    const socoNames = (s.socoOfficers || []).map((o) => o.name || '').filter(Boolean).join(', ') || '—';
+    const visitTypeStr = s.visitType === 'REVISIT' ? 'Revisit' : s.visitType === 'COURT_VISIT' ? 'Court Visit' : 'New Crime Scene';
+    const isEven = idx % 2 === 0;
+    const rowClass = isEven ? 'bg-white' : 'bg-zebra';
+
+    tableRows += `
+      <tr class="${rowClass}">
+        <td>Visit ${visitNo}</td>
+        <td>${visitTypeStr}</td>
+        <td>${s.cvrNo || '—'}</td>
+        <td>${s.policeStation || '—'}</td>
+        <td>${s.division || '—'}</td>
+        <td>${s.reportedToPoliceStation?.date || '—'}</td>
+        <td>${s.reportedToPoliceStation?.time || '—'}</td>
+        <td>${s.reportedToSocoLab?.date || '—'}</td>
+        <td>${s.reportedToSocoLab?.time || '—'}</td>
+        <td>${s.sceneInTime || '—'}</td>
+        <td>${s.sceneOutTime || '—'}</td>
+        <td>${s.offenceType || '—'}</td>
+        <td>${s.placeOfCrimeScene || '—'}</td>
+        <td>${s.crimeSceneType || '—'}</td>
+        <td>${s.inChargeOfficer?.name || '—'}</td>
+        <td>${socoNames}</td>
+        <td>${s.courtDetails?.courtName || '—'}</td>
+        <td>${s.courtDetails?.courtCaseNo || '—'}</td>
+        <td>${s.courtDetails?.bNumber || '—'}</td>
+        <td>${s.createdAt || '—'}</td>
+      </tr>
+    `;
+  });
+
+  const htmlContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Visit Details</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          table {
+            border-collapse: collapse;
+            font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+            font-size: 10.5pt;
+          }
+          th {
+            background-color: #1e3a8a;
+            color: #ffffff;
+            font-weight: bold;
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            text-align: left;
+          }
+          td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            text-align: left;
+            color: #334155;
+          }
+          .bg-zebra {
+            background-color: #f8fafc;
+          }
+          .title-row td {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            border: none;
+            padding-bottom: 5px;
+          }
+          .subtitle-row td {
+            font-size: 10pt;
+            color: #64748b;
+            border: none;
+            padding-bottom: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr class="title-row">
+            <td colspan="${headers.length}">SRI LANKA POLICE - SOCO REGISTRY REPORT</td>
+          </tr>
+          <tr class="subtitle-row">
+            <td colspan="${headers.length}">CVR Registry No: ${cvrNo} | Generated: ${new Date().toLocaleString()}</td>
+          </tr>
+          <thead>
+            <tr>
+              ${headers.map((h) => `<th>${h}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', fileName);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function exportToPDF(scenes: CrimeScene[]) {
+  const doc = new jsPDF();
+  const cvrNo = scenes[0]?.cvrNo || '—';
+  
+  doc.setProperties({
+    title: `Visit Details - ${cvrNo}`,
+    subject: 'SOCO Visit Registry Report',
+    author: 'Sri Lanka Police',
+    creator: 'SOCO SL Police Web Application'
+  });
+
+  // Header Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(30, 58, 138); // #1e3a8a (Navy Blue)
+  doc.text('SRI LANKA POLICE - SOCO VISIT REPORT', 15, 20);
+
+  // Header Subtitle
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(107, 114, 128); // #6b7280
+  doc.text(`CVR Registry No: ${cvrNo} | Generated: ${new Date().toLocaleString()}`, 15, 26);
+
+  // Underline header
+  doc.setDrawColor(59, 130, 246); // #3b82f6
+  doc.setLineWidth(0.8);
+  doc.line(15, 29, 195, 29);
+
+  let yOffset = 38;
+
+  scenes.forEach((s, idx) => {
+    if (idx > 0) {
+      doc.addPage();
+      yOffset = 20;
+    } else if (yOffset > 220) {
+      doc.addPage();
+      yOffset = 20;
+    }
+
+    const visitTypeStr = s.visitType === 'REVISIT' ? 'Revisit' : s.visitType === 'COURT_VISIT' ? 'Court Visit' : 'New Crime Scene';
+    const socoNames = (s.socoOfficers || []).map((o) => o.name || '').filter(Boolean).join(', ') || '—';
+
+    // Visit Header Section
+    doc.setFillColor(243, 244, 246); // bg-gray-100
+    doc.rect(15, yOffset, 180, 8, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39); // Gray-900
+    doc.text(`Visit ${idx + 1} (${visitTypeStr})`, 18, yOffset + 5.5);
+    
+    yOffset += 14;
+
+    const printField = (label: string, value: string, xPos: number, currentY: number, width = 85) => {
+      doc.setDrawColor(243, 244, 246);
+      doc.setLineWidth(0.3);
+      doc.setFillColor(250, 250, 250);
+      doc.rect(xPos, currentY - 5, width, 12, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(107, 114, 128);
+      doc.text(label.toUpperCase(), xPos + 3, currentY - 0.5);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(31, 41, 55);
+      
+      const maxChars = Math.floor(width / 2.2);
+      const displayVal = value.length > maxChars ? value.slice(0, maxChars - 3) + '...' : value;
+      doc.text(displayVal || '—', xPos + 3, currentY + 4.5);
+    };
+
+    // Print Scene Basics
+    printField('Visit Type', visitTypeStr, 15, yOffset);
+    printField('CVR No', s.cvrNo || '—', 105, yOffset);
+    yOffset += 16;
+
+    // Print Location
+    printField('Police Station', s.policeStation || '—', 15, yOffset);
+    printField('Division', s.division || '—', 105, yOffset);
+    yOffset += 16;
+
+    // Print Report Times
+    const reportedToPolice = `${s.reportedToPoliceStation?.date || '—'} ${s.reportedToPoliceStation?.time || ''}`;
+    const reportedToSoco = `${s.reportedToSocoLab?.date || '—'} ${s.reportedToSocoLab?.time || ''}`;
+    printField('Reported to Police', reportedToPolice, 15, yOffset);
+    printField('Reported to SOCO Lab', reportedToSoco, 105, yOffset);
+    yOffset += 16;
+
+    printField('Scene In Time', s.sceneInTime || '—', 15, yOffset);
+    printField('Scene Out Time', s.sceneOutTime || '—', 105, yOffset);
+    yOffset += 16;
+
+    // Print Crime Details
+    printField('Place of Crime Scene', s.placeOfCrimeScene || '—', 15, yOffset);
+    printField('Type of Crime Scene', s.crimeSceneType || '—', 105, yOffset);
+    yOffset += 16;
+
+    printField('Offence Type', s.offenceType || '—', 15, yOffset);
+    printField('In Charge Officer', s.inChargeOfficer?.name || '—', 105, yOffset);
+    yOffset += 16;
+
+    // Print SOCO Officers
+    printField('Officers Assigned', socoNames, 15, yOffset, 175);
+    yOffset += 18;
+
+    // Print Court Details if available
+    if (s.courtDetails && (s.courtDetails.courtName || s.courtDetails.courtCaseNo || s.courtDetails.bNumber)) {
+      if (yOffset > 220) {
+        doc.addPage();
+        yOffset = 20;
+      }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(75, 85, 99);
+      doc.text('COURT DETAILS', 15, yOffset + 4);
+      
+      yOffset += 12;
+
+      printField('Court Name', s.courtDetails.courtName || '—', 15, yOffset);
+      printField('Court Case No', s.courtDetails.courtCaseNo || '—', 105, yOffset);
+      yOffset += 16;
+
+      printField('B Number', s.courtDetails.bNumber || '—', 15, yOffset);
+      yOffset += 24;
+    } else {
+      yOffset += 10;
+    }
+  });
+
+  doc.save(`Visit_Details_${cvrNo.replace(/[\/\\?%*:|"<>]/g, '_')}.pdf`);
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -523,6 +810,26 @@ export default function SubmittedCrimeScenesPage() {
           backHref="/crime-visit-registry/submitted-crime-scenes"
           title={detailTitle}
           description="All visits for this CVR are listed below."
+          actions={
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => exportToCSV(relatedScenesForDetail)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors shadow-sm min-h-[34px]"
+              >
+                <Table className="w-3.5 h-3.5 text-emerald-600" />
+                Export Excel (CSV)
+              </button>
+              <button
+                type="button"
+                onClick={() => exportToPDF(relatedScenesForDetail)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors shadow-sm min-h-[34px]"
+              >
+                <FileText className="w-3.5 h-3.5 text-red-600" />
+                Export PDF
+              </button>
+            </div>
+          }
         />
         <div className="flex flex-wrap items-center gap-2 mb-6 -mt-4">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
