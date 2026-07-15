@@ -3,8 +3,9 @@ import { Fragment, useEffect, useMemo, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
+import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService, userService } from '@/lib/api';
+import { crimeService, userService, locationService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import { normalizeCourtVisitUpdate } from '@/types/crimeScene';
@@ -20,7 +21,7 @@ import {
   registryWorkflowListRowClasses,
   registryWorkflowBadgeClasses,
 } from '@/lib/registryWorkflowDisplay';
-import { CheckCircle, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle, ExternalLink, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { appTableClasses } from '@/lib/ui/styles';
 
 type FilterTab = 'ALL' | 'TODAY';
@@ -272,6 +273,11 @@ export default function SubmittedCrimeScenesPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [courtVisitsByCvr, setCourtVisitsByCvr] = useState<Record<string, any[]>>({});
   const [loadingCourtVisits, setLoadingCourtVisits] = useState<Record<string, boolean>>({});
+  
+  const [labs, setLabs] = useState<any[]>([]);
+  const [selectedLabIds, setSelectedLabIds] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loadingLabsData, setLoadingLabsData] = useState(false);
 
   const targetCvr = (searchParams.get('cvrNo') ?? '').trim();
   const sceneId = (searchParams.get('id') ?? '').trim();
@@ -279,64 +285,83 @@ export default function SubmittedCrimeScenesPage() {
   const isDetailMode = Boolean(detailCvrParam || sceneId);
 
   useEffect(() => {
-    // 1. Initial load from local storage
-    const localScenes = crimeSceneService.getAll();
-    setScenes(localScenes);
-
-    // 2. Fetch and merge backend CVR visits by location ID
-    userService.getCurrentUserInfo()
-      .then((userInfo) => {
-        if (userInfo && userInfo.locationId) {
-          return crimeService.getVisitsByCvrLocationId(Number(userInfo.locationId));
-        }
-        return [];
-      })
-      .then((backendVisits) => {
-        if (backendVisits && backendVisits.length > 0) {
-          const latestLocal = crimeSceneService.getAll();
-          const mapped = backendVisits.map((item) => {
-            const localMatch = latestLocal.find(
-              (s) =>
-                (s.cvrId && String(s.cvrId) === String(item.CVR_ID)) ||
-                (s.cvrNo && s.cvrNo === item.CVR_NO)
-            );
-            return {
-              id: String(item.CVR_ID || item.INITIATE_CVR_ID),
-              cvrNo: item.CVR_NO,
-              cvrId: Number(item.CVR_ID),
-              visitId: item.VISIT_ID,
-              visitType: item.VISIT_TYPE_ID === '1' ? ('NEW_VISIT' as const) : ('REVISIT' as const),
-              policeStation: localMatch?.policeStation || '',
-              reportedToPoliceStation: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
-              reportedToSocoLab: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
-              sceneInTime: item.SCENE_IN,
-              sceneOutTime: item.SCENE_OUT,
-              division: localMatch?.division || '',
-              offence: localMatch?.offence || {},
-              offenceType: item.OFFENCE_TYPE,
-              placeOfCrimeScene: item.PLACE_DETAIL,
-              createdAt: item.CREATED_DTM || new Date().toISOString(),
-              updatedAt: item.CREATED_DTM || new Date().toISOString(),
-              inChargeOfficer: localMatch?.inChargeOfficer || { name: '' },
-              socoOfficers: localMatch?.socoOfficers || [],
-              specialistTeams: localMatch?.specialistTeams || [],
-              courtDetails: localMatch?.courtDetails || { sentToAnalysisRows: [], productionSentToCourtRows: [] },
-              courtVisitUpdate: localMatch?.courtVisitUpdate,
-              registryWorkflowUpdates: localMatch?.registryWorkflowUpdates,
-              registryWorkflowUpdate: localMatch?.registryWorkflowUpdate,
-              approval_status: (item as any).approval_status || (item as any).APPROVAL_STATUS || localMatch?.approval_status || (Number(item.CVR_ID) % 2 === 0 ? 'Approved' : 'In Progress'),
-            };
-          });
-
-          const backendIds = new Set(mapped.map(s => String(s.cvrId)));
-          const uniqueLocal = latestLocal.filter(s => !s.cvrId || !backendIds.has(String(s.cvrId)));
-          setScenes([...mapped, ...uniqueLocal]);
+    // 1. Load SOCO labs list
+    locationService.getAllLocations()
+      .then((data) => {
+        if (data) {
+          const sorted = [...data].sort((a, b) => a.LOCATION_NAME.localeCompare(b.LOCATION_NAME));
+          setLabs(sorted);
         }
       })
       .catch((err) => {
-        console.error('Failed to load CVR visits from backend location', err);
+        console.error('Failed to load SOCO labs', err);
+      });
+
+    // 2. Default selected lab to user's location (do not fetch scenes automatically)
+    userService.getCurrentUserInfo()
+      .then((userInfo) => {
+        if (userInfo && userInfo.locationId) {
+          setSelectedLabIds([String(userInfo.locationId)]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load user info', err);
       });
   }, []);
+
+  const handleFetchForSelectedLabs = useCallback(async () => {
+    if (selectedLabIds.length === 0) return;
+    setLoadingLabsData(true);
+    try {
+      const results = await Promise.all(
+        selectedLabIds.map((locId) => crimeService.getVisitsByCvrLocationId(Number(locId)))
+      );
+      const allBackendVisits = results.flat();
+      
+      const latestLocal = crimeSceneService.getAll();
+      const mapped = allBackendVisits.map((item) => {
+        const localMatch = latestLocal.find(
+          (s) =>
+            (s.cvrId && String(s.cvrId) === String(item.CVR_ID)) ||
+            (s.cvrNo && s.cvrNo === item.CVR_NO)
+        );
+        return {
+          id: String(item.CVR_ID || item.INITIATE_CVR_ID),
+          cvrNo: item.CVR_NO,
+          cvrId: Number(item.CVR_ID),
+          visitId: item.VISIT_ID,
+          visitType: item.VISIT_TYPE_ID === '1' ? ('NEW_VISIT' as const) : ('REVISIT' as const),
+          policeStation: localMatch?.policeStation || '',
+          reportedToPoliceStation: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
+          reportedToSocoLab: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
+          sceneInTime: item.SCENE_IN,
+          sceneOutTime: item.SCENE_OUT,
+          division: localMatch?.division || '',
+          offence: localMatch?.offence || {},
+          offenceType: item.OFFENCE_TYPE,
+          placeOfCrimeScene: item.PLACE_DETAIL,
+          createdAt: item.CREATED_DTM || new Date().toISOString(),
+          updatedAt: item.CREATED_DTM || new Date().toISOString(),
+          inChargeOfficer: localMatch?.inChargeOfficer || { name: '' },
+          socoOfficers: localMatch?.socoOfficers || [],
+          specialistTeams: localMatch?.specialistTeams || [],
+          courtDetails: localMatch?.courtDetails || { sentToAnalysisRows: [], productionSentToCourtRows: [] },
+          courtVisitUpdate: localMatch?.courtVisitUpdate,
+          registryWorkflowUpdates: localMatch?.registryWorkflowUpdates,
+          registryWorkflowUpdate: localMatch?.registryWorkflowUpdate,
+          approval_status: (item as any).approval_status || (item as any).APPROVAL_STATUS || localMatch?.approval_status || (Number(item.CVR_ID) % 2 === 0 ? 'Approved' : 'In Progress'),
+        };
+      });
+
+      const backendIds = new Set(mapped.map(s => String(s.cvrId)));
+      const uniqueLocal = latestLocal.filter(s => !s.cvrId || !backendIds.has(String(s.cvrId)));
+      setScenes([...mapped, ...uniqueLocal]);
+    } catch (err) {
+      console.error('Failed to fetch crime scenes for selected SOCO labs', err);
+    } finally {
+      setLoadingLabsData(false);
+    }
+  }, [selectedLabIds]);
 
   const allGroups = useMemo(() => groupScenesByCvr(scenes), [scenes]);
 
@@ -613,6 +638,36 @@ export default function SubmittedCrimeScenesPage() {
         </div>
       )}
 
+      {/* SOCO Lab Selector Filter Bar */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex gap-3 flex-wrap items-end">
+          <div className="min-w-[240px] flex-1 max-w-xs">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+              Select SOCO Location
+            </label>
+            <MultiSelect
+              value={selectedLabIds}
+              onChange={setSelectedLabIds}
+              options={labs.map((l) => ({ value: String(l.LOCATION_ID), label: l.LOCATION_NAME }))}
+              placeholder="Select SOCO Location"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleFetchForSelectedLabs}
+            disabled={loadingLabsData || selectedLabIds.length === 0}
+            className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors min-h-[38px] flex items-center gap-1.5 shadow-sm border border-blue-700/10 hover:border-blue-700/25"
+          >
+            {loadingLabsData ? (
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+            View
+          </button>
+        </div>
+      </div>
+
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
         <TabBar
           tabs={tabs.map((tab) => ({ ...tab, count: countFor(tab.value) }))}
@@ -629,7 +684,9 @@ export default function SubmittedCrimeScenesPage() {
       </div>
 
       {sortedGroups.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 text-sm">No submitted crime scenes found.</div>
+        <div className="text-center py-16 text-gray-400 text-sm">
+          Please select SOCO Location(s) and click the "View" button to load the crime scenes.
+        </div>
       ) : (
         <div className={appTableClasses.wrapper}>
           <table className={appTableClasses.table}>
