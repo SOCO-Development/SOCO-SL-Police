@@ -50,9 +50,9 @@ function hasAnalysisReportData(r: AnalysisReportReceived | undefined): boolean {
   if (r.labReportReceived === 'Yes' || r.labReportReceived === 'No') return true;
   return Boolean(
     r.annexRef?.trim() ||
-      r.date?.trim() ||
-      r.resultReceived ||
-      r.resultOtherDetail?.trim(),
+    r.date?.trim() ||
+    r.resultReceived ||
+    r.resultOtherDetail?.trim(),
   );
 }
 
@@ -90,8 +90,8 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       : [];
   const hasCourtDetails = Boolean(
     scene.courtDetails?.courtName?.trim() ||
-      scene.courtDetails?.courtCaseNo?.trim() ||
-      scene.courtDetails?.bNumber?.trim(),
+    scene.courtDetails?.courtCaseNo?.trim() ||
+    scene.courtDetails?.bNumber?.trim(),
   );
   const workflowEntries = registryWorkflowDisplayEntries(scene);
 
@@ -171,10 +171,10 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             value={
               scene.crimeSceneType === 'Others'
                 ? readValue(
-                    scene.crimeSceneTypeOther?.trim()
-                      ? `Others — ${scene.crimeSceneTypeOther.trim()}`
-                      : 'Others',
-                  )
+                  scene.crimeSceneTypeOther?.trim()
+                    ? `Others — ${scene.crimeSceneTypeOther.trim()}`
+                    : 'Others',
+                )
                 : readValue(scene.crimeSceneType)
             }
           />
@@ -380,9 +380,8 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                     label="Officer (visit record)"
                     value={readValue(
                       row.officerName?.trim()
-                        ? `${row.officerName}${row.officerRegNo?.trim() ? ` (${row.officerRegNo.trim()})` : ''}${
-                            row.officerRoleLabel?.trim() ? ` — ${row.officerRoleLabel.trim()}` : ''
-                          }`
+                        ? `${row.officerName}${row.officerRegNo?.trim() ? ` (${row.officerRegNo.trim()})` : ''}${row.officerRoleLabel?.trim() ? ` — ${row.officerRoleLabel.trim()}` : ''
+                        }`
                         : undefined,
                     )}
                   />
@@ -479,7 +478,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
           <DisplayField label="Production Availability" value={readValue(scene.courtDetails?.productionPR)} />
         </div>
         {scene.courtDetails?.productionPR === 'Yes' &&
-        (scene.courtDetails?.productionPRTypes?.length ?? 0) > 0 ? (
+          (scene.courtDetails?.productionPRTypes?.length ?? 0) > 0 ? (
           <div className="mb-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
               Selected production types
@@ -495,7 +494,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
               ))}
             </div>
             {productionPRHasOthersSelected(scene.courtDetails.productionPRTypes) &&
-            scene.courtDetails.productionPROtherDetail?.trim() ? (
+              scene.courtDetails.productionPROtherDetail?.trim() ? (
               <div className="mt-3">
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                   Others — specify
@@ -519,8 +518,8 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                   row.sentToAnalysis === 'Yes' || row.sentToAnalysis === 'No'
                     ? row.sentToAnalysis
                     : String(row.date ?? '').trim() ||
-                        String(row.refNo ?? '').trim() ||
-                        String(row.institution ?? '').trim()
+                      String(row.refNo ?? '').trim() ||
+                      String(row.institution ?? '').trim()
                       ? 'Yes'
                       : '—';
                 return (
@@ -557,8 +556,8 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
                   row.sentToCourt === 'Yes' || row.sentToCourt === 'No'
                     ? row.sentToCourt
                     : String(row.date ?? '').trim() ||
-                        String(row.courtCaseNo ?? '').trim() ||
-                        String(row.courtName ?? '').trim()
+                      String(row.courtCaseNo ?? '').trim() ||
+                      String(row.courtName ?? '').trim()
                       ? 'Yes'
                       : '—';
                 return (
