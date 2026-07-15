@@ -433,6 +433,7 @@ export interface CrimeScene {
   /** All registry workflow saves touching this visit row (same CVR rows are updated together). */
   registryWorkflowUpdates?: RegistryWorkflowUpdate[];
 
+  approval_status?: string;
   createdAt: string;
   updatedAt: string;
 }
