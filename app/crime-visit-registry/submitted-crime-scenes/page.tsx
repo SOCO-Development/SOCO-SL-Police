@@ -558,6 +558,9 @@ export default function SubmittedCrimeScenesPage() {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [fullCvrDetails, setFullCvrDetails] = useState<Awaited<ReturnType<typeof crimeService.getFullCvrDetailsByInitiateCvrId>> | null>(null);
+  const [fullCvrDetailsLoading, setFullCvrDetailsLoading] = useState(false);
+  const [fullCvrDetailsError, setFullCvrDetailsError] = useState<string | null>(null);
   const [courtVisitsByCvr, setCourtVisitsByCvr] = useState<Record<string, any[]>>({});
   const [loadingCourtVisits, setLoadingCourtVisits] = useState<Record<string, boolean>>({});
   
@@ -624,7 +627,7 @@ export default function SubmittedCrimeScenesPage() {
           sceneInTime: item.SCENE_IN,
           sceneOutTime: item.SCENE_OUT,
           division: localMatch?.division || '',
-          offence: localMatch?.offence || {},
+          offence: localMatch?.offence || [],
           offenceType: item.OFFENCE_TYPE,
           placeOfCrimeScene: item.PLACE_DETAIL,
           createdAt: item.CREATED_DTM || new Date().toISOString(),
@@ -788,6 +791,20 @@ export default function SubmittedCrimeScenesPage() {
       .finally(() => {
         setHistoryLoading(false);
       });
+
+    setFullCvrDetailsLoading(true);
+    setFullCvrDetailsError(null);
+    crimeService.getFullCvrDetailsByInitiateCvrId(initiateId)
+      .then((data) => {
+        setFullCvrDetails(data);
+      })
+      .catch((err) => {
+        console.error('Failed to load full CVR details', err);
+        setFullCvrDetailsError(err instanceof Error ? err.message : 'Failed to load full CVR details');
+      })
+      .finally(() => {
+        setFullCvrDetailsLoading(false);
+      });
   }, [isDetailMode, relatedScenesForDetail]);
 
   if (isDetailMode) {
@@ -843,6 +860,85 @@ export default function SubmittedCrimeScenesPage() {
         </div>
 
         <CrimeSceneMultiDetailView scenes={relatedScenesForDetail} />
+
+        {/* Full CVR Details (Cvr/GetFullCvrDetailsByInitiateCvrId) */}
+        <div className="mt-12 space-y-4">
+          <h3 className="text-base font-semibold text-gray-800 uppercase tracking-widest pb-2 border-b border-gray-200 flex items-center gap-2">
+            <span className="w-1.5 h-4 rounded-full bg-purple-600 inline-block flex-shrink-0" />
+            Full CVR Details (Backend)
+          </h3>
+          {fullCvrDetailsLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full" />
+            </div>
+          ) : fullCvrDetailsError ? (
+            <div className="text-center py-8 border border-dashed border-red-300 rounded-xl text-red-500 text-sm">
+              {fullCvrDetailsError}
+            </div>
+          ) : fullCvrDetails ? (
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                <span><span className="font-semibold text-gray-800">Initiate CVR ID:</span> {fullCvrDetails.initiateCvrId}</span>
+                <span><span className="font-semibold text-gray-800">CVR No:</span> {fullCvrDetails.cvrNo}</span>
+                <span><span className="font-semibold text-gray-800">Total Visits:</span> {fullCvrDetails.totalVisits}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">CVR ID</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Visit Type</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Offence Type</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Place</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Scene Times</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Offences</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">SOCO Team</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {fullCvrDetails.visits.map((v) => (
+                      <tr key={v.cvrId} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-xs font-mono font-bold text-purple-700">
+                          {v.cvrId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs">
+                          {v.visitTypeId === '1' ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                              New Visit
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                              Revisit
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-900 font-medium">
+                          {v.offenceType || '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600 max-w-xs truncate" title={v.placeDetail}>
+                          {v.placeDetail || '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-600 font-mono">
+                          {v.sceneIn} - {v.sceneOut}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700">
+                          {v.offences.length}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700">
+                          {v.socoTeam.length}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 border border-dashed border-gray-300 rounded-xl text-gray-400 text-sm">
+              No full CVR details loaded.
+            </div>
+          )}
+        </div>
 
         {/* Database Visit History Section */}
         <div className="mt-12 space-y-4">
