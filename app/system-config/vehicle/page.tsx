@@ -98,11 +98,12 @@ export default function VehicleConfigPage() {
             setIsLoadingLocations(true);
             setIsLoading(true);
             try {
-                // Fetch locations and vehicles concurrently
-                const [locations, apiVehicles] = await Promise.all([
-                    locationService.getAllLocations(),
-                    crimeService.getAllVehicles(),
-                ]);
+                // Fetch locations first
+                const locations = await locationService.getAllLocations();
+                const locationIds = locations.map((loc) => Number(loc.LOCATION_ID)).filter(Boolean);
+
+                // Fetch vehicles for all locations
+                const apiVehicles = await crimeService.getAllVehicles({ locationIds });
 
                 // Set location options
                 const options = [
@@ -158,7 +159,8 @@ export default function VehicleConfigPage() {
                 setVehicles(mappedVehicles);
             } catch (err) {
                 console.error('Failed to load initial data:', err);
-                showErrorAlert('Error', 'Failed to load configuration data from server');
+                const message = err instanceof Error ? err.message : 'Unknown error';
+                showErrorAlert('Error', `Failed to load configuration data: ${message}`);
             } finally {
                 setIsLoadingLocations(false);
                 setIsLoading(false);

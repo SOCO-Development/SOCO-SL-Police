@@ -536,19 +536,61 @@ export default function CrimeVisitForm({
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // 1. Get current user info
+      let userInfo: any = null;
       try {
-        const [userInfo, locations, offences, vehicles] = await Promise.all([
-          userService.getCurrentUserInfo(),
-          locationService.getAllLocations(),
-          crimeService.getAllOffences(),
-          crimeService.getAllVehicles(),
-        ]);
-        if (cancelled) return;
+        userInfo = await userService.getCurrentUserInfo();
+      } catch (err) {
+        console.error("Failed to load user info", err);
+      }
 
+      // 2. Get locations
+      let locations: any[] = [];
+      try {
+        locations = await locationService.getAllLocations();
+      } catch (err) {
+        console.error("Failed to load locations", err);
+      }
+
+      // 3. Get offences
+      try {
+        const offences = await crimeService.getAllOffences();
+        if (!cancelled && Array.isArray(offences)) {
+          const mappedOffences = offences.map((off) => ({
+            value: String(off.OFFENCE_ID ?? off.offenceId ?? ''),
+            label: String(off.OFFENCE_NAME ?? off.offenceName ?? ''),
+          }));
+          setOffenceOptions(mappedOffences);
+        }
+      } catch (err) {
+        console.error("Failed to load offences", err);
+      }
+
+      // 4. Get vehicles
+      let vehicles: any[] = [];
+      try {
+        const userLocId = userInfo?.locationId;
+        const locIds = userLocId 
+          ? [Number(userLocId)] 
+          : locations.map((l) => Number(l.LOCATION_ID)).filter(Boolean);
+
+        if (locIds.length > 0) {
+          vehicles = await crimeService.getAllVehicles({ locationIds: locIds });
+        }
+      } catch (err) {
+        console.error("Failed to load vehicles", err);
+      }
+
+      if (cancelled) return;
+
+      // 5. Load dependent options if user info loaded successfully
+      if (userInfo && userInfo.locationId) {
+        const userLocId = userInfo.locationId;
+        
         try {
-          const officers = await officerService.getAllOfficers({ locationIds: [Number(userInfo.locationId)] });
-          if (!cancelled) {
-            const locOfficers = officers.filter(o => String(o.LOCATION_ID) === String(userInfo.locationId));
+          const officers = await officerService.getAllOfficers({ locationIds: [Number(userLocId)] });
+          if (!cancelled && Array.isArray(officers)) {
+            const locOfficers = officers.filter(o => String(o.LOCATION_ID) === String(userLocId));
             setDriverOptions(
               locOfficers.map(o => ({ value: o.USER_REGI_NO, label: `${o.USER_FULL_NAME} (${o.USER_REGI_NO})` })),
             );
@@ -560,48 +602,58 @@ export default function CrimeVisitForm({
           console.error("Failed to load officers for driver select", err);
         }
 
-        setVehicleOptions(
-          vehicles
-            .filter(v => String(v.LOCATION_ID) === String(userInfo.locationId))
-            .map(v => ({ value: v.VEHICLE_REGISTRATION_NO, label: v.VEHICLE_REGISTRATION_NO })),
-        );
-        setVehicleMap(new Map(
-          vehicles
-            .filter(v => String(v.LOCATION_ID) === String(userInfo.locationId))
-            .map(v => [v.VEHICLE_REGISTRATION_NO, v.VEHICLE_ID])
-        ));
+        if (!cancelled && Array.isArray(vehicles)) {
+          console.log("[SOCO] All vehicles loaded:", vehicles);
+          console.log("[SOCO] Filtering vehicles with userLocId:", userLocId);
+          
+          const filteredVehicles = vehicles.filter(v => {
+            const locId = v.LOCATION_ID ?? v.locationId ?? v.location_id;
+            return String(locId) === String(userLocId);
+          });
 
-        const mappedOffences = offences.map((off) => ({
-          value: String(off.OFFENCE_ID ?? off.offenceId ?? ''),
-          label: String(off.OFFENCE_NAME ?? off.offenceName ?? ''),
-        }));
-        setOffenceOptions(mappedOffences);
+          console.log("[SOCO] Filtered vehicles list:", filteredVehicles);
 
-        const userLocId = userInfo.locationId;
-        const matchingLab = locations.find(l => String(l.LOCATION_ID) === String(userLocId));
-        if (matchingLab) {
-          setSocoLabs([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
-          setFormData((f) => ({
-            ...f,
-            sectionA: {
-              ...f.sectionA,
-              requestDivision: matchingLab.LOCATION_NAME,
-              locationId: matchingLab.LOCATION_ID,
-            },
-          }));
-          setStationsLoading(true);
-          try {
-            const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
-            if (!cancelled) {
-              setStations(ps.map(s => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
-              setStationMap(new Map(ps.map(s => [s.POLICE_STATION_NAME, s.POLICE_STATION_ID])));
+          setVehicleOptions(
+            filteredVehicles.map(v => {
+              const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
+              return { value: String(regNo), label: String(regNo) };
+            })
+          );
+          setVehicleMap(new Map(
+            filteredVehicles.map(v => {
+              const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
+              const vId = v.VEHICLE_ID ?? v.vehicleId ?? v.vehicle_id ?? '';
+              return [String(regNo), String(vId)];
+            })
+          ));
+        }
+
+        if (!cancelled && Array.isArray(locations)) {
+          const matchingLab = locations.find(l => String(l.LOCATION_ID) === String(userLocId));
+          if (matchingLab) {
+            setSocoLabs([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
+            setFormData((f) => ({
+              ...f,
+              sectionA: {
+                ...f.sectionA,
+                requestDivision: matchingLab.LOCATION_NAME,
+                locationId: matchingLab.LOCATION_ID,
+              },
+            }));
+            setStationsLoading(true);
+            try {
+              const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
+              if (!cancelled && Array.isArray(ps)) {
+                setStations(ps.map(s => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
+                setStationMap(new Map(ps.map(s => [s.POLICE_STATION_NAME, s.POLICE_STATION_ID])));
+              }
+            } catch (err) {
+              console.error("Failed to load police stations", err);
+            } finally {
+              if (!cancelled) setStationsLoading(false);
             }
-          } finally {
-            if (!cancelled) setStationsLoading(false);
           }
         }
-      } catch (err) {
-        console.error("Failed to load SOCO lab / user info", err);
       }
     })();
     return () => { cancelled = true; };

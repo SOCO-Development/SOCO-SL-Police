@@ -55,9 +55,10 @@ export async function updateVehicle(payload: UpdateVehicleRequest): Promise<stri
 /**
  * Get all vehicles in the system
  */
-export async function getAllVehicles(): Promise<ApiVehicle[]> {
+export async function getAllVehicles(payload?: { locationIds?: number[] }): Promise<ApiVehicle[]> {
   return apiRequest<ApiVehicle[]>('Crime/GetAllVehicles', {
-    method: 'GET',
+    method: 'POST',
+    body: payload || { locationIds: [] },
   });
 }
 
