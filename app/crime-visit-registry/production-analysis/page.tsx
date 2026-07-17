@@ -177,16 +177,31 @@ export default function ProductionAnalysisPage() {
 
     try {
       await Promise.all(
-        rows.map((row) =>
-          crimeService.updateProductionSentAnalysis({
-            productionSentAnalysisId: row.productionSentAnalysisId || Number(row.productionRef) || 1,
+        rows.map(async (row) => {
+          let attachmentUrl = row.attachmentFileName || 'string';
+          const prodAnalysisId = row.productionSentAnalysisId || Number(row.productionRef) || 1;
+
+          if (row.attachmentFile) {
+            try {
+              attachmentUrl = await crimeService.uploadProductionAnalysisReport(
+                prodAnalysisId,
+                row.attachmentFile
+              );
+            } catch (uploadErr) {
+              console.error('Failed to upload production analysis report', uploadErr);
+              throw new Error(`Failed to upload file for Production ${row.productionRef}: ${uploadErr instanceof Error ? uploadErr.message : 'Unknown error'}`);
+            }
+          }
+
+          return crimeService.updateProductionSentAnalysis({
+            productionSentAnalysisId: prodAnalysisId,
             cvrId: numericCvrId,
             referenceNo: row.refNo || '',
             resultReceivedStatus: row.resultReceived === 'Positive' || row.resultReceived === 'Negative',
             resultStatus: row.resultReceived === 'Positive',
-            resultAttachmentUrl: row.attachmentFileName || 'string',
-          })
-        )
+            resultAttachmentUrl: attachmentUrl,
+          });
+        })
       );
     } catch (err) {
       console.error('Failed to update production analysis in backend', err);

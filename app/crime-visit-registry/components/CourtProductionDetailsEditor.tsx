@@ -71,13 +71,21 @@ function AnalysisAttachment({ index, row, readOnly, onUpdate }: AnalysisAttachme
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      onUpdate({ attachmentFileName: file.name, attachmentDataUrl: reader.result as string });
+       onUpdate({
+        attachmentFileName: file.name,
+        attachmentDataUrl: reader.result as string,
+        attachmentFile: file,
+      });
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemove = () => {
-    onUpdate({ attachmentFileName: '', attachmentDataUrl: '' });
+    onUpdate({
+      attachmentFileName: '',
+      attachmentDataUrl: '',
+      attachmentFile: undefined,
+    });
     if (fileRef.current) fileRef.current.value = '';
   };
 

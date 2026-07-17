@@ -297,3 +297,22 @@ export async function getCourtVisitsByCvrId(
     params: { initiateCvrId },
   });
 }
+
+
+/**
+ * Upload Production Analysis Report
+ */
+export async function uploadProductionAnalysisReport(
+  productionSentAnalysisId: number,
+  file: File,
+): Promise<string> {
+  const formData = new FormData();
+  formData.append('AnalysisReportFile', file);
+  formData.append('ProductionSentAnalysisId', String(productionSentAnalysisId));
+
+  return apiRequest<string>('Cvr/UploadProductionAnalysisReport', {
+    method: 'POST',
+    body: formData,
+    formData: true,
+  });
+}

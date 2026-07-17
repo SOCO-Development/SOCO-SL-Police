@@ -304,6 +304,8 @@ export interface SentToAnalysisRow {
   attachmentFileName?: string;
   /** Data URL for client-side persistence. */
   attachmentDataUrl?: string;
+    /** Raw file object for uploading to backend. */
+  attachmentFile?: File;
 }
 
 export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
