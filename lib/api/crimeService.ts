@@ -167,6 +167,66 @@ export async function updateProductionSentAnalysis(
 }
 
 /**
+ * Upload a production court affidavit attachment.
+ */
+export async function uploadProductionCourtAffidavit(
+  file: File,
+  productionSentCourtId: number | string,
+  reportType: string,
+): Promise<string> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('ProductionSentCourtId', String(productionSentCourtId));
+  formData.append('ReportType', reportType);
+
+  return apiRequest<string>('File/UploadProductionCourtAffidavit', {
+    method: 'POST',
+    body: formData,
+    formData: true,
+  });
+}
+
+/**
+ * Upload a production analysis report attachment.
+ */
+export async function uploadProductionAnalysisReport(
+  file: File,
+  productionSentAnalysisId: number | string,
+  reportType: string,
+): Promise<string> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('ProductionSentAnalysisId', String(productionSentAnalysisId));
+  formData.append('ReportType', reportType);
+
+  return apiRequest<string>('File/UploadProductionAnalysisReport', {
+    method: 'POST',
+    body: formData,
+    formData: true,
+  });
+}
+
+/**
+ * Upload a production court questionnaire attachment.
+ */
+export async function uploadProductionCourtQuestionaire(
+  file: File,
+  productionSentCourtId: number | string,
+  reportType: string,
+): Promise<string> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('ProductionSentCourtId', String(productionSentCourtId));
+  formData.append('ReportType', reportType);
+
+  return apiRequest<string>('File/UploadProductionCourtQuestionaire', {
+    method: 'POST',
+    body: formData,
+    formData: true,
+  });
+}
+
+/**
  * Add productions sent to court (SOCO_CVR3)
  */
 export async function addProductionSentCourt(

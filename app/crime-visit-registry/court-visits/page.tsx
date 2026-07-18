@@ -277,7 +277,13 @@ export default function CourtVisitsPage() {
         };
       });
 
-    const numericCvrId = Number(selectedScene.cvrId) || 1;
+    const numericCvrId = Number(selectedScene.cvrId);
+    if (!numericCvrId || isNaN(numericCvrId)) {
+      setError('The selected crime scene does not have a valid CVR ID. Please ensure it has been submitted and synchronized first.');
+      setSavedOk(false);
+      showPopup('error', 'Invalid CVR ID', 'The selected crime scene does not have a valid CVR ID. Please ensure it has been submitted and synchronized first.');
+      return;
+    }
 
     try {
       const [courts, allOfficers] = await Promise.all([

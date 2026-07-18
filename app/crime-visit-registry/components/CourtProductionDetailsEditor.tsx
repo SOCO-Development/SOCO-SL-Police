@@ -2,6 +2,7 @@
 
 import { AddRowButton, RemoveRowButton, FileUploadButton, FileAttachmentSlot } from '@/components/ui';
 import { useEffect, useRef, useState } from 'react';
+import { crimeService } from '@/lib/api';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import MultiSelect from '@/components/forms/MultiSelect';
@@ -66,14 +67,22 @@ interface AnalysisAttachmentProps {
 function AnalysisAttachment({ index, row, readOnly, onUpdate }: AnalysisAttachmentProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      onUpdate({ attachmentFileName: file.name, attachmentDataUrl: reader.result as string });
-    };
-    reader.readAsDataURL(file);
+
+    try {
+      const productionSentAnalysisId = row.productionSentAnalysisId ?? Number(row.productionRef) ?? 0;
+      const uploadedPath = await crimeService.uploadProductionAnalysisReport(
+        file,
+        productionSentAnalysisId,
+        'Analysis Report',
+      );
+      onUpdate({ attachmentFileName: uploadedPath, attachmentDataUrl: '' });
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Analysis Report upload failed.');
+    }
   };
 
   const handleRemove = () => {
@@ -732,10 +741,20 @@ export default function CourtProductionDetailsEditor({
                       dataUrl={row.divurumaDataUrl}
                       readOnly={readOnly}
                       onFile={async (file) => {
-                        const url = await readFileAsDataUrl(file);
-                        const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], divurumaFileName: file.name, divurumaDataUrl: url };
-                        patch({ productionSentToCourtRows: rows });
+                        try {
+                          const productionSentCourtId = row.productionSentCourtId ?? 0;
+                          const uploadedPath = await crimeService.uploadProductionCourtAffidavit(
+                            file,
+                            productionSentCourtId,
+                            'Affidavit',
+                          );
+                          const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                          rows[index] = { ...rows[index], divurumaFileName: uploadedPath, divurumaDataUrl: '' };
+                          patch({ productionSentToCourtRows: rows });
+                        } catch (err) {
+                          console.error(err);
+                          alert(err instanceof Error ? err.message : 'Affidavit upload failed.');
+                        }
                       }}
                       onRemove={() => {
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
@@ -750,10 +769,20 @@ export default function CourtProductionDetailsEditor({
                       dataUrl={row.prashnavalyaDataUrl}
                       readOnly={readOnly}
                       onFile={async (file) => {
-                        const url = await readFileAsDataUrl(file);
-                        const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], prashnavalyaFileName: file.name, prashnavalyaDataUrl: url };
-                        patch({ productionSentToCourtRows: rows });
+                        try {
+                          const productionSentCourtId = row.productionSentCourtId ?? 0;
+                          const uploadedPath = await crimeService.uploadProductionCourtQuestionaire(
+                            file,
+                            productionSentCourtId,
+                            'Questionnaire',
+                          );
+                          const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
+                          rows[index] = { ...rows[index], prashnavalyaFileName: uploadedPath, prashnavalyaDataUrl: '' };
+                          patch({ productionSentToCourtRows: rows });
+                        } catch (err) {
+                          console.error(err);
+                          alert(err instanceof Error ? err.message : 'Questionnaire upload failed.');
+                        }
                       }}
                       onRemove={() => {
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];

@@ -170,7 +170,12 @@ export default function ProductionAnalysisPage() {
       return;
     }
 
-    const numericCvrId = Number(selectedScene.cvrId) || 11;
+    const numericCvrId = Number(selectedScene.cvrId);
+    if (!numericCvrId || isNaN(numericCvrId)) {
+      setCourtDetailsError('The selected crime scene does not have a valid CVR ID. Please ensure it has been submitted and synchronized first.');
+      showPopup('error', 'Invalid CVR ID', 'The selected crime scene does not have a valid CVR ID. Please ensure it has been submitted and synchronized first.');
+      return;
+    }
     const rows = (courtDetailsDraft.sentToAnalysisRows ?? []).filter(
       (row) => row.productionRef?.trim() && row.sentToAnalysis === 'Yes'
     );

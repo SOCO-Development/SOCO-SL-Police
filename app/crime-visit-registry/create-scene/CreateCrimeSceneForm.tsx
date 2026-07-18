@@ -836,7 +836,8 @@ export default function CreateCrimeSceneForm({
 
     try {
       const res = await crimeService.createCvr(apiPayload);
-      const cvrId = res.dataBundle?.cvrId;
+      // apiRequest unwraps the ApiResponse envelope and returns dataBundle directly
+      const cvrId = (res as any).cvrId ?? res.dataBundle?.cvrId;
 
       // Save locally to localStorage so it shows up in local lists
       const payload = buildCrimeScenePayloadFromForm(form);
