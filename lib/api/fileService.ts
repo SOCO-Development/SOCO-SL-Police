@@ -59,3 +59,31 @@ export async function uploadProductionCourtAffidavit(
     },
   );
 }
+
+/**
+ * Upload a production court questionnaire.
+ *
+ * @param file                  - The file to upload.
+ * @param productionSentCourtId - The related production-sent-court ID (defaults to 0).
+ * @param reportType            - "Questionnaire".
+ * @returns The server-side file path of the uploaded report.
+ */
+export async function uploadProductionCourtQuestionaire(
+  file: File,
+  productionSentCourtId: number = 0,
+  reportType: string = 'Questionnaire',
+): Promise<UploadProductionCourtAffidavitResponse> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('ProductionSentCourtId', String(productionSentCourtId));
+  formData.append('ReportType', reportType);
+
+  return apiRequest<UploadProductionCourtAffidavitResponse>(
+    'File/UploadProductionCourtQuestionaire',
+    {
+      method: 'POST',
+      body: formData,
+      formData: true,
+    },
+  );
+}

@@ -196,7 +196,7 @@ export default function UpdateCourtDetailsPage() {
         }
 
         if (row.prashnavalyaFile) {
-          questionaireUrl = await fileService.uploadProductionCourtAffidavit(row.prashnavalyaFile, Number(row.productionRef) || 0, 'Questionnaire');
+          questionaireUrl = await fileService.uploadProductionCourtQuestionaire(row.prashnavalyaFile, Number(row.productionRef) || 0, 'Questionnaire');
           row.prashnavalyaFileName = questionaireUrl;
           row.prashnavalyaDataUrl = '';
           row.prashnavalyaFile = undefined;
