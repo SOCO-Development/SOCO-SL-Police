@@ -1,5 +1,8 @@
 import { apiRequest } from './client';
-import type { UploadProductionAnalysisReportResponse } from './types';
+import type {
+  UploadProductionAnalysisReportResponse,
+  UploadProductionCourtAffidavitResponse,
+} from './types';
 
 /**
  * Upload a production analysis report file.
@@ -21,6 +24,34 @@ export async function uploadProductionAnalysisReport(
 
   return apiRequest<UploadProductionAnalysisReportResponse>(
     'File/UploadProductionAnalysisReport',
+    {
+      method: 'POST',
+      body: formData,
+      formData: true,
+    },
+  );
+}
+
+/**
+ * Upload a production court affidavit (or questionnaire).
+ *
+ * @param file                  - The file to upload.
+ * @param productionSentCourtId - The related production-sent-court ID (defaults to 0).
+ * @param reportType            - "Affidavit" or "Questionnaire".
+ * @returns The server-side file path of the uploaded report.
+ */
+export async function uploadProductionCourtAffidavit(
+  file: File,
+  productionSentCourtId: number = 0,
+  reportType: string = 'Affidavit',
+): Promise<UploadProductionCourtAffidavitResponse> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('ProductionSentCourtId', String(productionSentCourtId));
+  formData.append('ReportType', reportType);
+
+  return apiRequest<UploadProductionCourtAffidavitResponse>(
+    'File/UploadProductionCourtAffidavit',
     {
       method: 'POST',
       body: formData,

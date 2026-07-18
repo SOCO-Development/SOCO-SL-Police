@@ -8,7 +8,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import Button from '@/components/buttons/Button';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService } from '@/lib/api';
+import { crimeService, fileService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
 import type { CrimeScene, CrimeSceneCourtDetails } from '@/types/crimeScene';
@@ -183,15 +183,36 @@ export default function UpdateCourtDetailsPage() {
       (row) => row.productionRef?.trim() && row.sentToCourt === 'Yes'
     );
 
-    const productionsSentCourt = rows.map((row) => ({
-      productionId: Number(row.productionRef) || 1,
-      sentStatus: true,
-      courtName: row.courtName || 'Colombo',
-      sentDate: toApiDate(row.date || ''),
-      caseNo: row.courtCaseNo || '',
-      affidavitAttachmentUrl: row.divurumaFileName || 'string',
-      questionaireAttachmentUrl: row.prashnavalyaFileName || 'string',
-    }));
+    const productionsSentCourt = await Promise.all(
+      rows.map(async (row) => {
+        let affidavitUrl = row.divurumaFileName || 'string';
+        let questionaireUrl = row.prashnavalyaFileName || 'string';
+
+        if (row.divurumaFile) {
+          affidavitUrl = await fileService.uploadProductionCourtAffidavit(row.divurumaFile, Number(row.productionRef) || 0, 'Affidavit');
+          row.divurumaFileName = affidavitUrl;
+          row.divurumaDataUrl = '';
+          row.divurumaFile = undefined;
+        }
+
+        if (row.prashnavalyaFile) {
+          questionaireUrl = await fileService.uploadProductionCourtAffidavit(row.prashnavalyaFile, Number(row.productionRef) || 0, 'Questionnaire');
+          row.prashnavalyaFileName = questionaireUrl;
+          row.prashnavalyaDataUrl = '';
+          row.prashnavalyaFile = undefined;
+        }
+
+        return {
+          productionId: Number(row.productionRef) || 1,
+          sentStatus: true,
+          courtName: row.courtName || 'Colombo',
+          sentDate: toApiDate(row.date || ''),
+          caseNo: row.courtCaseNo || '',
+          affidavitAttachmentUrl: affidavitUrl,
+          questionaireAttachmentUrl: questionaireUrl,
+        };
+      })
+    );
 
     try {
       await crimeService.addProductionSentCourt({

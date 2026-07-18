@@ -734,12 +734,12 @@ export default function CourtProductionDetailsEditor({
                       onFile={async (file) => {
                         const url = await readFileAsDataUrl(file);
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], divurumaFileName: file.name, divurumaDataUrl: url };
+                        rows[index] = { ...rows[index], divurumaFileName: file.name, divurumaDataUrl: url, divurumaFile: file };
                         patch({ productionSentToCourtRows: rows });
                       }}
                       onRemove={() => {
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], divurumaFileName: '', divurumaDataUrl: '' };
+                        rows[index] = { ...rows[index], divurumaFileName: '', divurumaDataUrl: '', divurumaFile: undefined };
                         patch({ productionSentToCourtRows: rows });
                       }}
                     />
@@ -752,12 +752,12 @@ export default function CourtProductionDetailsEditor({
                       onFile={async (file) => {
                         const url = await readFileAsDataUrl(file);
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], prashnavalyaFileName: file.name, prashnavalyaDataUrl: url };
+                        rows[index] = { ...rows[index], prashnavalyaFileName: file.name, prashnavalyaDataUrl: url, prashnavalyaFile: file };
                         patch({ productionSentToCourtRows: rows });
                       }}
                       onRemove={() => {
                         const rows = [...(courtDetails.productionSentToCourtRows ?? [])];
-                        rows[index] = { ...rows[index], prashnavalyaFileName: '', prashnavalyaDataUrl: '' };
+                        rows[index] = { ...rows[index], prashnavalyaFileName: '', prashnavalyaDataUrl: '', prashnavalyaFile: undefined };
                         patch({ productionSentToCourtRows: rows });
                       }}
                     />

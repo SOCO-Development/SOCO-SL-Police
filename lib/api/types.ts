@@ -1020,6 +1020,9 @@ export interface GetCourtVisitsByCvrIdResponse {
 /** Response for uploading a production analysis report file. */
 export type UploadProductionAnalysisReportResponse = string;
 
+/** Response for uploading a production court affidavit or questionnaire. */
+export type UploadProductionCourtAffidavitResponse = string;
+
 
 
 

@@ -281,6 +281,10 @@ export interface ProductionSentToCourtRow {
   /** Attachment: ප්‍රශ්ණාවලිය (Questionnaire) */
   prashnavalyaFileName?: string;
   prashnavalyaDataUrl?: string;
+  /** Actual affidavit file for upload. */
+  divurumaFile?: File;
+  /** Actual questionnaire file for upload. */
+  prashnavalyaFile?: File;
 }
 
 /** One production sent to an analysis institute (repeatable). */
@@ -317,8 +321,10 @@ export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
     courtCaseNo: '',
     divurumaFileName: '',
     divurumaDataUrl: '',
+    divurumaFile: undefined,
     prashnavalyaFileName: '',
     prashnavalyaDataUrl: '',
+    prashnavalyaFile: undefined,
   };
 }
 
