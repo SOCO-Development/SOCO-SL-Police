@@ -304,6 +304,8 @@ export interface SentToAnalysisRow {
   attachmentFileName?: string;
   /** Data URL for client-side persistence. */
   attachmentDataUrl?: string;
+  /** Actual file object for upload. */
+  attachmentFile?: File;
 }
 
 export function emptyProductionSentToCourtRow(): ProductionSentToCourtRow {
@@ -333,6 +335,7 @@ export function emptySentToAnalysisRow(): SentToAnalysisRow {
     resultNegativeOtherDetail: '',
     attachmentFileName: '',
     attachmentDataUrl: '',
+    attachmentFile: undefined,
   };
 }
 

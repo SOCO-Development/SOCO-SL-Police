@@ -6,4 +6,5 @@ export * as locationService from './locationService';
 export * as officerService from './officerService';
 export * as userService from './userService';
 export * as crimeService from './crimeService';
+export * as fileService from './fileService';
 export type * from './types';

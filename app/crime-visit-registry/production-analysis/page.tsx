@@ -6,7 +6,7 @@ import Link from 'next/link';
 import CustomSelect from '@/components/forms/CustomSelect';
 import Button from '@/components/buttons/Button';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService } from '@/lib/api';
+import { crimeService, fileService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import { PageHeader, PageLayout } from '@/components/ui';
@@ -177,16 +177,27 @@ export default function ProductionAnalysisPage() {
 
     try {
       await Promise.all(
-        rows.map((row) =>
-          crimeService.updateProductionSentAnalysis({
+        rows.map(async (row) => {
+          let attachmentUrl = row.attachmentFileName || 'string';
+
+          if (row.attachmentFile) {
+            const prodSentAnalysisId = row.productionSentAnalysisId || Number(row.productionRef) || 1;
+            attachmentUrl = await fileService.uploadProductionAnalysisReport(row.attachmentFile, prodSentAnalysisId);
+            
+            row.attachmentFileName = attachmentUrl;
+            row.attachmentDataUrl = '';
+            row.attachmentFile = undefined;
+          }
+
+          return crimeService.updateProductionSentAnalysis({
             productionSentAnalysisId: row.productionSentAnalysisId || Number(row.productionRef) || 1,
             cvrId: numericCvrId,
             referenceNo: row.refNo || '',
             resultReceivedStatus: row.resultReceived === 'Positive' || row.resultReceived === 'Negative',
             resultStatus: row.resultReceived === 'Positive',
-            resultAttachmentUrl: row.attachmentFileName || 'string',
-          })
-        )
+            resultAttachmentUrl: attachmentUrl,
+          });
+        })
       );
     } catch (err) {
       console.error('Failed to update production analysis in backend', err);
