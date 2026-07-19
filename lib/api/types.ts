@@ -1073,6 +1073,9 @@ export type UploadProductionAnalysisReportResponse = string;
 /** Response for uploading a production court affidavit or questionnaire. */
 export type UploadProductionCourtAffidavitResponse = string;
 
+/** Response for uploading a court visit report. */
+export type UploadCourtVisitReportResponse = string;
+
 
 
 

@@ -8,7 +8,7 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import Button from '@/components/buttons/Button';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService, officerService } from '@/lib/api';
+import { crimeService, officerService, fileService } from '@/lib/api';
 import { COURT_NAME_OPTIONAL_SELECT_OPTIONS } from '@/lib/courtNames';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene, CourtVisitOfficerDetailRow, CourtVisitUpdateDetails, CrimeSceneCourtDetails } from '@/types/crimeScene';
@@ -183,7 +183,7 @@ export default function CourtVisitsPage() {
 
   async function handleCourtVisitAttachment(index: number, file: File | null) {
     if (!file) {
-      patchCourtVisitRow(index, { attachmentFileName: '', attachmentDataUrl: '' });
+      patchCourtVisitRow(index, { attachmentFileName: '', attachmentDataUrl: '', attachmentFile: undefined });
       return;
     }
     if (file.size > MAX_COURT_VISIT_ATTACHMENT_BYTES) {
@@ -192,7 +192,7 @@ export default function CourtVisitsPage() {
     }
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      patchCourtVisitRow(index, { attachmentFileName: file.name, attachmentDataUrl: dataUrl });
+      patchCourtVisitRow(index, { attachmentFileName: file.name, attachmentDataUrl: dataUrl, attachmentFile: file });
     } catch {
       showPopup('error', 'File Error', 'Could not read the attachment.');
     }
@@ -288,7 +288,8 @@ export default function CourtVisitsPage() {
       const foundCourt = courts.find(c => c.COURT_NAME === courtDraft.courtName);
       const courtId = foundCourt ? Number(foundCourt.COURT_ID) : 1;
 
-      await Promise.all(
+      // Save each court visit text details to the database
+      const addedDetails = await Promise.all(
         filled.map(async (row) => {
           const matchingOfficer = allOfficers.find(
             (o) =>
@@ -306,8 +307,34 @@ export default function CourtVisitsPage() {
             visitDescription: row.visitDescription || '',
             courtVisitAttachmentUrl: row.attachmentFileName || 'string',
           });
+
+          return { row, testifiedOfficer: row.testifiedOfficer, visitDescription: row.visitDescription };
         })
       );
+
+      // Match newly added visits to upload reports if user selected any
+      const hasFiles = filled.some(row => row.attachmentFile);
+      if (hasFiles) {
+        try {
+          const dbVisits = await crimeService.getCourtVisitsByCvrId(numericCvrId);
+          await Promise.all(
+            addedDetails.map(async ({ row, testifiedOfficer, visitDescription }) => {
+              if (row.attachmentFile) {
+                const matchedDb = dbVisits.find(
+                  (v) =>
+                    v.TESTIFIED_OFFICER_NAME === testifiedOfficer &&
+                    v.VISIT_DESCRIPTION === visitDescription
+                );
+                if (matchedDb) {
+                  await fileService.uploadCourtVisitReport(row.attachmentFile, Number(matchedDb.COURT_VISIT_DETAILS_ID));
+                }
+              }
+            })
+          );
+        } catch (uploadErr) {
+          console.error('Failed to upload court visit attachments', uploadErr);
+        }
+      }
     } catch (err) {
       console.error('Failed to add court visits to backend', err);
       const msg = err instanceof Error ? err.message : 'Backend API update failed.';
@@ -333,6 +360,25 @@ export default function CourtVisitsPage() {
     setSavedOk(true);
     showPopup('success', 'Court Visit Saved', 'Court visit details have been saved successfully.');
     setTimeout(() => router.push('/crime-visit-registry'), 2500);
+  }
+
+  async function handleUploadReport(courtVisitDetailId: string, file: File) {
+    try {
+      await fileService.uploadCourtVisitReport(file, Number(courtVisitDetailId));
+      showPopup('success', 'Upload Successful', 'Court visit report uploaded successfully.');
+
+      // Reload previous visits to reflect changes
+      if (selectedScene?.cvrId) {
+        setPrevVisitsLoading(true);
+        const data = await crimeService.getCourtVisitsByCvrId(Number(selectedScene.cvrId));
+        if (data) setPrevVisits(data);
+        setPrevVisitsLoading(false);
+      }
+    } catch (err) {
+      console.error('Failed to upload report:', err);
+      const msg = err instanceof Error ? err.message : 'Upload failed.';
+      showPopup('error', 'Upload Failed', msg);
+    }
   }
 
   return (
@@ -582,6 +628,7 @@ export default function CourtVisitsPage() {
                                     <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Description</th>
                                     <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Created By</th>
                                     <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Date & Time</th>
+                                    <th className="px-4 py-2 text-left font-bold text-fuchsia-900 uppercase tracking-wider">Report</th>
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-fuchsia-100">
@@ -592,6 +639,40 @@ export default function CourtVisitsPage() {
                                       <td className="px-4 py-2 text-gray-600 max-w-xs truncate" title={visit.VISIT_DESCRIPTION}>{visit.VISIT_DESCRIPTION}</td>
                                       <td className="px-4 py-2 text-gray-700">{visit.CREATED_BY_NAME || '—'}</td>
                                       <td className="px-4 py-2 text-gray-500 tabular-nums">{visit.CREATED_DTM}</td>
+                                      <td className="px-4 py-2 text-gray-700">
+                                        {visit.COURT_VISIT_ATTACHEMENT_URL && visit.COURT_VISIT_ATTACHEMENT_URL !== 'string' ? (
+                                          <div className="flex items-center gap-2">
+                                            <span className="truncate max-w-[120px] font-medium text-gray-700" title={visit.COURT_VISIT_ATTACHEMENT_URL}>
+                                              {visit.COURT_VISIT_ATTACHEMENT_URL.split('\\').pop()?.split('/').pop()}
+                                            </span>
+                                            <label className="text-blue-600 hover:text-blue-800 cursor-pointer underline text-[11px] font-medium shrink-0">
+                                              Change
+                                              <input
+                                                type="file"
+                                                accept="application/pdf,.doc,.docx"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                  const f = e.target.files?.[0] ?? null;
+                                                  if (f) void handleUploadReport(visit.COURT_VISIT_DETAILS_ID, f);
+                                                }}
+                                              />
+                                            </label>
+                                          </div>
+                                        ) : (
+                                          <label className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium text-[11px] flex items-center gap-1">
+                                            <span>Upload Report</span>
+                                            <input
+                                              type="file"
+                                              accept="application/pdf,.doc,.docx"
+                                              className="hidden"
+                                              onChange={(e) => {
+                                                const f = e.target.files?.[0] ?? null;
+                                                if (f) void handleUploadReport(visit.COURT_VISIT_DETAILS_ID, f);
+                                              }}
+                                            />
+                                          </label>
+                                        )}
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>

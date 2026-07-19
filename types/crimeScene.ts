@@ -100,6 +100,7 @@ export interface CourtVisitOfficerDetailRow {
   attachmentFileName?: string;
   /** Data URL for client-side persistence (optional; may be large). */
   attachmentDataUrl?: string;
+  attachmentFile?: File;
 }
 
 export function emptyCourtVisitOfficerDetailRow(): CourtVisitOfficerDetailRow {

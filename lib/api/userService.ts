@@ -81,9 +81,12 @@ export async function getProfileImage(regiNo: string): Promise<string | null> {
     const base = (await import('./config')).API_BASE_URL;
     const url = `${base.replace(/\/+$/, '')}/File/GetProfileImage?userRegiNo=${encodeURIComponent(regiNo)}`;
 
-    const res = await fetch(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(url, { headers });
 
     if (!res.ok) return null;
 
