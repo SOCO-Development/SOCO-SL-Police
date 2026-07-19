@@ -2,6 +2,7 @@ import { apiRequest } from './client';
 import type {
   UploadProductionAnalysisReportResponse,
   UploadProductionCourtAffidavitResponse,
+  UploadCourtVisitReportResponse,
 } from './types';
 
 /**
@@ -80,6 +81,31 @@ export async function uploadProductionCourtQuestionaire(
 
   return apiRequest<UploadProductionCourtAffidavitResponse>(
     'File/UploadProductionCourtQuestionaire',
+    {
+      method: 'POST',
+      body: formData,
+      formData: true,
+    },
+  );
+}
+
+/**
+ * Upload a court visit report.
+ *
+ * @param file               - The file to upload.
+ * @param courtVisitDetailId - The related court visit detail ID (defaults to 0).
+ * @returns The server-side file path of the uploaded report.
+ */
+export async function uploadCourtVisitReport(
+  file: File,
+  courtVisitDetailId: number = 0,
+): Promise<UploadCourtVisitReportResponse> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('CourtVisitDetailId', String(courtVisitDetailId));
+
+  return apiRequest<UploadCourtVisitReportResponse>(
+    'File/UploadCourtVisitReport',
     {
       method: 'POST',
       body: formData,
