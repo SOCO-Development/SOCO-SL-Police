@@ -876,6 +876,56 @@ export interface GetCvrsByLocationIdResponse {
   dataBundle: LocationCvrItemApi[];
 }
 
+// ─── Get Full CVR Details By Initiate CVR Id ──────────────────────────
+
+export interface FullCvrVisitAttachments {
+  photoUrl: string;
+  sketchUrl: string;
+  reportUrl: string;
+}
+
+export interface FullCvrVisitItem {
+  cvrId: number;
+  visitTypeId: string;
+  reportedPoliceDate: string;
+  reportedPoliceTime: string;
+  reportedSocoDate: string;
+  reportedSocoTime: string;
+  sceneIn: string;
+  sceneOut: string;
+  sceneDuration: string;
+  offenceType: string;
+  placeDetail: string;
+  typeCrimeScene: string;
+  isExactTime: string;
+  incidentFromDate: string;
+  incidentFromTime: string;
+  incidentToDate: string;
+  incidentToTime: string;
+  locationId: string;
+  policeStationId: string;
+  attachments: FullCvrVisitAttachments;
+  offences: Array<{ CVR_ID: string; OFFENCE_ID: string }>;
+  socoTeam: Array<{ SCENE_SOCO_TEAM_ID: string; SYSTEM_USER_ID: string; TEAM_ROLE_ID: string }>;
+  expertTeams: unknown[];
+  investigationOfficers: unknown[];
+  sceneGuards: unknown[];
+  courtDetails: unknown[];
+  productionDetails: Array<{ CVR_ID: string; PRODUCTION_STATUS: string }>;
+  productionsSentAnalysis: unknown[];
+  productionsSentCourt: unknown[];
+  productionAnalysisHistory: unknown[];
+  productionCourtHistory: unknown[];
+}
+
+export interface FullCvrDetails {
+  initiateCvrId: number;
+  cvrNo: string;
+  totalVisits: number;
+  visits: FullCvrVisitItem[];
+  courtVisits: unknown[];
+}
+
 export interface AddCourtVisitRequest {
   initiateCvrId: number;
   courtId: number;

@@ -30,6 +30,7 @@ import type {
   ProductionAnalysisHistoryItemApi,
   ProductionCourtHistoryItemApi,
   CourtVisitDetailItemApi,
+  FullCvrDetails,
 } from './types';
 
 /**
@@ -293,6 +294,18 @@ export async function getCourtVisitsByCvrId(
   initiateCvrId: number,
 ): Promise<CourtVisitDetailItemApi[]> {
   return apiRequest<CourtVisitDetailItemApi[]>('Cvr/GetCourtVisitsByCvrId', {
+    method: 'GET',
+    params: { initiateCvrId },
+  });
+}
+
+/**
+ * Get full CVR details (all visits + court visits) by initiate CVR ID
+ */
+export async function getFullCvrDetailsByInitiateCvrId(
+  initiateCvrId: number,
+): Promise<FullCvrDetails> {
+  return apiRequest<FullCvrDetails>('Cvr/GetFullCvrDetailsByInitiateCvrId', {
     method: 'GET',
     params: { initiateCvrId },
   });
