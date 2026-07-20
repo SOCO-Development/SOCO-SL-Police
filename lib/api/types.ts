@@ -1076,6 +1076,9 @@ export type UploadProductionCourtAffidavitResponse = string;
 /** Response for uploading a court visit report. */
 export type UploadCourtVisitReportResponse = string;
 
+/** Response for uploading a CVR photo file. */
+export type UploadCvrPhotoResponse = string;
+
 
 
 
