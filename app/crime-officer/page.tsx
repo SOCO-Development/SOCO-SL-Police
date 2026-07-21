@@ -2,7 +2,7 @@
 
 import FeatureCard from '@/components/cards/FeatureCard';
 import { PageHeader, PageLayout } from '@/components/ui';
-import { UserPlus, Users } from 'phosphor-react';
+import { UserPlus, Users, UserGear } from 'phosphor-react';
 
 export default function CrimeOfficerPage() {
     const cards = [
@@ -19,6 +19,13 @@ export default function CrimeOfficerPage() {
             description: 'Browse, search and manage all registered SOCO officers.',
             href: '/crime-officer/view',
             icon: <Users className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
+        },
+        {
+            title: 'User Configuration',
+            subtitle: 'පරිශීලක වින්‍යාස කිරීම',
+            description: 'View and update user privileges, roles and allowed locations.',
+            href: '/crime-officer/user-configuration',
+            icon: <UserGear className="w-12 h-12" weight="fill" style={{ color: '#8b5cf6' }} />,
         },
     ];
 
