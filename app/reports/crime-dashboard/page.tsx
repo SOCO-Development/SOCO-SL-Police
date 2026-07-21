@@ -3,11 +3,11 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PageHeader, PageLayout } from '@/components/ui';
 import { ShieldAlert, ShieldCheck, Siren, Gavel } from 'lucide-react';
-import DashboardFilterBar, { type DashboardFilters } from '@/components/dashboard/DashboardFilterBar';
+import CrimeDashboardFilterBar, { type CrimeDashboardFilters } from '@/components/dashboard/CrimeDashboardFilterBar';
 import CrimeCategorizationChart from '@/components/dashboard/CrimeCategorizationChart';
 
 export default function CrimeDashboardPage() {
-  const handleViewFilters = (filters: DashboardFilters) => {
+  const handleViewFilters = (filters: CrimeDashboardFilters) => {
     console.log('Crime dashboard filters applied', filters);
   };
 
@@ -37,27 +37,11 @@ export default function CrimeDashboardPage() {
   const maxYValue = getMaxValue(locationData);
   const yAxisTicks = Array.from({ length: Math.ceil(maxYValue / 50) + 1 }, (_, i) => i * 50);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white/90 backdrop-blur-md p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-900 mb-2">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: <span className="font-semibold">{entry.value.toLocaleString()}</span>
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <PageLayout contentClassName="py-10">
       <PageHeader backHref="/reports" title="Crime Dashboard" />
 
-      <DashboardFilterBar onView={handleViewFilters} />
+      <CrimeDashboardFilterBar onView={handleViewFilters} />
 
       {/* Main Content Area */}
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-100 p-8 relative z-0">
@@ -172,7 +156,23 @@ export default function CrimeDashboardPage() {
                   ticks={yAxisTicks}
                   stroke="#9ca3af"
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white/90 backdrop-blur-md p-3 border border-gray-200 rounded-lg shadow-lg">
+                          <p className="font-semibold text-gray-900 mb-2">{label}</p>
+                          {payload.map((entry, index) => (
+                            <p key={index} className="text-sm" style={{ color: entry.color }}>
+                              {entry.name}: <span className="font-semibold">{Number(entry.value).toLocaleString()}</span>
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
                 <Bar dataKey="open" fill="#c41e3a" name="Open" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="solved" fill="#28a745" name="Solved" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="underInvestigation" fill="#f0ad4e" name="Under Investigation" radius={[4, 4, 0, 0]} />
