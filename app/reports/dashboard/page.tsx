@@ -1,18 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { PageHeader, PageLayout } from '@/components/ui';
-import DatePicker from '@/components/forms/DatePicker';
-import TimePicker from '@/components/forms/TimePicker';
-import CustomSelect from '@/components/forms/CustomSelect';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { TrendingUp, Handshake, Users, Trash2 } from 'lucide-react';
-import FilterPrimaryButton from '@/components/buttons/FilterPrimaryButton';
+import { FileText, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import DashboardFilterBar, { type DashboardFilters } from '@/components/dashboard/DashboardFilterBar';
+import CrimeCategorizationChart from '@/components/dashboard/CrimeCategorizationChart';
 
 export default function DashboardPage() {
-  const [selectedItems1, setSelectedItems1] = useState('11');
-  const [selectedItems2, setSelectedItems2] = useState('7');
-  const [selectedItems3, setSelectedItems3] = useState('835');
+  const handleViewFilters = (filters: DashboardFilters) => {
+    console.log('Dashboard filters applied', filters);
+  };
 
   // Sample data for Location Distribution
   const locationData = [
@@ -26,21 +23,6 @@ export default function DashboardPage() {
     { name: 'Kalutara', rejected: 220, completed: 900, pending: 1000 },
     { name: 'Kandy', rejected: 160, completed: 650, pending: 850 },
     { name: 'Matara', rejected: 190, completed: 750, pending: 950 },
-  ];
-
-  // Sample data for Medium Categorization
-  const categoryData = [
-    { name: 'Anti-corruption information', value: 20574, fill: '#9b5b8f' },
-    { name: 'Incidents', value: 38493, fill: '#c41e3a' },
-    { name: 'Miscellaneous Complaints', value: 29700, fill: '#28a745' },
-    { name: 'Traffic offences', value: 9539, fill: '#f0ad4e' },
-    { name: 'Crimes', value: 23600, fill: '#000000' },
-    { name: 'Information', value: 4641, fill: '#004085' },
-    { name: 'Violence and abuse against children and women', value: 2069, fill: '#e83e8c' },
-    { name: 'Bribery and corruption scams', value: 495, fill: '#6f42c1' },
-    { name: 'Complaints against the police', value: 741, fill: '#fd7e14' },
-    { name: 'Other institutions under the Ministry', value: 2, fill: '#17a2b8' },
-    { name: 'Electoral and Political', value: 1, fill: '#6c757d' },
   ];
 
   // Sample data for Timely Distribution
@@ -126,47 +108,6 @@ export default function DashboardPage() {
     { date: '08-01-2026', requests: 3600 },
   ];
 
-  const itemsSelectedOptions1 = [
-    { value: 'UTR', label: 'UTR' },
-    { value: 'CITR', label: 'CITR' },
-    { value: 'Lost Phone', label: 'Lost Phone' },
-    { value: 'Tell IGP', label: 'Tell IGP' },
-    { value: 'NHD 118', label: 'NHD 118' },
-    { value: 'Narcotics', label: 'Narcotics' },
-    { value: 'NHD - Public', label: 'NHD - Public' },
-  ];
-
-  const itemsSelectedOptions2 = [
-    { value: 'Appollo 01', label: 'Appollo 01' },
-    { value: 'Appollo 02', label: 'Appollo 02' },
-    { value: 'Appollo 03', label: 'Appollo 03' },
-    { value: 'Appollo 04', label: 'Appollo 04' },
-    { value: 'Appollo 05', label: 'Appollo 05' },
-    { value: 'Appollo 06', label: 'Appollo 06' },
-    { value: 'Appollo 07', label: 'Appollo 07' },
-    { value: 'Appollo 08', label: 'Appollo 08' },
-    { value: 'Appollo 09', label: 'Appollo 09' },
-    { value: 'Appollo 10', label: 'Appollo 10' },
-    { value: 'Appollo 11', label: 'Appollo 11' },
-    { value: 'Appollo 12', label: 'Appollo 12' },
-    { value: 'Appollo 13', label: 'Appollo 13' },
-    { value: 'Appollo 14', label: 'Appollo 14' },
-    { value: 'Appollo 15', label: 'Appollo 15' },
-    { value: 'Colombo Emergency', label: 'Colombo Emergency' },
-    { value: 'Nuwaraeliya Division', label: 'Nuwaraeliya Division' },
-    { value: 'Kandy Division', label: 'Kandy Division' },
-    { value: 'Gampaha Division', label: 'Gampaha Division' },
-    { value: 'Kalutara Division', label: 'Kalutara Division' },
-    { value: 'Matara Division', label: 'Matara Division' },
-    { value: 'Galle Division', label: 'Galle Division' },
-  ];
-
-  const itemsSelectedOptions3 = [
-    { value: 'Crimes', label: 'Crimes' },
-    { value: 'Information', label: 'Information' },
-    { value: 'Incidents', label: 'Incidents' },
-  ];
-
   // Calculate max value for Y-axis based on Location Distribution data
   const getMaxValue = (data: typeof locationData) => {
     let max = 0;
@@ -215,121 +156,80 @@ export default function DashboardPage() {
     <PageLayout contentClassName="py-10">
       <PageHeader backHref="/reports" title="360 Dashboard" />
 
-            {/* Filter Section - 2 Rows, 4 Columns */}
-            <div className="bg-gradient-to-r from-teal-50 via-blue-50 to-teal-50 border border-teal-200/50 rounded-xl p-6 mb-6 shadow-md backdrop-blur-sm relative z-10">
-              <div className="grid grid-cols-4 gap-4">
-                {/* First Row - 4 Columns */}
-                <DatePicker
-                  defaultValue="01-12-2025"
-                  className="w-full"
-                />
-                <TimePicker
-                  defaultValue="10:44"
-                  className="w-full"
-                />
-                <DatePicker
-                  defaultValue="08-01-2026"
-                  className="w-full"
-                />
-                <TimePicker
-                  defaultValue="11:44"
-                  className="w-full"
-                />
-                {/* Second Row - 4 Columns */}
-                <CustomSelect
-                  value={selectedItems1}
-                  onChange={(value) => setSelectedItems1(value)}
-                  options={itemsSelectedOptions1}
-                  className="w-full"
-                />
-                <CustomSelect
-                  value={selectedItems2}
-                  onChange={(value) => setSelectedItems2(value)}
-                  options={itemsSelectedOptions2}
-                  className="w-full"
-                />
-                <CustomSelect
-                  value={selectedItems3}
-                  onChange={(value) => setSelectedItems3(value)}
-                  options={itemsSelectedOptions3}
-                  className="w-full"
-                />
-                <FilterPrimaryButton>View Dashboard</FilterPrimaryButton>
-              </div>
-            </div>
+      <DashboardFilterBar onView={handleViewFilters} />
 
             {/* Main Content Area */}
             <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-100 p-8 relative z-0">
               {/* KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* TOTAL REQUESTS */}
+                {/* TOTAL CVRs */}
                 <div className="bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 rounded-xl p-6 shadow-lg border border-blue-200/50 hover:shadow-xl transition-all duration-300">
                   <div className="flex items-start gap-4 mb-4">
                     <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md flex-shrink-0">
-                      <TrendingUp className="w-7 h-7 text-white" />
+                      <FileText className="w-7 h-7 text-white" />
                     </div>
                     <div className="flex-1 text-right">
-                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">TOTAL REQUESTS</p>
-                      <p className="text-5xl font-extrabold text-blue-700 leading-none mb-1">129,845</p>
+                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">TOTAL CVRs</p>
+                      <p className="text-5xl font-extrabold text-blue-700 leading-none mb-1">1,245</p>
                       <p className="text-sm font-semibold text-blue-600">Live</p>
                     </div>
                   </div>
                   <div className="h-1 bg-blue-200 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full" style={{ width: '100%' }}></div>
                   </div>
-                  </div>
-
-                {/* COMPLETED REQUESTS */}
-                <div className="bg-gradient-to-br from-green-50 via-green-100 to-green-50 rounded-xl p-6 shadow-lg border border-green-200/50 hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md flex-shrink-0">
-                      <Handshake className="w-7 h-7 text-white" />
-                    </div>
-                    <div className="flex-1 text-right">
-                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">COMPLETED REQUESTS</p>
-                      <p className="text-5xl font-extrabold text-green-700 leading-none mb-1">37,369</p>
-                      <p className="text-sm font-semibold text-green-600">(28.8%)</p>
-                    </div>
-                  </div>
-                  <div className="h-1 bg-green-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full" style={{ width: '28.8%' }}></div>
-                  </div>
                 </div>
 
-                {/* ON-DESK REQUESTS */}
-                <div className="bg-gradient-to-br from-red-50 via-red-100 to-red-50 rounded-xl p-6 shadow-lg border border-red-200/50 hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-md flex-shrink-0">
-                      <Users className="w-7 h-7 text-white" />
-                    </div>
-                    <div className="flex-1 text-right">
-                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">ON-DESK REQUESTS</p>
-                      <p className="text-5xl font-extrabold text-red-700 leading-none mb-1">92,475</p>
-                      <p className="text-sm font-semibold text-red-600">(71.2%)</p>
-                  </div>
-                  </div>
-                  <div className="h-1 bg-red-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full" style={{ width: '71.2%' }}></div>
-                  </div>
-                </div>
-
-                {/* REJECTED REQUESTS */}
+                {/* PENDING CVRs */}
                 <div className="bg-gradient-to-br from-yellow-50 via-yellow-100 to-yellow-50 rounded-xl p-6 shadow-lg border border-yellow-200/50 hover:shadow-xl transition-all duration-300">
                   <div className="flex items-start gap-4 mb-4">
                     <div className="p-3 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-md flex-shrink-0">
-                      <Trash2 className="w-7 h-7 text-white" />
-              </div>
+                      <Clock className="w-7 h-7 text-white" />
+                    </div>
                     <div className="flex-1 text-right">
-                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">REJECTED REQUESTS</p>
-                      <p className="text-5xl font-extrabold text-red-700 leading-none mb-1">1</p>
-                      <p className="text-sm font-semibold text-yellow-600">(0%)</p>
+                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">PENDING CVRs</p>
+                      <p className="text-5xl font-extrabold text-yellow-700 leading-none mb-1">312</p>
+                      <p className="text-sm font-semibold text-yellow-600">(25.1%)</p>
                     </div>
                   </div>
                   <div className="h-1 bg-yellow-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full" style={{ width: '0%' }}></div>
-                        </div>
-                      </div>
+                    <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full" style={{ width: '25.1%' }}></div>
+                  </div>
+                </div>
+
+                {/* APPROVED CVRs */}
+                <div className="bg-gradient-to-br from-green-50 via-green-100 to-green-50 rounded-xl p-6 shadow-lg border border-green-200/50 hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md flex-shrink-0">
+                      <CheckCircle2 className="w-7 h-7 text-white" />
                     </div>
+                    <div className="flex-1 text-right">
+                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">APPROVED CVRs</p>
+                      <p className="text-5xl font-extrabold text-green-700 leading-none mb-1">928</p>
+                      <p className="text-sm font-semibold text-green-600">(74.5%)</p>
+                    </div>
+                  </div>
+                  <div className="h-1 bg-green-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full" style={{ width: '74.5%' }}></div>
+                  </div>
+                </div>
+
+                {/* REJECTED CVRs */}
+                <div className="bg-gradient-to-br from-red-50 via-red-100 to-red-50 rounded-xl p-6 shadow-lg border border-red-200/50 hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-md flex-shrink-0">
+                      <XCircle className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="flex-1 text-right">
+                      <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">REJECTED CVRs</p>
+                      <p className="text-5xl font-extrabold text-red-700 leading-none mb-1">5</p>
+                      <p className="text-sm font-semibold text-red-600">(0.4%)</p>
+                    </div>
+                  </div>
+                  <div className="h-1 bg-red-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full" style={{ width: '0.4%' }}></div>
+                  </div>
+                </div>
+              </div>
 
               {/* Charts Section - Two Columns */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -339,15 +239,15 @@ export default function DashboardPage() {
                     <h2 className="text-xl font-bold text-gray-900">Location Distribution</h2>
                     <div className="flex items-center gap-3 text-xs">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f0ad4e' }}></div>
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#c41e3a' }}></div>
                         <span className="text-gray-600">Rejected</span>
-                        </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#28a745' }}></div>
-                        <span className="text-gray-600">Completed</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#c41e3a' }}></div>
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#28a745' }}></div>
+                        <span className="text-gray-600">Approved</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f0ad4e' }}></div>
                         <span className="text-gray-600">Pending</span>
                       </div>
                     </div>
@@ -372,95 +272,14 @@ export default function DashboardPage() {
                         stroke="#9ca3af"
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="rejected" fill="#f0ad4e" name="Rejected" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="completed" fill="#28a745" name="Completed" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="pending" fill="#c41e3a" name="Pending" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="rejected" fill="#c41e3a" name="Rejected" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="completed" fill="#28a745" name="Approved" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="pending" fill="#f0ad4e" name="Pending" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
 
-                    {/* Medium Categorization Chart */}
-                <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 outline-none focus:outline-none" tabIndex={-1}>
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">Medium Categorization</h2>
-                  <div className="flex items-start gap-6">
-                    {/* Pie Chart on Left */}
-                    <div className="flex-shrink-0 flex flex-col">
-                      {/* Total Complaints Card at Top */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4 shadow-sm text-center">
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Complaints</p>
-                        <p className="text-2xl font-bold text-gray-900">{categoryData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}</p>
-                      </div>
-                      {/* Pie Chart */}
-                      <ResponsiveContainer width={280} height={280}>
-                        <PieChart>
-                          <Pie
-                            data={categoryData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={70}
-                            outerRadius={120}
-                            paddingAngle={2}
-                            dataKey="value"
-                            startAngle={90}
-                            endAngle={-270}
-                          >
-                            {categoryData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} stroke="#fff" strokeWidth={2.5} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            wrapperStyle={{ zIndex: 9999 }}
-                            contentStyle={{ zIndex: 9999 }}
-                            content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
-                                const data = payload[0];
-                                const total = categoryData.reduce((sum, i) => sum + i.value, 0);
-                                const percentage = ((data.value as number / total) * 100).toFixed(1);
-                                return (
-                                  <div className="bg-white/90 backdrop-blur-md p-2.5 border border-gray-300 rounded-lg shadow-xl" style={{ pointerEvents: 'none', zIndex: 9999 }}>
-                                    <p className="text-xs font-semibold text-gray-900 mb-1">{data.name}</p>
-                                    <p className="text-xs text-gray-700">
-                                      <span className="font-bold">{data.value?.toLocaleString()}</span> ({percentage}%)
-                                    </p>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    {/* Legend on Right */}
-                    <div className="flex-1 min-w-0">
-                      <div className="space-y-2 max-h-[450px] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-                        {categoryData.map((item, index) => {
-                          const total = categoryData.reduce((sum, i) => sum + i.value, 0);
-                          const percentage = ((item.value / total) * 100).toFixed(1);
-                          return (
-                            <div 
-                              key={index} 
-                              className="group flex items-center gap-2 p-1.5 rounded-md hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border border-transparent hover:border-blue-300 hover:shadow-sm transition-all duration-200 cursor-pointer"
-                              title={`${item.name}: ${item.value.toLocaleString()} (${percentage}%)`}
-                            >
-                              <div 
-                                className="w-3 h-3 rounded-sm flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow" 
-                              style={{ backgroundColor: item.fill }}
-                            ></div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs text-gray-700 font-medium truncate group-hover:text-gray-900">{item.name}</p>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="text-[10px] font-bold text-gray-900">{item.value.toLocaleString()}</span>
-                                  <span className="text-[10px] text-gray-500">({percentage}%)</span>
-                                </div>
-                              </div>
-                          </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                      </div>
-                    </div>
+                <CrimeCategorizationChart />
                   </div>
 
               {/* Timely Distribution Chart - Full Width */}
