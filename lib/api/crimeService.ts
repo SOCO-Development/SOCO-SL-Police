@@ -31,6 +31,8 @@ import type {
   ProductionCourtHistoryItemApi,
   CourtVisitDetailItemApi,
   FullCvrDetails,
+  ApproveCrimeSceneRequest,
+  ApproveCrimeSceneResponse,
 } from './types';
 
 /**
@@ -308,5 +310,17 @@ export async function getFullCvrDetailsByInitiateCvrId(
   return apiRequest<FullCvrDetails>('Cvr/GetFullCvrDetailsByInitiateCvrId', {
     method: 'GET',
     params: { initiateCvrId },
+  });
+}
+
+/**
+ * Approve a crime scene (SOCO_CVR14)
+ */
+export async function approveCrimeScene(
+  payload: ApproveCrimeSceneRequest,
+): Promise<ApproveCrimeSceneResponse> {
+  return apiRequest<ApproveCrimeSceneResponse>('Cvr/ApproveCrimeScene', {
+    method: 'POST',
+    body: payload,
   });
 }

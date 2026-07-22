@@ -523,4 +523,19 @@ export const crimeSceneService = {
     saveAll(all);
     return created;
   },
+
+  updateApprovalStatus(sceneId: string, status: string): CrimeScene | null {
+    const all = loadAll();
+    const idx = all.findIndex((s) => s.id === sceneId);
+    if (idx === -1) return null;
+    const scene = all[idx];
+    const next: CrimeScene = {
+      ...scene,
+      updatedAt: now(),
+      approval_status: status,
+    };
+    all[idx] = next;
+    saveAll(all);
+    return next;
+  },
 };
