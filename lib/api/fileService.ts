@@ -4,6 +4,8 @@ import type {
   UploadProductionCourtAffidavitResponse,
   UploadCourtVisitReportResponse,
   UploadCvrPhotoResponse,
+  UploadCvrSketchResponse,
+  UploadCvrReportResponse,
 } from './types';
 
 /**
@@ -135,6 +137,62 @@ export async function uploadCvrPhoto(
 
   return apiRequest<UploadCvrPhotoResponse>(
     'File/UploadCvrPhoto',
+    {
+      method: 'POST',
+      body: formData,
+      formData: true,
+    },
+  );
+}
+
+/**
+ * Upload a CVR sketch.
+ *
+ * @param file   - The sketch file to upload.
+ * @param cvrId  - The related CVR ID (defaults to 0).
+ * @param cvrNo  - The CVR Number (defaults to "").
+ * @returns The server-side file path of the uploaded sketch.
+ */
+export async function uploadCvrSketch(
+  file: File,
+  cvrId: number = 0,
+  cvrNo: string = '',
+): Promise<UploadCvrSketchResponse> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('CvrId', String(cvrId));
+  formData.append('CvrNo', cvrNo);
+
+  return apiRequest<UploadCvrSketchResponse>(
+    'File/UploadCvrSketch',
+    {
+      method: 'POST',
+      body: formData,
+      formData: true,
+    },
+  );
+}
+
+/**
+ * Upload a CVR report.
+ *
+ * @param file   - The report file to upload.
+ * @param cvrId  - The related CVR ID (defaults to 0).
+ * @param cvrNo  - The CVR Number (defaults to "").
+ * @returns The server-side file path of the uploaded report.
+ */
+export async function uploadCvrReport(
+  file: File,
+  cvrId: number = 0,
+  cvrNo: string = '',
+): Promise<UploadCvrReportResponse> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('CvrId', String(cvrId));
+  formData.append('CvrNo', cvrNo);
+
+  return apiRequest<UploadCvrReportResponse>(
+    'File/UploadCvrReport',
     {
       method: 'POST',
       body: formData,
