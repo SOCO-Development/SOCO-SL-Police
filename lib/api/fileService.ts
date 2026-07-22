@@ -4,6 +4,7 @@ import type {
   UploadProductionCourtAffidavitResponse,
   UploadCourtVisitReportResponse,
   UploadCvrPhotoResponse,
+  UploadCvrSketchResponse,
 } from './types';
 
 /**
@@ -135,6 +136,34 @@ export async function uploadCvrPhoto(
 
   return apiRequest<UploadCvrPhotoResponse>(
     'File/UploadCvrPhoto',
+    {
+      method: 'POST',
+      body: formData,
+      formData: true,
+    },
+  );
+}
+
+/**
+ * Upload a CVR sketch.
+ *
+ * @param file   - The sketch file to upload.
+ * @param cvrId  - The related CVR ID (defaults to 0).
+ * @param cvrNo  - The CVR Number (defaults to "").
+ * @returns The server-side file path of the uploaded sketch.
+ */
+export async function uploadCvrSketch(
+  file: File,
+  cvrId: number = 0,
+  cvrNo: string = '',
+): Promise<UploadCvrSketchResponse> {
+  const formData = new FormData();
+  formData.append('File', file);
+  formData.append('CvrId', String(cvrId));
+  formData.append('CvrNo', cvrNo);
+
+  return apiRequest<UploadCvrSketchResponse>(
+    'File/UploadCvrSketch',
     {
       method: 'POST',
       body: formData,
