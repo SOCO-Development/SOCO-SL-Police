@@ -1082,6 +1082,9 @@ export type UploadCvrPhotoResponse = string;
 /** Response for uploading a CVR sketch file. */
 export type UploadCvrSketchResponse = string;
 
+/** Response for uploading a CVR report file. */
+export type UploadCvrReportResponse = string;
+
 
 
 
