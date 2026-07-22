@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
+import MultiSelect from '@/components/forms/MultiSelect';
+import DatePicker from '@/components/forms/DatePicker';
 import { crimeSceneService } from '@/lib/crimeSceneService';
+import { userService, locationService } from '@/lib/api';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import CrimeSceneRevisionDiff from '@/components/cvr/CrimeSceneRevisionDiff';
-import { ActionChipButton, ApproveRejectActions, PageHeader, PageLayout, SearchInput, TabBar } from '@/components/ui';
+import { ActionChipButton, ApproveRejectActions, PageHeader, PageLayout, SearchInput } from '@/components/ui';
+import { cn } from '@/lib/utils';
+import { Eye } from 'lucide-react';
 
 type FilterTab = 'REQUESTS' | 'REVISIONS';
 
@@ -15,6 +20,22 @@ const tabs: { label: string; value: FilterTab }[] = [
   { label: 'Permission Requests', value: 'REQUESTS' },
   { label: 'Revised CVR', value: 'REVISIONS' },
 ];
+
+/** Accepts DD-MM-YYYY (DatePicker) or YYYY-MM-DD. */
+function parseDDMMYYYY(dateStr: string): Date | null {
+  const s = dateStr.trim();
+  if (!s) return null;
+  const parts = s.split('-');
+  if (parts.length !== 3) return null;
+  const n = parts.map((p) => Number(p));
+  if (n.some((x) => Number.isNaN(x))) return null;
+  if (parts[0].length === 4) {
+    const [year, month, day] = n;
+    return new Date(year, month - 1, day);
+  }
+  const [day, month, year] = n;
+  return new Date(year, month - 1, day);
+}
 
 export default function PendingCvrApprovalsPage() {
   const [requests, setRequests] = useState<CrimeScene[]>([]);
@@ -27,14 +48,50 @@ export default function PendingCvrApprovalsPage() {
   const [revisionSortKey, setRevisionSortKey] = useState<keyof CrimeScene | string | null>('updatedAt');
   const [revisionSortAsc, setRevisionSortAsc] = useState(false);
 
+  const [labs, setLabs] = useState<any[]>([]);
+  const [selectedLabIds, setSelectedLabIds] = useState<string[]>([]);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadingLabsData, setLoadingLabsData] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
   function reload() {
     setRequests(crimeSceneService.getPendingAmendmentRequests());
     setRevisions(crimeSceneService.getPendingRevisionApprovals());
   }
 
   useEffect(() => {
-    reload();
+    locationService
+      .getAllLocations()
+      .then((data) => {
+        if (data) {
+          const sorted = [...data].sort((a, b) => a.LOCATION_NAME.localeCompare(b.LOCATION_NAME));
+          setLabs(sorted);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load SOCO labs', err);
+      });
+
+    userService
+      .getCurrentUserInfo()
+      .then((userInfo) => {
+        if (userInfo && userInfo.locationId) {
+          setSelectedLabIds([String(userInfo.locationId)]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load user info', err);
+      });
   }, []);
+
+  const handleView = useCallback(() => {
+    if (selectedLabIds.length === 0) return;
+    setLoadingLabsData(true);
+    reload();
+    setHasLoaded(true);
+    setLoadingLabsData(false);
+  }, [selectedLabIds]);
 
   function baselineScene(row: CrimeScene): CrimeScene | null {
     const raw = row.cvrAmendment?.baselineJson;
@@ -46,29 +103,51 @@ export default function PendingCvrApprovalsPage() {
     }
   }
 
+  const inDateRange = useCallback(
+    (row: CrimeScene) => {
+      if (!dateFrom && !dateTo) return true;
+      const updated = new Date(row.updatedAt);
+      if (Number.isNaN(updated.getTime())) return true;
+      const from = parseDDMMYYYY(dateFrom);
+      const to = parseDDMMYYYY(dateTo);
+      if (from) {
+        const fromStart = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+        if (updated < fromStart) return false;
+      }
+      if (to) {
+        const toEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+        if (updated > toEnd) return false;
+      }
+      return true;
+    },
+    [dateFrom, dateTo]
+  );
+
   const filteredRequests = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return requests;
     return requests.filter((row) => {
+      if (!inDateRange(row)) return false;
+      if (!q) return true;
       const haystack = [row.cvrNo, row.id, row.visitType, formatDateTimeDDMMYYYY(row.updatedAt)]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [requests, searchTerm]);
+  }, [requests, searchTerm, inDateRange]);
 
   const filteredRevisions = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return revisions;
     return revisions.filter((row) => {
+      if (!inDateRange(row)) return false;
+      if (!q) return true;
       const haystack = [row.cvrNo, row.id, row.visitType, formatDateTimeDDMMYYYY(row.updatedAt)]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [revisions, searchTerm]);
+  }, [revisions, searchTerm, inDateRange]);
 
   const sortedRequests = useMemo(() => {
     const data = [...filteredRequests];
@@ -111,7 +190,7 @@ export default function PendingCvrApprovalsPage() {
   const selectedRevision =
     sortedRevisions.find((row) => row.id === selectedRevisionId) ?? sortedRevisions[0] ?? null;
 
-  const countFor = (tab: FilterTab) => (tab === 'REQUESTS' ? requests.length : revisions.length);
+  const countFor = (tab: FilterTab) => (tab === 'REQUESTS' ? filteredRequests.length : filteredRevisions.length);
 
   function handleRequestSort(key: keyof CrimeScene | string) {
     if (requestSortKey === key) setRequestSortAsc((prev) => !prev);
@@ -227,12 +306,72 @@ export default function PendingCvrApprovalsPage() {
         //description="Approve or reject permission requests first, then review amended records with field-level diffs."
       />
 
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
-              <TabBar
-                tabs={tabs.map((tab) => ({ ...tab, count: countFor(tab.value) }))}
-                value={filter}
-                onChange={setFilter}
-              />
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-6">
+        <div className="flex gap-3 flex-wrap items-end">
+          <div className="min-w-[220px] flex-1 max-w-xs">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+              Select SOCO Location
+            </label>
+            <MultiSelect
+              value={selectedLabIds}
+              onChange={setSelectedLabIds}
+              options={labs.map((l) => ({ value: String(l.LOCATION_ID), label: l.LOCATION_NAME }))}
+              placeholder="Select SOCO Location"
+            />
+          </div>
+          <div className="min-w-[170px]">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">From</label>
+            <DatePicker value={dateFrom} onChange={setDateFrom} />
+          </div>
+          <div className="min-w-[170px]">
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">To</label>
+            <DatePicker value={dateTo} onChange={setDateTo} />
+          </div>
+          <button
+            type="button"
+            onClick={handleView}
+            disabled={loadingLabsData || selectedLabIds.length === 0}
+            className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors min-h-[38px] flex items-center gap-1.5 shadow-sm border border-blue-700/10 hover:border-blue-700/25"
+          >
+            {loadingLabsData ? (
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+            View
+          </button>
+        </div>
+      </div>
+
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+                {tabs.map((tab) => {
+                  const active = filter === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => setFilter(tab.value)}
+                      className={cn(
+                        'group inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
+                        active
+                          ? 'bg-white text-blue-700 shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      )}
+                    >
+                      {tab.label}
+                      <span
+                        className={cn(
+                          'rounded-full px-1.5 py-0.5 text-xs font-semibold',
+                          active ? 'bg-blue-50 text-blue-700' : 'bg-gray-200 text-gray-600 group-hover:bg-gray-300'
+                        )}
+                      >
+                        {countFor(tab.value)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
               <SearchInput
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -242,7 +381,11 @@ export default function PendingCvrApprovalsPage() {
               />
             </div>
 
-            {filter === 'REQUESTS' ? (
+            {!hasLoaded ? (
+              <div className="text-center py-16 text-gray-400 text-sm">
+                Please select SOCO Location(s) and click the "View" button to load pending approvals.
+              </div>
+            ) : filter === 'REQUESTS' ? (
               <AppTable<CrimeScene>
                 columns={requestColumns}
                 data={sortedRequests}
@@ -255,7 +398,7 @@ export default function PendingCvrApprovalsPage() {
               />
             ) : null}
 
-            {filter === 'REVISIONS' ? (
+            {hasLoaded && filter === 'REVISIONS' ? (
               <div className="space-y-6">
                 <AppTable<CrimeScene>
                   columns={revisionColumns}
