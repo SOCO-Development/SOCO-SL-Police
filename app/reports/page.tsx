@@ -10,6 +10,7 @@ import {
   FileText,
   DeviceMobile,
   SquaresFour,
+  ShieldWarning,
 } from 'phosphor-react';
 
 export default function ReportsPage() {
@@ -18,6 +19,11 @@ export default function ReportsPage() {
       title: '360 - Dashboard',
       icon: <SquaresFour className="w-12 h-12" weight="fill" style={{ color: '#3b82f6' }} />,
       href: '/reports/dashboard',
+    },
+    {
+      title: 'Crime Dashboard',
+      icon: <ShieldWarning className="w-12 h-12" weight="fill" style={{ color: '#c41e3a' }} />,
+      href: '/reports/crime-dashboard',
     },
     {
       title: 'Report & Data',
