@@ -1085,6 +1085,19 @@ export type UploadCvrSketchResponse = string;
 /** Response for uploading a CVR report file. */
 export type UploadCvrReportResponse = string;
 
+export interface ApproveCrimeSceneRequest {
+  cvrId: number;
+  approved_by: number;
+}
+
+export interface ApproveCrimeSceneResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: string;
+}
+
 
 
 

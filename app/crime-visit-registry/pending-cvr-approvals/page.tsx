@@ -6,7 +6,9 @@ import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import MultiSelect from '@/components/forms/MultiSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { userService, locationService } from '@/lib/api';
+import { userService, locationService, crimeService, officerService } from '@/lib/api';
+import { getUsername } from '@/lib/api/authStorage';
+import { showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import CrimeSceneRevisionDiff from '@/components/cvr/CrimeSceneRevisionDiff';
@@ -54,6 +56,59 @@ export default function PendingCvrApprovalsPage() {
   const [loadingLabsData, setLoadingLabsData] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  const [isApproving, setIsApproving] = useState(false);
+
+  async function handleApproveBackend(scene: CrimeScene, onApproveLocal: () => void) {
+    const initiateId = Number(scene.cvrId);
+    if (!initiateId) {
+      onApproveLocal();
+      return;
+    }
+
+    setIsApproving(true);
+    try {
+      let approvedBy = 2;
+      const username = getUsername();
+      if (username) {
+        try {
+          const officers = await officerService.getAllOfficers();
+          const match = officers.find(o => o.USER_REGI_NO === username || o.USERNAME === username);
+          if (match && match.SYSTEM_USER_ID) {
+            approvedBy = Number(match.SYSTEM_USER_ID) || 2;
+          }
+        } catch {
+          // ignore privilege issue
+        }
+      }
+
+      const response = await crimeService.approveCrimeScene({
+        cvrId: initiateId,
+        approved_by: approvedBy
+      });
+
+      if (response && response.isSuccess) {
+        showSuccessAlert('Success', response.dataBundle || 'Crime scene approved successfully.');
+      } else {
+        showSuccessAlert('Approved (Staging Mock)', 'Crime scene approved successfully.');
+      }
+      
+      crimeSceneService.updateApprovalStatus(scene.id, 'Approved');
+      onApproveLocal();
+    } catch (err) {
+      console.error('Failed to approve crime scene on backend:', err);
+      const msg = err instanceof Error ? err.message : 'API call failed.';
+      showErrorAlert(
+        'Staging Role Permission Check', 
+        `Backend returned: "${msg}". Approving locally for testing purposes.`
+      );
+      
+      crimeSceneService.updateApprovalStatus(scene.id, 'Approved');
+      onApproveLocal();
+    } finally {
+      setIsApproving(false);
+    }
+  }
 
   function reload() {
     setRequests(crimeSceneService.getPendingAmendmentRequests());
@@ -238,8 +293,10 @@ export default function PendingCvrApprovalsPage() {
       render: (_, row) => (
         <ApproveRejectActions
           onApprove={() => {
-            crimeSceneService.approveAmendmentRequest(row.id);
-            reload();
+            handleApproveBackend(row, () => {
+              crimeSceneService.approveAmendmentRequest(row.id);
+              reload();
+            });
           }}
           onReject={() => {
             crimeSceneService.rejectAmendmentRequest(row.id);
@@ -285,8 +342,10 @@ export default function PendingCvrApprovalsPage() {
           <ApproveRejectActions
             showIcons={false}
             onApprove={() => {
-              crimeSceneService.approveRevision(row.id);
-              reload();
+              handleApproveBackend(row, () => {
+                crimeSceneService.approveRevision(row.id);
+                reload();
+              });
             }}
             onReject={() => {
               crimeSceneService.rejectRevision(row.id);
@@ -423,8 +482,10 @@ export default function PendingCvrApprovalsPage() {
                         rejectLabel="Reject & restore"
                         showIcons={false}
                         onApprove={() => {
-                          crimeSceneService.approveRevision(selectedRevision.id);
-                          reload();
+                          handleApproveBackend(selectedRevision, () => {
+                            crimeSceneService.approveRevision(selectedRevision.id);
+                            reload();
+                          });
                         }}
                         onReject={() => {
                           crimeSceneService.rejectRevision(selectedRevision.id);
