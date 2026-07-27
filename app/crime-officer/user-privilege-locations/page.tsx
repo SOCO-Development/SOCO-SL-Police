@@ -103,18 +103,24 @@ export default function UserPrivilegeLocationsPage() {
         setHasViewed(true);
         setIsLoadingPrivileges(true);
         try {
-            const groups = await officerService.getUserPrivileges(selectedUserOption.systemUserId);
-            const rows: PrivilegeLocationRow[] = groups.flatMap((group) =>
-                group.configurations
-                    .filter((config) => config.privilegeId != null)
-                    .map((config) => ({
-                        privilegeId: config.privilegeId as number,
+            const groups = await officerService.getUserPrivilegeLocations(selectedUserOption.systemUserId);
+            const rows: PrivilegeLocationRow[] = (groups ?? []).flatMap((group) =>
+                (group.privileges ?? []).map((privilege) => {
+                    const uniqueLocations = Array.from(
+                        new Map((privilege.locations ?? []).map((loc) => [loc.locationId, loc])).values()
+                    );
+                    return {
+                        privilegeId: privilege.privilegeId,
                         privilegeTypeId: group.privilegeTypeId,
                         privilegeType: group.privilegeType,
-                        privilegeRole: config.privilegeRole,
-                        isActive: config.isActive,
+                        privilegeRole: privilege.privilegeRole,
+                        locationOptions: uniqueLocations.map((loc) => ({
+                            value: String(loc.locationId),
+                            label: loc.locationName,
+                        })),
                         locationIds: [],
-                    }))
+                    };
+                })
             );
             setPrivilegeRows(rows);
         } catch (err) {
@@ -215,7 +221,6 @@ export default function UserPrivilegeLocationsPage() {
             ) : (
                 <PrivilegeLocationTable
                     rows={privilegeRows}
-                    locationOptions={locationOptions.filter((o) => o.value !== '')}
                     onUpdate={handleUpdateLocations}
                     emptyMessage="No privileges available for this user."
                 />

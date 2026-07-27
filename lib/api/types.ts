@@ -611,6 +611,28 @@ export interface SetPrivilegeLocationsRequest {
   locationIds: number[];
 }
 
+/** A single selectable location option for a privilege, as returned by GetUserPrivilegeLocations. */
+export interface PrivilegeLocationOption {
+  locationId: number;
+  locationName: string;
+}
+
+/** One privilege entry within GetUserPrivilegeLocations, with its allowed location options. */
+export interface UserPrivilegeLocationEntry {
+  privilegeId: number;
+  privilegeConfigurationId: number;
+  privilegeRole: string;
+  locations: PrivilegeLocationOption[];
+}
+
+/** GetUserPrivilegeLocations returns the full privilege catalog grouped by type,
+ * each privilege annotated with its list of assignable locations. */
+export interface UserPrivilegeLocationTypeGroup {
+  privilegeTypeId: number;
+  privilegeType: string;
+  privileges: UserPrivilegeLocationEntry[];
+}
+
 // ─── Crime API Types ──────────────────────────────────────────────────
 
 export interface AddVehicleRequest {

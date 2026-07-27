@@ -9,21 +9,20 @@ export interface PrivilegeLocationRow {
     privilegeTypeId: number;
     privilegeType: string;
     privilegeRole: string;
-    isActive: boolean;
+    /** Locations assignable to this privilege, as MultiSelect options. */
+    locationOptions: { value: string; label: string }[];
     /** Currently assigned location IDs (as strings, to match MultiSelect) for this privilege. */
     locationIds: string[];
 }
 
 export interface PrivilegeLocationTableProps {
     rows: PrivilegeLocationRow[];
-    locationOptions: { value: string; label: string }[];
     onUpdate: (row: PrivilegeLocationRow, locationIds: string[]) => Promise<void>;
     emptyMessage?: string;
 }
 
 export default function PrivilegeLocationTable({
     rows,
-    locationOptions,
     onUpdate,
     emptyMessage = 'No privileges available for this user.',
 }: PrivilegeLocationTableProps) {
@@ -78,7 +77,7 @@ export default function PrivilegeLocationTable({
                                     <td className="px-4 py-3 text-gray-900 font-medium">{row.privilegeRole.trim()}</td>
                                     <td className="px-4 py-3">
                                         <MultiSelect
-                                            options={locationOptions}
+                                            options={row.locationOptions}
                                             value={locations}
                                             onChange={(vals) => handleLocationsChange(row, vals)}
                                             placeholder="Select location(s)"
