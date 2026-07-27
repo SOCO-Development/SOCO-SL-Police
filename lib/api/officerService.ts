@@ -29,6 +29,7 @@ import type {
   PrivilegeTypeGroup,
   SetUserPrivilegesRequest,
   UserPrivilegeTypeGroup,
+  SetPrivilegeLocationsRequest,
 } from './types';
 
 /**
@@ -273,5 +274,17 @@ export async function setUserPrivileges(
 export async function getUserPrivileges(systemUserId: number): Promise<UserPrivilegeTypeGroup[]> {
   return apiRequest<UserPrivilegeTypeGroup[]>('UserPrivilege/GetUserPrivileges', {
     params: { systemUserId },
+  });
+}
+
+/**
+ * Set the location(s) a specific privilege is scoped to, for a given user.
+ */
+export async function setPrivilegeLocations(
+  payload: SetPrivilegeLocationsRequest,
+): Promise<string> {
+  return apiRequest<string>('UserPrivilege/SetPrivilegeLocations', {
+    method: 'POST',
+    body: payload,
   });
 }

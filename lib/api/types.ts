@@ -603,6 +603,14 @@ export interface UserPrivilegeTypeGroup {
   configurations: UserPrivilegeConfiguration[];
 }
 
+// ─── Set Privilege Locations ─────────────────────────────────────────
+
+export interface SetPrivilegeLocationsRequest {
+  systemUserId: number;
+  privilegeId: number;
+  locationIds: number[];
+}
+
 // ─── Crime API Types ──────────────────────────────────────────────────
 
 export interface AddVehicleRequest {
