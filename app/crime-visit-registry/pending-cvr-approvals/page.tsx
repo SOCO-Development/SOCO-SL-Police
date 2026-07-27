@@ -59,6 +59,7 @@ export default function PendingCvrApprovalsPage() {
 
   const [isApproving, setIsApproving] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [loadingRevisions, setLoadingRevisions] = useState(false);
 
   async function resolveCurrentOfficerId(): Promise<number | null> {
     const username = getUsername();
@@ -105,6 +106,36 @@ export default function PendingCvrApprovalsPage() {
     }
   }
 
+  async function loadApprovedCrimeScenesFromBackend() {
+    setLoadingRevisions(true);
+    try {
+      const officerId = await resolveCurrentOfficerId();
+      if (!officerId) {
+        console.error('Could not resolve current officer id for approved CVRs');
+        setRevisions([]);
+        return;
+      }
+      const items = await crimeService.getApprovedCrimeScenesByUserId(officerId);
+      const mapped: CrimeScene[] = items.map((item) => {
+        const id = String(item.CVR_ID ?? item.INITIATE_CVR_ID ?? '');
+        return {
+          id,
+          cvrNo: String(item.CVR_NO ?? id),
+          cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
+          visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
+          createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+          updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+        } as CrimeScene;
+      });
+      setRevisions(mapped);
+    } catch (err) {
+      console.error('Failed to load approved CVRs', err);
+      setRevisions([]);
+    } finally {
+      setLoadingRevisions(false);
+    }
+  }
+
   async function handleApproveBackend(scene: CrimeScene, onApproveLocal: () => void) {
     const initiateId = Number(scene.cvrId);
     if (!initiateId) {
@@ -145,7 +176,7 @@ export default function PendingCvrApprovalsPage() {
 
   function reload() {
     loadPendingRequestsFromBackend();
-    setRevisions(crimeSceneService.getPendingRevisionApprovals());
+    loadApprovedCrimeScenesFromBackend();
   }
 
   useEffect(() => {
@@ -167,7 +198,7 @@ export default function PendingCvrApprovalsPage() {
     setLoadingLabsData(true);
     await Promise.all([
       loadPendingRequestsFromBackend(),
-      Promise.resolve(setRevisions(crimeSceneService.getPendingRevisionApprovals())),
+      loadApprovedCrimeScenesFromBackend(),
     ]);
     setHasLoaded(true);
     setLoadingLabsData(false);
