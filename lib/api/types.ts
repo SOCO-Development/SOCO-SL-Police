@@ -545,6 +545,14 @@ export interface UserPrivilegeItem {
   PRIVILEGE_NAME: string;
 }
 
+// ─── Get User Privilege Locations (UserPrivilege/GetUserPrivilegeLocations) ─
+
+export interface UserPrivilegeLocationItem {
+  SYSTEM_USER_ID: string;
+  LOCATION_ID: string;
+}
+
+
 // ─── Update Personal Info (SOCO_U14) ────────────────────────────────
 
 export interface UpdatePersonalInfoRequest {

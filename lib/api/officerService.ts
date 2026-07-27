@@ -27,6 +27,7 @@ import type {
   OfficerDetailBundle,
   GrantLoginAccessRequest,
   UserPrivilegeItem,
+  UserPrivilegeLocationItem,
 } from './types';
 
 /**
@@ -251,6 +252,18 @@ export async function updateUserDesignation(
 export async function getUserPrivileges(): Promise<UserPrivilegeItem[]> {
   try {
     return await apiRequest<UserPrivilegeItem[]>('UserPrivilege/GetUserPrivileges');
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch all user privilege locations (UserPrivilege/GetUserPrivilegeLocations)
+ * Returns flat list of location access records keyed by SYSTEM_USER_ID.
+ */
+export async function getUserPrivilegeLocations(): Promise<UserPrivilegeLocationItem[]> {
+  try {
+    return await apiRequest<UserPrivilegeLocationItem[]>('UserPrivilege/GetUserPrivilegeLocations');
   } catch {
     return [];
   }
