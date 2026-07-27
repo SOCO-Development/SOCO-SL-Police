@@ -26,6 +26,8 @@ import type {
   OfficerListItem,
   OfficerDetailBundle,
   GrantLoginAccessRequest,
+  PrivilegeTypeGroup,
+  SetUserPrivilegesRequest,
 } from './types';
 
 /**
@@ -238,6 +240,26 @@ export async function updateUserDesignation(
   payload: UpdateUserDesignationRequest,
 ): Promise<string> {
   return apiRequest<string>('UserPrivilege/UpdateDesignation', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Get the full catalog of privilege types and their configurations,
+ * used to populate the privilege selection dropdown.
+ */
+export async function getPrivilegeCatalog(): Promise<PrivilegeTypeGroup[]> {
+  return apiRequest<PrivilegeTypeGroup[]>('UserPrivilege/GetPrivilegeCatalog');
+}
+
+/**
+ * Replace a user's full set of privileges with the given configuration IDs.
+ */
+export async function setUserPrivileges(
+  payload: SetUserPrivilegesRequest,
+): Promise<string> {
+  return apiRequest<string>('UserPrivilege/SetUserPrivileges', {
     method: 'POST',
     body: payload,
   });

@@ -1,28 +1,24 @@
 'use client';
 
-import CustomSelect from '@/components/forms/CustomSelect';
-import { TableIconButton, Button } from '@/components/ui';
-import { Trash2, Users2, ShieldCheck } from 'lucide-react';
+import MultiSelect from '@/components/forms/MultiSelect';
+import { Button } from '@/components/ui';
+import { ShieldCheck } from 'lucide-react';
 
-export interface PrivilegeCategoryOption {
+export interface PrivilegeOption {
     value: string;
     label: string;
 }
 
-export interface UserPrivilege {
-    id: string;
-    categoryId: string;
-}
-
 export interface PrivilegeListProps {
-    privileges: UserPrivilege[];
-    categoryOptions: PrivilegeCategoryOption[];
+    /** Flattened, grouped-by-type privilege options for the MultiSelect. */
+    privilegeOptions: PrivilegeOption[];
+    /** Currently selected privilege configuration IDs (as strings, to match MultiSelect). */
+    selectedPrivilegeIds: string[];
+    onChange: (ids: string[]) => void;
     userName?: string;
-    /** IDs of rows with an unsaved category selection, used to enable/highlight the row's Update action. */
-    dirtyIds?: Set<string>;
-    onCategoryChange?: (privilegeId: string, categoryId: string) => void;
-    onUpdate?: (privilege: UserPrivilege) => void;
-    onDelete?: (privilege: UserPrivilege) => void;
+    isDirty?: boolean;
+    isSaving?: boolean;
+    onSave?: () => void;
     emptyMessage?: string;
 }
 
@@ -34,14 +30,14 @@ function getInitials(name: string) {
 }
 
 export default function PrivilegeList({
-    privileges,
-    categoryOptions,
+    privilegeOptions,
+    selectedPrivilegeIds,
+    onChange,
     userName,
-    dirtyIds,
-    onCategoryChange,
-    onUpdate,
-    onDelete,
-    emptyMessage = 'No privileges found.',
+    isDirty = false,
+    isSaving = false,
+    onSave,
+    emptyMessage = 'No privileges available.',
 }: PrivilegeListProps) {
     return (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -61,87 +57,43 @@ export default function PrivilegeList({
                     </div>
                     <div className="shrink-0 flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
                         <ShieldCheck className="w-4 h-4" aria-hidden />
-                        {privileges.length}
-                        <span className="hidden sm:inline">{privileges.length === 1 ? 'privilege' : 'privileges'}</span>
+                        {selectedPrivilegeIds.length}
+                        <span className="hidden sm:inline">
+                            {selectedPrivilegeIds.length === 1 ? 'privilege' : 'privileges'}
+                        </span>
                     </div>
                 </div>
             )}
 
-            {privileges.length === 0 ? (
+            {privilegeOptions.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-sm">{emptyMessage}</div>
             ) : (
-                <>
-                    <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        <span className="w-6 shrink-0" />
-                        <span className="w-9 shrink-0" />
-                        <span className="flex-1">Privilege Category</span>
-                        <span className="shrink-0">Actions</span>
+                <div className="p-5 flex flex-col gap-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+                            Privilege Categories
+                        </label>
+                        <MultiSelect
+                            options={privilegeOptions}
+                            value={selectedPrivilegeIds}
+                            onChange={onChange}
+                            placeholder="Select privileges"
+                        />
                     </div>
 
-                    <div className="divide-y divide-gray-100">
-                        {privileges.map((row, index) => {
-                            const isDirty = dirtyIds?.has(row.id) ?? false;
-                            return (
-                                <div
-                                    key={row.id}
-                                    className={`flex flex-wrap sm:flex-nowrap items-center gap-4 px-5 py-3.5 transition-colors ${
-                                        isDirty ? 'bg-amber-50/60' : 'hover:bg-gray-50/70'
-                                    }`}
-                                >
-                                    <span className="w-6 shrink-0 text-xs font-mono text-gray-400">
-                                        {String(index + 1).padStart(2, '0')}
-                                    </span>
-                                    <span className="w-9 h-9 shrink-0 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
-                                        <Users2 className="w-4 h-4" aria-hidden />
-                                    </span>
-
-                                    <div className="flex-1 min-w-[200px] flex items-center gap-2">
-                                        <div className="flex-1">
-                                            <CustomSelect
-                                                options={categoryOptions}
-                                                value={row.categoryId}
-                                                onChange={(val) => onCategoryChange?.(row.id, val)}
-                                                placeholder="Select category"
-                                            />
-                                        </div>
-                                        {isDirty && (
-                                            <span
-                                                className="w-2 h-2 rounded-full bg-amber-400 shrink-0"
-                                                title="Unsaved change"
-                                                aria-label="Unsaved change"
-                                            />
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        {onUpdate && (
-                                            <Button
-                                                type="button"
-                                                variant="success"
-                                                onClick={() => onUpdate(row)}
-                                                disabled={!isDirty}
-                                                title={isDirty ? 'Save the selected category' : 'No changes to save'}
-                                                className="!min-h-8 !py-1.5 !text-xs px-4"
-                                            >
-                                                Update
-                                            </Button>
-                                        )}
-                                        {onDelete && (
-                                            <TableIconButton
-                                                variant="delete"
-                                                onClick={() => onDelete(row)}
-                                                title="Delete privilege"
-                                                aria-label="Delete privilege"
-                                            >
-                                                <Trash2 size={15} />
-                                            </TableIconButton>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    <div className="flex items-center justify-end gap-2">
+                        {isDirty && <span className="text-xs text-amber-600 mr-auto">Unsaved changes</span>}
+                        <Button
+                            type="button"
+                            variant="success"
+                            onClick={onSave}
+                            disabled={!isDirty || isSaving}
+                            className="!min-h-9 !py-2 !text-sm px-5"
+                        >
+                            {isSaving ? 'Saving…' : 'Save Privileges'}
+                        </Button>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );

@@ -567,6 +567,24 @@ export interface UpdateUserDesignationRequest {
   designationId: number;
 }
 
+// ─── Privilege Catalog / Set User Privileges ────────────────────────
+
+export interface PrivilegeConfiguration {
+  privilegeConfigurationId: number;
+  privilegeRole: string;
+}
+
+export interface PrivilegeTypeGroup {
+  privilegeTypeId: number;
+  privilegeType: string;
+  configurations: PrivilegeConfiguration[];
+}
+
+export interface SetUserPrivilegesRequest {
+  systemUserId: number;
+  privilegeConfigurationIds: number[];
+}
+
 // ─── Crime API Types ──────────────────────────────────────────────────
 
 export interface AddVehicleRequest {

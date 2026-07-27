@@ -3,23 +3,16 @@
 import { useEffect, useId, useState } from 'react';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
-import PrivilegeList, { type UserPrivilege } from './PrivilegeList';
+import PrivilegeList, { type PrivilegeOption } from './PrivilegeList';
 import { PageHeader, PageLayout, Button } from '@/components/ui';
 import { locationService, officerService } from '@/lib/api';
 import { getErrorMessage, showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 import { ShieldCheck } from 'lucide-react';
 
-const PRIVILEGE_CATEGORY_OPTIONS = [
-    { value: 'ADDING_USERS', label: 'Adding Users' },
-    { value: 'VIEW_ACCESS', label: 'View Access' },
-    { value: 'EDIT_ACCESS', label: 'Edit Access' },
-];
-
-function getDummyPrivileges(userId: string): UserPrivilege[] {
-    return PRIVILEGE_CATEGORY_OPTIONS.map((cat, idx) => ({
-        id: `${userId}-PRIV-${idx}`,
-        categoryId: cat.value,
-    }));
+interface UserOption {
+    value: string;
+    label: string;
+    systemUserId: number;
 }
 
 export default function UserConfigurationPage() {
@@ -33,12 +26,16 @@ export default function UserConfigurationPage() {
 
     const [socoLocations, setSocoLocations] = useState<string[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-    const [userOptions, setUserOptions] = useState<Array<{ value: string; label: string }>>([]);
+    const [userOptions, setUserOptions] = useState<UserOption[]>([]);
     const [selectedUser, setSelectedUser] = useState('');
 
-    const [privileges, setPrivileges] = useState<UserPrivilege[]>([]);
+    const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+    const [privilegeOptions, setPrivilegeOptions] = useState<PrivilegeOption[]>([]);
+
     const [hasViewed, setHasViewed] = useState(false);
-    const [pendingCategoryChanges, setPendingCategoryChanges] = useState<Record<string, string>>({});
+    const [savedPrivilegeIds, setSavedPrivilegeIds] = useState<string[]>([]);
+    const [selectedPrivilegeIds, setSelectedPrivilegeIds] = useState<string[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         const loadLocations = async () => {
@@ -80,6 +77,7 @@ export default function UserConfigurationPage() {
                 const options = officers.map((officer) => ({
                     value: officer.USER_REGI_NO,
                     label: officer.USER_CALLING_NAME || officer.USER_FULL_NAME,
+                    systemUserId: Number(officer.SYSTEM_USER_ID),
                 }));
                 setUserOptions(options);
                 setSelectedUser((prev) => (options.some((o) => o.value === prev) ? prev : ''));
@@ -101,48 +99,54 @@ export default function UserConfigurationPage() {
         };
     }, [socoLocations]);
 
-    const handleViewPrivileges = () => {
-        if (!selectedUser) return;
-        setPrivileges(getDummyPrivileges(selectedUser));
-        setPendingCategoryChanges({});
+    const selectedUserOption = userOptions.find((u) => u.value === selectedUser);
+
+    const handleViewPrivileges = async () => {
+        if (!selectedUserOption) return;
+
         setHasViewed(true);
+        setIsLoadingCatalog(true);
+        try {
+            const catalog = await officerService.getPrivilegeCatalog();
+            const options: PrivilegeOption[] = catalog.flatMap((group) =>
+                group.configurations.map((config) => ({
+                    value: String(config.privilegeConfigurationId),
+                    label: `${group.privilegeType} — ${config.privilegeRole.trim()}`,
+                }))
+            );
+            setPrivilegeOptions(options);
+            // No endpoint yet to fetch a user's existing privileges; start unselected.
+            setSelectedPrivilegeIds([]);
+            setSavedPrivilegeIds([]);
+        } catch (err) {
+            console.error('Failed to load privilege catalog:', err);
+            showErrorAlert('Error', getErrorMessage(err, 'Failed to load the privilege catalog.'));
+            setPrivilegeOptions([]);
+        } finally {
+            setIsLoadingCatalog(false);
+        }
     };
 
-    const handleCategoryChange = (privilegeId: string, categoryId: string) => {
-        const current = privileges.find((p) => p.id === privilegeId)?.categoryId;
-        setPendingCategoryChanges((prev) => {
-            const next = { ...prev };
-            if (categoryId === current) {
-                delete next[privilegeId];
-            } else {
-                next[privilegeId] = categoryId;
-            }
-            return next;
-        });
-    };
+    const isDirty =
+        selectedPrivilegeIds.length !== savedPrivilegeIds.length ||
+        selectedPrivilegeIds.some((id) => !savedPrivilegeIds.includes(id));
 
-    const handleUpdate = (privilege: UserPrivilege) => {
-        const newCategoryId = pendingCategoryChanges[privilege.id];
-        if (!newCategoryId) return;
-        setPrivileges((prev) =>
-            prev.map((p) => (p.id === privilege.id ? { ...p, categoryId: newCategoryId } : p))
-        );
-        setPendingCategoryChanges((prev) => {
-            const next = { ...prev };
-            delete next[privilege.id];
-            return next;
-        });
-        showSuccessAlert('Success', 'Privilege has been updated successfully.');
-    };
-
-    const handleDelete = (privilege: UserPrivilege) => {
-        setPrivileges((prev) => prev.filter((p) => p.id !== privilege.id));
-        setPendingCategoryChanges((prev) => {
-            const next = { ...prev };
-            delete next[privilege.id];
-            return next;
-        });
-        showErrorAlert('Deleted', 'Privilege has been removed.');
+    const handleSavePrivileges = async () => {
+        if (!selectedUserOption) return;
+        setIsSaving(true);
+        try {
+            await officerService.setUserPrivileges({
+                systemUserId: selectedUserOption.systemUserId,
+                privilegeConfigurationIds: selectedPrivilegeIds.map((id) => Number(id)),
+            });
+            setSavedPrivilegeIds(selectedPrivilegeIds);
+            showSuccessAlert('Success', 'Privileges have been updated successfully.');
+        } catch (err) {
+            console.error('Failed to save privileges:', err);
+            showErrorAlert('Error', getErrorMessage(err, 'Failed to update privileges.'));
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -195,11 +199,11 @@ export default function UserConfigurationPage() {
                             type="button"
                             variant="primary"
                             onClick={handleViewPrivileges}
-                            disabled={!selectedUser}
+                            disabled={!selectedUser || isLoadingCatalog}
                             title={!selectedUser ? 'Select a location and user first' : undefined}
                             className="!min-h-[38px] !py-2 !text-sm px-4"
                         >
-                            View Privileges
+                            {isLoadingCatalog ? 'Loading…' : 'View Privileges'}
                         </Button>
                     </div>
                 </div>
@@ -215,18 +219,14 @@ export default function UserConfigurationPage() {
                 </div>
             ) : (
                 <PrivilegeList
-                    privileges={privileges.map((p) =>
-                        pendingCategoryChanges[p.id] !== undefined
-                            ? { ...p, categoryId: pendingCategoryChanges[p.id] }
-                            : p
-                    )}
-                    categoryOptions={PRIVILEGE_CATEGORY_OPTIONS}
-                    userName={userOptions.find((u) => u.value === selectedUser)?.label}
-                    dirtyIds={new Set(Object.keys(pendingCategoryChanges))}
-                    onCategoryChange={handleCategoryChange}
-                    onUpdate={handleUpdate}
-                    onDelete={handleDelete}
-                    emptyMessage="No privileges assigned to this user yet."
+                    privilegeOptions={privilegeOptions}
+                    selectedPrivilegeIds={selectedPrivilegeIds}
+                    onChange={setSelectedPrivilegeIds}
+                    userName={selectedUserOption?.label}
+                    isDirty={isDirty}
+                    isSaving={isSaving}
+                    onSave={handleSavePrivileges}
+                    emptyMessage="No privileges available in the catalog."
                 />
             )}
         </PageLayout>
