@@ -57,12 +57,10 @@ function buildUrl(path: string, params?: RequestOptions['params']): string {
 }
 
 function getErrorMessage<T>(response: ApiResponse<T>): string {
-  return (
-    response.errorMessage ??
-    response.errorShow ??
-    response.exceptionDetail ??
-    'Request failed'
-  );
+  const show = response.errorShow?.trim();
+  const msg = response.errorMessage?.trim();
+  const detail = response.exceptionDetail?.trim();
+  return show || msg || detail || 'Request failed';
 }
 
 async function refreshAccessToken(): Promise<boolean> {
