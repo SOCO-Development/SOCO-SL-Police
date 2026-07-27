@@ -19,8 +19,8 @@ import { Eye } from 'lucide-react';
 type FilterTab = 'REQUESTS' | 'REVISIONS';
 
 const tabs: { label: string; value: FilterTab }[] = [
-  { label: 'Permission Requests', value: 'REQUESTS' },
-  { label: 'Revised CVR', value: 'REVISIONS' },
+  { label: 'Pending CVRs', value: 'REQUESTS' },
+  { label: 'Approved CVRs', value: 'REVISIONS' },
 ];
 
 /** Accepts DD-MM-YYYY (DatePicker) or YYYY-MM-DD. */
@@ -452,7 +452,7 @@ export default function PendingCvrApprovalsPage() {
                 sortKey={requestSortKey}
                 sortAsc={requestSortAsc}
                 onSort={handleRequestSort}
-                emptyMessage="No pending update requests."
+                emptyMessage="No pending CVRs"
                 variant="card"
               />
             ) : null}
@@ -466,7 +466,7 @@ export default function PendingCvrApprovalsPage() {
                   sortKey={revisionSortKey}
                   sortAsc={revisionSortAsc}
                   onSort={handleRevisionSort}
-                  emptyMessage="No amended records waiting for approval."
+                  emptyMessage="No approved CVRs"
                   variant="card"
                 />
 
