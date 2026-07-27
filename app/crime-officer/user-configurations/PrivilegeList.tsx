@@ -1,20 +1,19 @@
 'use client';
 
-import MultiSelect from '@/components/forms/MultiSelect';
 import { Button } from '@/components/ui';
 import { ShieldCheck } from 'lucide-react';
 
-export interface PrivilegeOption {
-    value: string;
-    label: string;
+export interface PrivilegeRow {
+    privilegeConfigurationId: string;
+    privilegeType: string;
+    privilegeRole: string;
 }
 
 export interface PrivilegeListProps {
-    /** Flattened, grouped-by-type privilege options for the MultiSelect. */
-    privilegeOptions: PrivilegeOption[];
-    /** Currently selected privilege configuration IDs (as strings, to match MultiSelect). */
+    rows: PrivilegeRow[];
+    /** IDs currently toggled ON. */
     selectedPrivilegeIds: string[];
-    onChange: (ids: string[]) => void;
+    onToggle: (id: string, nextValue: boolean) => void;
     userName?: string;
     isDirty?: boolean;
     isSaving?: boolean;
@@ -29,10 +28,39 @@ function getInitials(name: string) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export default function PrivilegeList({
-    privilegeOptions,
-    selectedPrivilegeIds,
+function ToggleSwitch({
+    checked,
     onChange,
+    label,
+}: {
+    checked: boolean;
+    onChange: (next: boolean) => void;
+    label: string;
+}) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            aria-label={label}
+            onClick={() => onChange(!checked)}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
+                checked ? 'bg-emerald-500' : 'bg-gray-300'
+            }`}
+        >
+            <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                    checked ? 'translate-x-6' : 'translate-x-1'
+                }`}
+            />
+        </button>
+    );
+}
+
+export default function PrivilegeList({
+    rows,
+    selectedPrivilegeIds,
+    onToggle,
     userName,
     isDirty = false,
     isSaving = false,
@@ -65,23 +93,39 @@ export default function PrivilegeList({
                 </div>
             )}
 
-            {privilegeOptions.length === 0 ? (
+            {rows.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-sm">{emptyMessage}</div>
             ) : (
-                <div className="p-5 flex flex-col gap-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
-                            Privilege Categories
-                        </label>
-                        <MultiSelect
-                            options={privilegeOptions}
-                            value={selectedPrivilegeIds}
-                            onChange={onChange}
-                            placeholder="Select privileges"
-                        />
+                <>
+                    <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        <span className="flex-1">Privilege Type</span>
+                        <span className="flex-1">Privilege Role</span>
+                        <span className="w-11 shrink-0 text-right">Status</span>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="divide-y divide-gray-100">
+                        {rows.map((row) => {
+                            const checked = selectedPrivilegeIds.includes(row.privilegeConfigurationId);
+                            return (
+                                <div
+                                    key={row.privilegeConfigurationId}
+                                    className="flex flex-wrap sm:flex-nowrap items-center gap-4 px-5 py-3.5 hover:bg-gray-50/70 transition-colors"
+                                >
+                                    <span className="flex-1 min-w-[140px] text-sm text-gray-700">{row.privilegeType}</span>
+                                    <span className="flex-1 min-w-[140px] text-sm font-medium text-gray-900">{row.privilegeRole}</span>
+                                    <span className="w-11 shrink-0 flex justify-end">
+                                        <ToggleSwitch
+                                            checked={checked}
+                                            onChange={(next) => onToggle(row.privilegeConfigurationId, next)}
+                                            label={`${row.privilegeType} — ${row.privilegeRole}`}
+                                        />
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100">
                         {isDirty && <span className="text-xs text-amber-600 mr-auto">Unsaved changes</span>}
                         <Button
                             type="button"
@@ -93,7 +137,7 @@ export default function PrivilegeList({
                             {isSaving ? 'Saving…' : 'Save Privileges'}
                         </Button>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );

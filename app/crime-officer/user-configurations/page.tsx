@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
-import PrivilegeList, { type PrivilegeOption } from './PrivilegeList';
+import PrivilegeList, { type PrivilegeRow } from './PrivilegeList';
 import { PageHeader, PageLayout, Button } from '@/components/ui';
 import { locationService, officerService } from '@/lib/api';
 import { getErrorMessage, showErrorAlert, showSuccessAlert } from '@/lib/alerts';
@@ -30,7 +30,7 @@ export default function UserConfigurationPage() {
     const [selectedUser, setSelectedUser] = useState('');
 
     const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
-    const [privilegeOptions, setPrivilegeOptions] = useState<PrivilegeOption[]>([]);
+    const [privilegeRows, setPrivilegeRows] = useState<PrivilegeRow[]>([]);
 
     const [hasViewed, setHasViewed] = useState(false);
     const [savedPrivilegeIds, setSavedPrivilegeIds] = useState<string[]>([]);
@@ -108,22 +108,23 @@ export default function UserConfigurationPage() {
         setIsLoadingCatalog(true);
         try {
             const groups = await officerService.getUserPrivileges(selectedUserOption.systemUserId);
-            const options: PrivilegeOption[] = groups.flatMap((group) =>
+            const rows: PrivilegeRow[] = groups.flatMap((group) =>
                 group.configurations.map((config) => ({
-                    value: String(config.privilegeConfigurationId),
-                    label: `${group.privilegeType} — ${config.privilegeRole.trim()}`,
+                    privilegeConfigurationId: String(config.privilegeConfigurationId),
+                    privilegeType: group.privilegeType,
+                    privilegeRole: config.privilegeRole.trim(),
                 }))
             );
             const assignedIdStrings = groups.flatMap((group) =>
                 group.configurations.filter((c) => c.isActive).map((c) => String(c.privilegeConfigurationId))
             );
-            setPrivilegeOptions(options);
+            setPrivilegeRows(rows);
             setSelectedPrivilegeIds(assignedIdStrings);
             setSavedPrivilegeIds(assignedIdStrings);
         } catch (err) {
             console.error('Failed to load privileges:', err);
             showErrorAlert('Error', getErrorMessage(err, 'Failed to load privileges for this user.'));
-            setPrivilegeOptions([]);
+            setPrivilegeRows([]);
         } finally {
             setIsLoadingCatalog(false);
         }
@@ -132,6 +133,12 @@ export default function UserConfigurationPage() {
     const isDirty =
         selectedPrivilegeIds.length !== savedPrivilegeIds.length ||
         selectedPrivilegeIds.some((id) => !savedPrivilegeIds.includes(id));
+
+    const handleTogglePrivilege = (id: string, nextValue: boolean) => {
+        setSelectedPrivilegeIds((prev) =>
+            nextValue ? [...prev, id] : prev.filter((existingId) => existingId !== id)
+        );
+    };
 
     const handleSavePrivileges = async () => {
         if (!selectedUserOption) return;
@@ -221,9 +228,9 @@ export default function UserConfigurationPage() {
                 </div>
             ) : (
                 <PrivilegeList
-                    privilegeOptions={privilegeOptions}
+                    rows={privilegeRows}
                     selectedPrivilegeIds={selectedPrivilegeIds}
-                    onChange={setSelectedPrivilegeIds}
+                    onToggle={handleTogglePrivilege}
                     userName={selectedUserOption?.label}
                     isDirty={isDirty}
                     isSaving={isSaving}
