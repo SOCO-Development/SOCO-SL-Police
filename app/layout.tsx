@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     ? { metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL) }
     : {}),
   title: "SOCO - SL Police",
-  description: "Sri Lanka Police Scene of Crime Operations - Command & Control Center",
+  description: "Sri Lanka Police Scene of Crime Operations - Data Management System",
   icons: {
     icon: logoPath,
     shortcut: logoPath,

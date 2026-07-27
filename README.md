@@ -11,7 +11,7 @@ Built with **Next.js 16**, **React 19**, **TypeScript**, and **Tailwind CSS 4**.
 | Module | Description |
 |--------|-------------|
 | **Login** | Branded sign-in with English, Sinhala, and Tamil (Noto Sans) |
-| **Home** | Command & Control Center with live radar visualization |
+| **Home** | Scene of Crime Data Management with live radar visualization |
 | **Crime Visit Registry** | Initiate visits, drafts, crime scenes, CVR approvals, court & production updates |
 | **Crime Officer Management** | Add and view SOCO officers |
 | **Reports & Dashboards** | 360° dashboard, complaint/officer stats, data exports |

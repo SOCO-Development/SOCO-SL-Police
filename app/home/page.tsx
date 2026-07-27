@@ -290,12 +290,12 @@ export default function HomePage() {
                   </div>
 
                   <h1 className={`text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] drop-shadow-sm transition-colors duration-500 ${d ? 'text-white' : 'text-gray-900'}`}>
-                    Command <span className={`font-light transition-colors duration-500 ${d ? 'text-slate-600' : 'text-gray-300'}`}>&</span> <br />
-                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${d ? 'from-blue-400 via-blue-500 to-indigo-500' : 'from-blue-600 via-blue-500 to-teal-500'}`}>Control</span> Center
+                    Scene of Crime <br />
+                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${d ? 'from-blue-400 via-blue-500 to-indigo-500' : 'from-blue-600 via-blue-500 to-teal-500'}`}>Data Management</span>
                   </h1>
 
                   <p className={`text-lg max-w-xl leading-relaxed transition-colors duration-500 ${d ? 'text-slate-400' : 'text-gray-500'}`}>
-                    A unified digital operations platform. Manage internal case workflows, monitor compliance, and drive data-informed policing across all divisions.
+                    A comprehensive digital platform for Scene of Crime Officers (SOCO). Efficiently record crime scene visits, manage case documentation, and streamline forensic data operations across all police divisions.
                   </p>
                 </div>
 
