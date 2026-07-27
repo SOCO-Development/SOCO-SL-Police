@@ -28,6 +28,7 @@ import type {
   GrantLoginAccessRequest,
   PrivilegeTypeGroup,
   SetUserPrivilegesRequest,
+  UserPrivilegeTypeGroup,
 } from './types';
 
 /**
@@ -262,5 +263,15 @@ export async function setUserPrivileges(
   return apiRequest<string>('UserPrivilege/SetUserPrivileges', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Get the full privilege catalog for a user, annotated with which
+ * configurations are currently active (assigned) for them.
+ */
+export async function getUserPrivileges(systemUserId: number): Promise<UserPrivilegeTypeGroup[]> {
+  return apiRequest<UserPrivilegeTypeGroup[]>('UserPrivilege/GetUserPrivileges', {
+    params: { systemUserId },
   });
 }

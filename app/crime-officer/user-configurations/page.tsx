@@ -107,20 +107,22 @@ export default function UserConfigurationPage() {
         setHasViewed(true);
         setIsLoadingCatalog(true);
         try {
-            const catalog = await officerService.getPrivilegeCatalog();
-            const options: PrivilegeOption[] = catalog.flatMap((group) =>
+            const groups = await officerService.getUserPrivileges(selectedUserOption.systemUserId);
+            const options: PrivilegeOption[] = groups.flatMap((group) =>
                 group.configurations.map((config) => ({
                     value: String(config.privilegeConfigurationId),
                     label: `${group.privilegeType} — ${config.privilegeRole.trim()}`,
                 }))
             );
+            const assignedIdStrings = groups.flatMap((group) =>
+                group.configurations.filter((c) => c.isActive).map((c) => String(c.privilegeConfigurationId))
+            );
             setPrivilegeOptions(options);
-            // No endpoint yet to fetch a user's existing privileges; start unselected.
-            setSelectedPrivilegeIds([]);
-            setSavedPrivilegeIds([]);
+            setSelectedPrivilegeIds(assignedIdStrings);
+            setSavedPrivilegeIds(assignedIdStrings);
         } catch (err) {
-            console.error('Failed to load privilege catalog:', err);
-            showErrorAlert('Error', getErrorMessage(err, 'Failed to load the privilege catalog.'));
+            console.error('Failed to load privileges:', err);
+            showErrorAlert('Error', getErrorMessage(err, 'Failed to load privileges for this user.'));
             setPrivilegeOptions([]);
         } finally {
             setIsLoadingCatalog(false);

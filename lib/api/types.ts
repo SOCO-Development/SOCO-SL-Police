@@ -585,6 +585,24 @@ export interface SetUserPrivilegesRequest {
   privilegeConfigurationIds: number[];
 }
 
+/**
+ * Configuration entry as returned by GetUserPrivileges: the full catalog entry
+ * plus whether it's currently assigned to the queried user (isActive).
+ */
+export interface UserPrivilegeConfiguration {
+  privilegeConfigurationId: number;
+  privilegeRole: string;
+  isActive: boolean;
+  privilegeId: number | null;
+}
+
+/** GetUserPrivileges returns the full catalog grouped by type, annotated with isActive per config. */
+export interface UserPrivilegeTypeGroup {
+  privilegeTypeId: number;
+  privilegeType: string;
+  configurations: UserPrivilegeConfiguration[];
+}
+
 // ─── Crime API Types ──────────────────────────────────────────────────
 
 export interface AddVehicleRequest {
