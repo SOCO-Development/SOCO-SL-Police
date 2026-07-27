@@ -1,16 +1,14 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { X, Loader2 } from 'lucide-react';
-import FormInput from '@/components/forms/FormInput';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import CustomSelect from '@/components/forms/CustomSelect';
 import UserList, { type ManagedUser } from './UserList';
 import { PageHeader, PageLayout, Button } from '@/components/ui';
 import { locationService, officerService } from '@/lib/api';
-import { getErrorMessage, showErrorAlert, showSuccessAlert } from '@/lib/alerts';
+import { getErrorMessage, showErrorAlert } from '@/lib/alerts';
 
 export default function UserManagementPage() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [users, setUsers] = useState<ManagedUser[]>([]);
     const [sortKey, setSortKey] = useState<keyof ManagedUser | string | null>('fullName');
     const [sortAsc, setSortAsc] = useState(true);
@@ -26,16 +24,6 @@ export default function UserManagementPage() {
     const [hasSearched, setHasSearched] = useState(false);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
     const [usersError, setUsersError] = useState<string | null>(null);
-
-    const [mobileNumber, setMobileNumber] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [userLocation, setUserLocation] = useState('');
-    const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
-    const [editingUserId, setEditingUserId] = useState<string | null>(null);
-    const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null);
-
-
 
     // ── Load locations on mount ─────────────────────────────────────────
     useEffect(() => {
@@ -60,7 +48,7 @@ export default function UserManagementPage() {
         loadLocations();
     }, []);
 
-    // ── Fetch users + privileges from API ───────────────────────────────
+    // ── Fetch users, privileges, and privilege locations from API ───────
     const fetchUsersForLocation = useCallback(
         async (locationId: string) => {
             setIsLoadingUsers(true);
@@ -71,10 +59,11 @@ export default function UserManagementPage() {
                     ? allLocations.map((loc) => parseInt(loc.value, 10))
                     : [parseInt(locationId, 10)];
 
-                // Fetch officers and privileges in parallel
-                const [officers, privileges] = await Promise.all([
+                // Fetch officers, privileges, and privilege locations in parallel
+                const [officers, privileges, privilegeLocations] = await Promise.all([
                     officerService.getAllOfficers({ locationIds }),
                     officerService.getUserPrivileges(),
+                    officerService.getUserPrivilegeLocations(),
                 ]);
 
                 // Build a privilege map: SYSTEM_USER_ID → string[]
@@ -85,6 +74,20 @@ export default function UserManagementPage() {
                         privilegeMap.set(key, []);
                     }
                     privilegeMap.get(key)!.push(priv.PRIVILEGE_NAME);
+                }
+
+                // Build a privilege locations map: SYSTEM_USER_ID → string[]
+                const privilegeLocationsMap = new Map<string, string[]>();
+                for (const locPriv of privilegeLocations) {
+                    const key = locPriv.SYSTEM_USER_ID;
+                    if (!privilegeLocationsMap.has(key)) {
+                        privilegeLocationsMap.set(key, []);
+                    }
+                    // Find location label for display
+                    const locLabel =
+                        allLocations.find((l) => l.value === locPriv.LOCATION_ID)?.label ??
+                        `Location ${locPriv.LOCATION_ID}`;
+                    privilegeLocationsMap.get(key)!.push(locLabel);
                 }
 
                 // Map officers to ManagedUser[]
@@ -99,6 +102,7 @@ export default function UserManagementPage() {
                         mobileNumber: officer.PHONE_MOBILE ?? '—',
                         locationId: officer.LOCATION_ID,
                         locationName: locName,
+                        privilegeLocations: privilegeLocationsMap.get(officer.SYSTEM_USER_ID) ?? [],
                         privileges: privilegeMap.get(officer.SYSTEM_USER_ID) ?? [],
                     };
                 });
@@ -156,91 +160,6 @@ export default function UserManagementPage() {
         setUsersError(null);
     };
 
-    const resetForm = () => {
-        setMobileNumber('');
-        setFullName('');
-        setUserLocation('');
-        setEditingUserId(null);
-    };
-
-    const handleEdit = (user: ManagedUser) => {
-        setEditingUserId(user.id);
-        setMobileNumber(user.mobileNumber);
-        setFullName(user.fullName);
-        setUserLocation(user.locationId);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        resetForm();
-    };
-
-    const handleDelete = (user: ManagedUser) => {
-        setDeleteTarget(user);
-    };
-
-    const confirmDelete = () => {
-        if (!deleteTarget) return;
-        setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-        showErrorAlert('Deleted', `${deleteTarget.fullName} has been removed.`);
-        setDeleteTarget(null);
-    };
-
-
-
-    const onSubmitUser = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setError('');
-        setSuccessMessage('');
-
-        if (!mobileNumber.trim() || !fullName.trim() || !userLocation) {
-            setError('Mobile number, full name and SOCO location are required.');
-            return;
-        }
-
-        if (!/^0\d{9}$/.test(mobileNumber.trim())) {
-            setError('Mobile number must be 10 digits and start with 0 (e.g. 0771234567).');
-            return;
-        }
-
-        const selectedLocationLabel =
-            locationOptions.find((option) => option.value === userLocation)?.label ?? userLocation;
-
-        if (editingUserId) {
-            setUsers((prev) =>
-                prev.map((u) =>
-                    u.id === editingUserId
-                        ? {
-                              ...u,
-                              mobileNumber: mobileNumber.trim(),
-                              fullName: fullName.trim(),
-                              locationId: userLocation,
-                              locationName: selectedLocationLabel,
-                          }
-                        : u
-                )
-            );
-            setSuccessMessage('User has been updated successfully.');
-            showSuccessAlert('Success', 'User has been updated successfully.');
-        } else {
-            const newUser: ManagedUser = {
-                id: `USR-${Date.now()}`,
-                mobileNumber: mobileNumber.trim(),
-                fullName: fullName.trim(),
-                locationId: userLocation,
-                locationName: selectedLocationLabel,
-                privileges: [],
-            };
-            setUsers((prev) => [newUser, ...prev]);
-            setSuccessMessage('User has been added successfully.');
-            showSuccessAlert('Success', 'User has been added successfully.');
-        }
-
-        setIsModalOpen(false);
-        resetForm();
-    };
-
     return (
         <PageLayout>
             <PageHeader
@@ -293,19 +212,6 @@ export default function UserManagementPage() {
                             )}
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="success"
-                            onClick={() => {
-                                resetForm();
-                                setIsModalOpen(true);
-                            }}
-                            className="!min-h-[38px] !py-2 !text-sm px-4"
-                        >
-                            + Add User
-                        </Button>
-                    </div>
                 </div>
             </div>
 
@@ -336,113 +242,8 @@ export default function UserManagementPage() {
                     sortKey={sortKey}
                     sortAsc={sortAsc}
                     onSort={handleSort}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
                     emptyMessage="No users found for the selected SOCO location."
                 />
-            )}
-
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg flex flex-col">
-                        <div className="px-6 py-5 border-b border-gray-200 flex items-start justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-800">
-                                    {editingUserId ? 'Edit User' : 'Add New User'}
-                                </h3>
-                                <p className="text-sm text-gray-600 mt-1">
-                                    {editingUserId
-                                        ? 'Update user details and SOCO location.'
-                                        : 'Enter mobile number, full name and assign a SOCO location.'}
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={closeModal}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
-                                title="Close"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={onSubmitUser} className="px-6 py-5 space-y-5">
-                            <div className="grid grid-cols-1 gap-4">
-                                <FormInput
-                                    label="Mobile Number"
-                                    placeholder="e.g. 0771234567"
-                                    type="tel"
-                                    inputMode="numeric"
-                                    maxLength={10}
-                                    value={mobileNumber}
-                                    onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                                />
-                                <FormInput
-                                    label="Full Name"
-                                    placeholder="e.g. Kasun Perera"
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    className="min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                                />
-                                <CustomSelect
-                                    label="SOCO Location *"
-                                    options={locationOptions}
-                                    value={userLocation}
-                                    onChange={setUserLocation}
-                                    disabled={isLoadingLocations}
-                                />
-                            </div>
-
-                            {error && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-                                    {error}
-                                </div>
-                            )}
-                            {successMessage && (
-                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
-                                    {successMessage}
-                                </div>
-                            )}
-
-                            <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl -mx-6 -mb-5 flex items-center justify-end gap-2">
-                                <Button variant="secondary" type="button" onClick={closeModal}>
-                                    Cancel
-                                </Button>
-                                <Button variant="success" type="submit">
-                                    {editingUserId ? 'Update User' : 'Save User'}
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-
-
-            {deleteTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-sm">
-                        <div className="px-6 py-5">
-                            <h3 className="text-lg font-semibold text-gray-800">Delete User</h3>
-                            <p className="text-sm text-gray-600 mt-2">
-                                Are you sure you want to delete <span className="font-semibold">{deleteTarget.fullName}</span>? This action cannot be undone.
-                            </p>
-                        </div>
-                        <div className="border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-end gap-2">
-                            <Button variant="secondary" type="button" onClick={() => setDeleteTarget(null)}>
-                                Cancel
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={confirmDelete}
-                                className="!bg-red-600 hover:!bg-red-700 !text-white"
-                            >
-                                Delete
-                            </Button>
-                        </div>
-                    </div>
-                </div>
             )}
         </PageLayout>
     );
