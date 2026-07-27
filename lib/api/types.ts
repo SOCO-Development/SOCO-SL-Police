@@ -538,6 +538,13 @@ export interface GrantLoginAccessRequest {
   designationId?: number;
 }
 
+// ─── Get User Privileges (UserPrivilege/GetUserPrivileges) ──────────
+
+export interface UserPrivilegeItem {
+  SYSTEM_USER_ID: string;
+  PRIVILEGE_NAME: string;
+}
+
 // ─── Update Personal Info (SOCO_U14) ────────────────────────────────
 
 export interface UpdatePersonalInfoRequest {

@@ -26,6 +26,7 @@ import type {
   OfficerListItem,
   OfficerDetailBundle,
   GrantLoginAccessRequest,
+  UserPrivilegeItem,
 } from './types';
 
 /**
@@ -241,4 +242,16 @@ export async function updateUserDesignation(
     method: 'POST',
     body: payload,
   });
+}
+
+/**
+ * Fetch all user privileges (UserPrivilege/GetUserPrivileges)
+ * Returns flat list of privilege records keyed by SYSTEM_USER_ID.
+ */
+export async function getUserPrivileges(): Promise<UserPrivilegeItem[]> {
+  try {
+    return await apiRequest<UserPrivilegeItem[]>('UserPrivilege/GetUserPrivileges');
+  } catch {
+    return [];
+  }
 }

@@ -1,12 +1,12 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import FormInput from '@/components/forms/FormInput';
 import CustomSelect from '@/components/forms/CustomSelect';
-import UserList, { getDummyUsers, type ManagedUser, type PrivilegeType, type UserRole } from './UserList';
+import UserList, { type ManagedUser } from './UserList';
 import { PageHeader, PageLayout, Button } from '@/components/ui';
-import { locationService } from '@/lib/api';
+import { locationService, officerService } from '@/lib/api';
 import { getErrorMessage, showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 
 export default function UserManagementPage() {
@@ -24,6 +24,8 @@ export default function UserManagementPage() {
     const [viewLocation, setViewLocation] = useState('');
     const [appliedViewLocation, setAppliedViewLocation] = useState('');
     const [hasSearched, setHasSearched] = useState(false);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+    const [usersError, setUsersError] = useState<string | null>(null);
 
     const [mobileNumber, setMobileNumber] = useState('');
     const [fullName, setFullName] = useState('');
@@ -33,9 +35,9 @@ export default function UserManagementPage() {
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null);
 
-    const [pendingChanges, setPendingChanges] = useState<Record<string, { role?: UserRole; privileges?: PrivilegeType[] }>>({});
-    const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false);
 
+
+    // ── Load locations on mount ─────────────────────────────────────────
     useEffect(() => {
         const loadLocations = async () => {
             setIsLoadingLocations(true);
@@ -58,11 +60,64 @@ export default function UserManagementPage() {
         loadLocations();
     }, []);
 
+    // ── Fetch users + privileges from API ───────────────────────────────
+    const fetchUsersForLocation = useCallback(
+        async (locationId: string) => {
+            setIsLoadingUsers(true);
+            setUsersError(null);
+
+            try {
+                const locationIds = locationId === 'ALL'
+                    ? allLocations.map((loc) => parseInt(loc.value, 10))
+                    : [parseInt(locationId, 10)];
+
+                // Fetch officers and privileges in parallel
+                const [officers, privileges] = await Promise.all([
+                    officerService.getAllOfficers({ locationIds }),
+                    officerService.getUserPrivileges(),
+                ]);
+
+                // Build a privilege map: SYSTEM_USER_ID → string[]
+                const privilegeMap = new Map<string, string[]>();
+                for (const priv of privileges) {
+                    const key = priv.SYSTEM_USER_ID;
+                    if (!privilegeMap.has(key)) {
+                        privilegeMap.set(key, []);
+                    }
+                    privilegeMap.get(key)!.push(priv.PRIVILEGE_NAME);
+                }
+
+                // Map officers to ManagedUser[]
+                const mapped: ManagedUser[] = officers.map((officer) => {
+                    const locName =
+                        allLocations.find((l) => l.value === officer.LOCATION_ID)?.label ??
+                        `Location ${officer.LOCATION_ID}`;
+
+                    return {
+                        id: officer.SYSTEM_USER_ID,
+                        fullName: officer.USER_FULL_NAME,
+                        mobileNumber: officer.PHONE_MOBILE ?? '—',
+                        locationId: officer.LOCATION_ID,
+                        locationName: locName,
+                        privileges: privilegeMap.get(officer.SYSTEM_USER_ID) ?? [],
+                    };
+                });
+
+                setUsers(mapped);
+            } catch (err) {
+                console.error('Failed to load users:', err);
+                const msg = getErrorMessage(err, 'Failed to load users for the selected location.');
+                setUsersError(msg);
+                setUsers([]);
+            } finally {
+                setIsLoadingUsers(false);
+            }
+        },
+        [allLocations],
+    );
+
     const filteredUsers = useMemo(() => {
-        let list = users.map((u) => {
-            const pending = pendingChanges[u.id];
-            return pending ? { ...u, ...pending } : u;
-        });
+        let list = [...users];
 
         if (appliedViewLocation && appliedViewLocation !== 'ALL') {
             list = list.filter((u) => u.locationId === appliedViewLocation);
@@ -75,7 +130,7 @@ export default function UserManagementPage() {
             const cmp = aVal.localeCompare(bVal);
             return sortAsc ? cmp : -cmp;
         });
-    }, [users, pendingChanges, appliedViewLocation, sortKey, sortAsc]);
+    }, [users, appliedViewLocation, sortKey, sortAsc]);
 
     const handleSort = (key: keyof ManagedUser | string) => {
         if (sortKey === key) {
@@ -87,29 +142,18 @@ export default function UserManagementPage() {
     };
 
     const handleView = () => {
-        if (viewLocation === 'ALL') {
-            setUsers((prev) => {
-                const seeded = [...prev];
-                allLocations.forEach((loc) => {
-                    if (!seeded.some((u) => u.locationId === loc.value)) {
-                        seeded.push(...getDummyUsers(loc.value, loc.label));
-                    }
-                });
-                return seeded;
-            });
-        } else if (viewLocation && !users.some((u) => u.locationId === viewLocation)) {
-            const locationName =
-                locationOptions.find((option) => option.value === viewLocation)?.label ?? viewLocation;
-            setUsers((prev) => [...prev, ...getDummyUsers(viewLocation, locationName)]);
-        }
+        if (!viewLocation) return;
         setAppliedViewLocation(viewLocation);
         setHasSearched(true);
+        fetchUsersForLocation(viewLocation);
     };
 
     const handleClearFilters = () => {
         setViewLocation('');
         setAppliedViewLocation('');
         setHasSearched(false);
+        setUsers([]);
+        setUsersError(null);
     };
 
     const resetForm = () => {
@@ -143,24 +187,7 @@ export default function UserManagementPage() {
         setDeleteTarget(null);
     };
 
-    const handleRoleChange = (userId: string, role: UserRole) => {
-        setPendingChanges((prev) => ({ ...prev, [userId]: { ...prev[userId], role } }));
-    };
 
-    const handlePrivilegesChange = (userId: string, privileges: PrivilegeType[]) => {
-        setPendingChanges((prev) => ({ ...prev, [userId]: { ...prev[userId], privileges } }));
-    };
-
-    const pendingChangeCount = Object.keys(pendingChanges).length;
-
-    const confirmSubmitPrivileges = () => {
-        setUsers((prev) =>
-            prev.map((u) => (pendingChanges[u.id] ? { ...u, ...pendingChanges[u.id] } : u))
-        );
-        showSuccessAlert('Success', `Privilege changes have been submitted for ${pendingChangeCount} user${pendingChangeCount === 1 ? '' : 's'}.`);
-        setPendingChanges({});
-        setIsSubmitConfirmOpen(false);
-    };
 
     const onSubmitUser = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -203,8 +230,7 @@ export default function UserManagementPage() {
                 fullName: fullName.trim(),
                 locationId: userLocation,
                 locationName: selectedLocationLabel,
-                role: 'Officer',
-                privileges: ['VIEW_ACCESS'],
+                privileges: [],
             };
             setUsers((prev) => [newUser, ...prev]);
             setSuccessMessage('User has been added successfully.');
@@ -220,7 +246,7 @@ export default function UserManagementPage() {
             <PageHeader
                 backHref="/crime-officer"
                 title="User Management"
-                description="Manage SOCO system users, roles and access permissions."
+                description="Manage SOCO system users and access permissions."
             />
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-fade-in">
@@ -245,8 +271,15 @@ export default function UserManagementPage() {
                                 variant="primary"
                                 onClick={handleView}
                                 className="!min-h-[38px] !py-2 !text-sm px-4"
+                                disabled={!viewLocation || isLoadingUsers}
                             >
-                                View
+                                {isLoadingUsers ? (
+                                    <span className="flex items-center gap-2">
+                                        <Loader2 size={14} className="animate-spin" /> Loading…
+                                    </span>
+                                ) : (
+                                    'View'
+                                )}
                             </Button>
                             {(viewLocation || appliedViewLocation || hasSearched) && (
                                 <Button
@@ -261,16 +294,6 @@ export default function UserManagementPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        {pendingChangeCount > 0 && (
-                            <Button
-                                type="button"
-                                variant="primary"
-                                onClick={() => setIsSubmitConfirmOpen(true)}
-                                className="!min-h-[38px] !py-2 !text-sm px-4"
-                            >
-                                Submit Privileges ({pendingChangeCount})
-                            </Button>
-                        )}
                         <Button
                             type="button"
                             variant="success"
@@ -290,6 +313,23 @@ export default function UserManagementPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
                     Select a SOCO location and click View to see available users.
                 </div>
+            ) : isLoadingUsers ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-12 flex flex-col items-center justify-center text-center">
+                    <Loader2 size={32} className="animate-spin text-blue-500 mb-3" />
+                    <p className="text-sm text-gray-500">Loading users…</p>
+                </div>
+            ) : usersError ? (
+                <div className="bg-white rounded-xl border border-red-200 p-8 text-center">
+                    <p className="text-sm text-red-600">{usersError}</p>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => appliedViewLocation && fetchUsersForLocation(appliedViewLocation)}
+                        className="mt-3 !text-sm !text-blue-600 hover:!text-blue-800"
+                    >
+                        Retry
+                    </Button>
+                </div>
             ) : (
                 <UserList
                     users={filteredUsers}
@@ -298,8 +338,6 @@ export default function UserManagementPage() {
                     onSort={handleSort}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
-                    onRoleChange={handleRoleChange}
-                    onPrivilegesChange={handlePrivilegesChange}
                     emptyMessage="No users found for the selected SOCO location."
                 />
             )}
@@ -380,27 +418,7 @@ export default function UserManagementPage() {
                 </div>
             )}
 
-            {isSubmitConfirmOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-sm">
-                        <div className="px-6 py-5">
-                            <h3 className="text-lg font-semibold text-gray-800">Submit Privilege Changes</h3>
-                            <p className="text-sm text-gray-600 mt-2">
-                                Are you sure you want to submit role and privilege changes for{' '}
-                                <span className="font-semibold">{pendingChangeCount}</span> user{pendingChangeCount === 1 ? '' : 's'}?
-                            </p>
-                        </div>
-                        <div className="border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-end gap-2">
-                            <Button variant="secondary" type="button" onClick={() => setIsSubmitConfirmOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button variant="success" type="button" onClick={confirmSubmitPrivileges}>
-                                Submit
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {deleteTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

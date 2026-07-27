@@ -2,16 +2,11 @@
 
 import { useMemo } from 'react';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
-import CustomSelect from '@/components/forms/CustomSelect';
-import MultiSelect from '@/components/forms/MultiSelect';
 import { TableIconButton } from '@/components/ui';
 import { Pencil, Trash2 } from 'lucide-react';
 
-export type UserRole = 'Admin' | 'Officer';
-
-export type PrivilegeType = 'ADDING_USERS' | 'VIEW_ACCESS' | 'EDIT_ACCESS';
-
-export const PRIVILEGE_OPTIONS: { value: PrivilegeType; label: string }[] = [
+/** Privilege options for the multi-select dropdown. */
+export const PRIVILEGE_OPTIONS: { value: string; label: string }[] = [
     { value: 'ADDING_USERS', label: 'Adding Users' },
     { value: 'VIEW_ACCESS', label: 'View Access' },
     { value: 'EDIT_ACCESS', label: 'Edit Access' },
@@ -23,28 +18,7 @@ export interface ManagedUser {
     mobileNumber: string;
     locationId: string;
     locationName: string;
-    role: UserRole;
-    privileges: PrivilegeType[];
-}
-
-const DUMMY_NAMES: Array<{ fullName: string; mobileNumber: string; role: UserRole; privileges: PrivilegeType[] }> = [
-    { fullName: 'Kasun Perera', mobileNumber: '0771234567', role: 'Admin', privileges: ['ADDING_USERS', 'VIEW_ACCESS', 'EDIT_ACCESS'] },
-    { fullName: 'Nimali Fernando', mobileNumber: '0712345678', role: 'Officer', privileges: ['VIEW_ACCESS'] },
-    { fullName: 'Sampath Wickramasinghe', mobileNumber: '0763456789', role: 'Officer', privileges: ['VIEW_ACCESS'] },
-    { fullName: 'Dilani Rathnayake', mobileNumber: '0754567890', role: 'Officer', privileges: ['VIEW_ACCESS', 'EDIT_ACCESS'] },
-];
-
-/** Sample users for a location, used to demo the list before real data is wired up. */
-export function getDummyUsers(locationId: string, locationName: string): ManagedUser[] {
-    return DUMMY_NAMES.map((u, idx) => ({
-        id: `DUMMY-${locationId}-${idx}`,
-        fullName: u.fullName,
-        mobileNumber: u.mobileNumber,
-        locationId,
-        locationName,
-        role: u.role,
-        privileges: u.privileges,
-    }));
+    privileges: string[];
 }
 
 export interface UserListProps {
@@ -55,8 +29,6 @@ export interface UserListProps {
     emptyMessage?: string;
     onEdit?: (user: ManagedUser) => void;
     onDelete?: (user: ManagedUser) => void;
-    onRoleChange?: (userId: string, role: UserRole) => void;
-    onPrivilegesChange?: (userId: string, privileges: PrivilegeType[]) => void;
 }
 
 export default function UserList({
@@ -67,8 +39,6 @@ export default function UserList({
     emptyMessage = 'No users found.',
     onEdit,
     onDelete,
-    onRoleChange,
-    onPrivilegesChange,
 }: UserListProps) {
     const columns: AppTableColumn<ManagedUser>[] = useMemo(
         () => [
@@ -76,33 +46,25 @@ export default function UserList({
             { key: 'mobileNumber', label: 'Mobile Number', sortable: true, className: 'font-mono text-xs text-gray-600' },
             { key: 'locationName', label: 'SOCO Location', sortable: true },
             {
-                key: 'role',
-                label: 'Role',
-                sortable: true,
-                render: (_, row) => (
-                    <div className="min-w-[120px]">
-                        <CustomSelect
-                            options={[
-                                { value: 'Officer', label: 'Officer' },
-                                { value: 'Admin', label: 'Admin' },
-                            ]}
-                            value={row.role}
-                            onChange={(val) => onRoleChange?.(row.id, val as UserRole)}
-                        />
-                    </div>
-                ),
-            },
-            {
                 key: 'privileges',
                 label: 'Privileges',
                 render: (_, row) => (
-                    <div className="min-w-[220px]">
-                        <MultiSelect
-                            options={PRIVILEGE_OPTIONS}
-                            value={row.privileges}
-                            onChange={(val) => onPrivilegesChange?.(row.id, val as PrivilegeType[])}
-                            placeholder="Select privileges"
-                        />
+                    <div className="flex flex-wrap gap-1 min-w-[160px]">
+                        {row.privileges.length > 0 ? (
+                            row.privileges.map((priv) => {
+                                const label = PRIVILEGE_OPTIONS.find((o) => o.value === priv)?.label ?? priv;
+                                return (
+                                    <span
+                                        key={priv}
+                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                    >
+                                        {label}
+                                    </span>
+                                );
+                            })
+                        ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                        )}
                     </div>
                 ),
             },
@@ -126,7 +88,7 @@ export default function UserList({
                 ),
             },
         ],
-        [onEdit, onDelete, onRoleChange, onPrivilegesChange],
+        [onEdit, onDelete],
     );
 
     return (
