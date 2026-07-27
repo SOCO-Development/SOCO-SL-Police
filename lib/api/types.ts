@@ -1098,6 +1098,24 @@ export interface ApproveCrimeSceneResponse {
   dataBundle: string;
 }
 
+/** Field names unconfirmed against a real payload — backend has only returned an empty array so far. */
+export interface PendingCvrApprovalItemApi {
+  CVR_ID?: string;
+  CVR_NO?: string;
+  INITIATE_CVR_ID?: string;
+  VISIT_TYPE_ID?: string;
+  CREATED_DTM?: string;
+  [key: string]: unknown;
+}
+
+export interface GetPendingApprovalsByUserIdResponse {
+  isSuccess: boolean;
+  errorShow: string | null;
+  errorMessage: string | null;
+  exceptionDetail: string | null;
+  dataBundle: PendingCvrApprovalItemApi[];
+}
+
 
 
 
