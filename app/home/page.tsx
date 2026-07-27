@@ -291,7 +291,7 @@ export default function HomePage() {
 
                   <h1 className={`text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] drop-shadow-sm transition-colors duration-500 ${d ? 'text-white' : 'text-gray-900'}`}>
                     Scene of Crime <br />
-                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${d ? 'from-blue-400 via-blue-500 to-indigo-500' : 'from-blue-600 via-blue-500 to-teal-500'}`}>Data Management</span>
+                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${d ? 'from-blue-400 via-blue-500 to-indigo-500' : 'from-blue-600 via-blue-500 to-teal-500'}`}>Across Sri Lanka</span>
                   </h1>
 
                   <p className={`text-lg max-w-xl leading-relaxed transition-colors duration-500 ${d ? 'text-slate-400' : 'text-gray-500'}`}>
