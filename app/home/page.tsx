@@ -14,7 +14,8 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { geoMercator, geoPath, geoCentroid } from 'd3-geo';
 
 /* ─── Data ─────────────────────────────────────────── */
 
@@ -57,9 +58,76 @@ const stats = [
 
 const THEME_KEY = 'home_theme';
 
-/* ─── Radar canvas ──────────────────────────────────── */
+/* ─── Radar canvas with Sri Lanka map scanning ──────── */
+interface DistrictFeature {
+  type: 'Feature';
+  properties: { district: string; iso: string };
+  geometry: any;
+}
+
+interface DistrictGeoJSON {
+  type: 'FeatureCollection';
+  features: DistrictFeature[];
+}
+
+const CITY_DISTRICTS = [
+  { name: 'Colombo', district: 'Colombo' },
+  { name: 'Kandy', district: 'Kandy' },
+  { name: 'Galle', district: 'Galle' },
+  { name: 'Jaffna', district: 'Jaffna' },
+  { name: 'Trincomalee', district: 'Trincomalee' },
+  { name: 'Anuradhapura', district: 'Anuradhapura' },
+];
+
 function RadarCanvas({ light }: { light?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [geoData, setGeoData] = useState<DistrictGeoJSON | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/sri-lanka-districts.geojson')
+      .then((res) => res.json())
+      .then((data: DistrictGeoJSON) => {
+        if (!cancelled) setGeoData(data);
+      })
+      .catch((err) => console.error('Failed to load district map data', err));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const projection = useMemo(() => {
+    if (!geoData) return null;
+    return geoMercator().fitExtent([[8, 8], [242, 327]], geoData as any);
+  }, [geoData]);
+
+  const pathGenerator = useMemo(() => {
+    if (!projection) return null;
+    return geoPath(projection);
+  }, [projection]);
+
+  // Canvas dimensions 420x420, centered SVG map 250x335
+  const cityBlips = useMemo(() => {
+    if (!geoData || !projection) return [];
+    const SVG_W = 250;
+    const SVG_H = 335;
+    const OFFSET_X = (420 - SVG_W) / 2; // 85
+    const OFFSET_Y = (420 - SVG_H) / 2; // 42.5
+
+    return CITY_DISTRICTS.map((c) => {
+      const feat = geoData.features.find((f) => f.properties.district === c.district);
+      if (!feat) return null;
+      const centroid = geoCentroid(feat as any);
+      const [px, py] = projection(centroid) || [0, 0];
+      const cx = OFFSET_X + px;
+      const cy = OFFSET_Y + py;
+      const dx = cx - 210;
+      const dy = cy - 210;
+      let angle = Math.atan2(dy, dx);
+      if (angle < 0) angle += Math.PI * 2;
+      return { name: c.name, cx, cy, px, py, angle };
+    }).filter(Boolean) as { name: string; cx: number; cy: number; px: number; py: number; angle: number }[];
+  }, [geoData, projection]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -70,24 +138,16 @@ function RadarCanvas({ light }: { light?: boolean }) {
     let animFrame: number;
     let angle = 0;
 
-    const blips = [
-      { r: 0.35, a: 0.8 },
-      { r: 0.55, a: 2.1 },
-      { r: 0.72, a: 3.5 },
-      { r: 0.28, a: 5.0 },
-      { r: 0.62, a: 4.2 },
-      { r: 0.45, a: 1.3 },
-    ];
-
     function draw() {
       const W = canvas!.width;
       const H = canvas!.height;
       const cx = W / 2;
       const cy = H / 2;
-      const R = Math.min(cx, cy) - 6;
+      const R = Math.min(cx, cy) - 8;
 
       ctx!.clearRect(0, 0, W, H);
 
+      // Radial background gradient
       const bg = ctx!.createRadialGradient(cx, cy, 0, cx, cy, R);
       if (light) {
         bg.addColorStop(0, '#f0f9ff');
@@ -101,7 +161,8 @@ function RadarCanvas({ light }: { light?: boolean }) {
       ctx!.arc(cx, cy, R, 0, Math.PI * 2);
       ctx!.fill();
 
-      const ringColor = light ? 'rgba(147, 197, 253, 0.4)' : 'rgba(51, 65, 85, 0.4)';
+      // Radar rings
+      const ringColor = light ? 'rgba(147, 197, 253, 0.35)' : 'rgba(51, 65, 85, 0.4)';
       for (let i = 1; i <= 4; i++) {
         ctx!.beginPath();
         ctx!.arc(cx, cy, (R * i) / 4, 0, Math.PI * 2);
@@ -110,6 +171,7 @@ function RadarCanvas({ light }: { light?: boolean }) {
         ctx!.stroke();
       }
 
+      // Radar crosshairs
       ctx!.strokeStyle = ringColor;
       ctx!.lineWidth = 1;
       ctx!.beginPath();
@@ -119,12 +181,13 @@ function RadarCanvas({ light }: { light?: boolean }) {
       ctx!.lineTo(cx, cy + R);
       ctx!.stroke();
 
-      const sweepColor = light ? '59, 130, 246' : '59, 130, 246';
+      // Rotating sweep cone
+      const sweepColor = '59, 130, 246';
       const steps = 55;
       for (let s = 0; s < steps; s++) {
         const a0 = angle - (s * Math.PI * 2) / 360;
         const a1 = angle - ((s + 1) * Math.PI * 2) / 360;
-        const opacity = Math.max(0, (light ? 0.12 : 0.15) - (s / steps) * (light ? 0.12 : 0.15));
+        const opacity = Math.max(0, (light ? 0.14 : 0.18) - (s / steps) * (light ? 0.14 : 0.18));
         ctx!.beginPath();
         ctx!.moveTo(cx, cy);
         ctx!.arc(cx, cy, R, a0, a1, true);
@@ -133,66 +196,119 @@ function RadarCanvas({ light }: { light?: boolean }) {
         ctx!.fill();
       }
 
+      // Sweep leading line
       ctx!.beginPath();
       ctx!.moveTo(cx, cy);
       ctx!.lineTo(cx + Math.cos(angle) * R, cy + Math.sin(angle) * R);
-      ctx!.strokeStyle = light ? 'rgba(59, 130, 246, 0.6)' : 'rgba(96, 165, 250, 0.8)';
+      ctx!.strokeStyle = light ? 'rgba(59, 130, 246, 0.7)' : 'rgba(96, 165, 250, 0.9)';
       ctx!.lineWidth = 1.5;
       ctx!.stroke();
 
+      // Radar signal flashes on city locations when sweep passes over them
       const blipColor = light ? '16, 185, 129' : '52, 211, 153';
-      blips.forEach(b => {
-        let diff = angle - b.a;
+      cityBlips.forEach((b) => {
+        let diff = angle - b.angle;
         while (diff < 0) diff += Math.PI * 2;
         diff = diff % (Math.PI * 2);
-        const fade = Math.max(0, 1 - diff / (Math.PI * 1.5));
+        const fade = Math.max(0, 1 - diff / (Math.PI * 1.4));
         if (fade > 0.02) {
-          const bx = cx + Math.cos(b.a) * b.r * R;
-          const by = cy + Math.sin(b.a) * b.r * R;
           ctx!.beginPath();
-          ctx!.arc(bx, by, 2.5, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(${blipColor}, ${fade * 0.9})`;
+          ctx!.arc(b.cx, b.cy, 3.5, 0, Math.PI * 2);
+          ctx!.fillStyle = `rgba(${blipColor}, ${fade * 0.95})`;
           ctx!.fill();
+
           ctx!.beginPath();
-          ctx!.arc(bx, by, 6, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(${blipColor}, ${fade * 0.2})`;
+          ctx!.arc(b.cx, b.cy, 10, 0, Math.PI * 2);
+          ctx!.fillStyle = `rgba(${blipColor}, ${fade * 0.3})`;
           ctx!.fill();
         }
       });
 
+      // Center pivot dot
       ctx!.beginPath();
-      ctx!.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx!.arc(cx, cy, 3.5, 0, Math.PI * 2);
       ctx!.fillStyle = light ? 'rgba(59, 130, 246, 1)' : 'rgba(96, 165, 250, 1)';
       ctx!.fill();
 
+      // Outer ring border
       ctx!.beginPath();
       ctx!.arc(cx, cy, R, 0, Math.PI * 2);
       ctx!.strokeStyle = light ? 'rgba(147, 197, 253, 0.5)' : 'rgba(30, 58, 138, 0.5)';
       ctx!.lineWidth = 2;
       ctx!.stroke();
 
-      angle += 0.012;
+      angle += 0.008;
       animFrame = requestAnimationFrame(draw);
     }
 
     draw();
     return () => cancelAnimationFrame(animFrame);
-  }, [light]);
+  }, [light, cityBlips]);
+
+  const mapStroke = light ? 'rgba(147, 197, 253, 0.6)' : 'rgba(59, 130, 246, 0.4)';
+  const mapFill = light ? 'rgba(224, 242, 254, 0.25)' : 'rgba(15, 23, 42, 0.45)';
 
   return (
-    <div className={`relative flex items-center justify-center p-2 rounded-full border backdrop-blur-sm shadow-2xl transition-colors duration-500 ${
+    <div className={`relative flex items-center justify-center p-2.5 rounded-full border backdrop-blur-sm shadow-2xl transition-colors duration-500 ${
       light
         ? 'border-blue-200/50 bg-blue-50/30 shadow-blue-200/20'
         : 'border-slate-800/50 bg-slate-900/30 shadow-blue-900/10'
     }`}>
       <div className={`absolute inset-0 rounded-full border transition-colors duration-500 ${light ? 'border-blue-300/20' : 'border-blue-500/10'}`} />
+
+      {/* Canvas Radar Sweep */}
       <canvas
         ref={canvasRef}
-        width={340}
-        height={340}
+        width={420}
+        height={420}
         className="rounded-full"
         aria-hidden
       />
+
+      {/* Embedded Sri Lanka Map Overlay inside Radar Scope */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="relative w-[250px] h-[335px]">
+          <svg
+            viewBox="0 0 250 335"
+            className="w-full h-full drop-shadow-[0_0_12px_rgba(59,130,246,0.3)] opacity-85"
+            aria-label="Sri Lanka Tactical Radar Map"
+          >
+            {geoData && pathGenerator && geoData.features.map((feature) => (
+              <path
+                key={feature.properties.iso}
+                d={pathGenerator(feature as any) ?? undefined}
+                fill={mapFill}
+                stroke={mapStroke}
+                strokeWidth="1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-500"
+              />
+            ))}
+          </svg>
+
+          {/* Blinking green lights on city locations in Sri Lanka */}
+          {cityBlips.map((b, i) => (
+            <div
+              key={`ping-${b.name}`}
+              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+              style={{
+                left: `${(b.px / 250) * 100}%`,
+                top: `${(b.py / 335) * 100}%`,
+              }}
+            >
+              <div
+                className={`w-4 h-4 rounded-full animate-ping opacity-80 ${
+                  light ? 'bg-emerald-500' : 'bg-emerald-400'
+                }`}
+                style={{ animationDelay: `${i * 450}ms`, animationDuration: '2.5s' }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Radar ticks */}
       <div className={`absolute -top-1 w-[1px] h-3 transition-colors duration-500 ${light ? 'bg-blue-400/40' : 'bg-blue-500/50'}`} />
       <div className={`absolute -bottom-1 w-[1px] h-3 transition-colors duration-500 ${light ? 'bg-blue-400/40' : 'bg-blue-500/50'}`} />
       <div className={`absolute -left-1 h-[1px] w-3 transition-colors duration-500 ${light ? 'bg-blue-400/40' : 'bg-blue-500/50'}`} />
@@ -251,7 +367,7 @@ export default function HomePage() {
           </div>
 
           {/* ── Hero Section ── */}
-          <section className="relative z-10 w-full max-w-[1400px] mx-auto px-6 min-h-[calc(100vh-3.5rem)] flex items-center py-20 lg:py-0">
+          <section className="relative z-10 w-full max-w-[1400px] mx-auto px-6 min-h-[calc(100vh-3.5rem)] flex items-center py-20 lg:py-16">
             <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-16 lg:gap-8 items-center w-full">
 
               {/* Left Content */}
@@ -291,11 +407,11 @@ export default function HomePage() {
 
                   <h1 className={`text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] drop-shadow-sm transition-colors duration-500 ${d ? 'text-white' : 'text-gray-900'}`}>
                     Scene of Crime <br />
-                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${d ? 'from-blue-400 via-blue-500 to-indigo-500' : 'from-blue-600 via-blue-500 to-teal-500'}`}>Across Sri Lanka</span>
+                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${d ? 'from-blue-400 via-blue-500 to-indigo-500' : 'from-blue-600 via-blue-500 to-teal-500'}`}>Data Management</span>
                   </h1>
 
                   <p className={`text-lg max-w-xl leading-relaxed transition-colors duration-500 ${d ? 'text-slate-400' : 'text-gray-500'}`}>
-                    A comprehensive digital platform for Scene of Crime Officers (SOCO). Efficiently record crime scene visits, manage case documentation, and streamline forensic data operations across all police divisions.
+                    A comprehensive digital platform for Scene of Crime Officers (SOCO). Efficiently record crime scene visits, manage case documentation, and streamline forensic data operations across Sri Lanka.
                   </p>
                 </div>
 
@@ -314,7 +430,7 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Right Radar Component */}
+              {/* Right Tactical Radar Scan Column */}
               <div className="hidden lg:flex flex-col items-center justify-center relative">
                 <div className="relative">
                   {mounted && <RadarCanvas light={!d} />}
@@ -323,9 +439,11 @@ export default function HomePage() {
                   <div className={`absolute -bottom-4 -left-4 w-8 h-8 border-b-2 border-l-2 rounded-bl-lg transition-colors duration-500 ${d ? 'border-slate-700' : 'border-blue-200'}`} />
                   <div className={`absolute -bottom-4 -right-4 w-8 h-8 border-b-2 border-r-2 rounded-br-lg transition-colors duration-500 ${d ? 'border-slate-700' : 'border-blue-200'}`} />
                 </div>
-                <div className="absolute -bottom-16 flex items-center gap-3">
+                <div className="mt-8 flex items-center gap-3">
                   <div className={`h-[1px] w-12 bg-gradient-to-r from-transparent transition-colors duration-500 ${d ? 'to-blue-500/50' : 'to-blue-300/50'}`} />
-                  <span className={`text-[10px] font-mono tracking-[0.3em] uppercase transition-colors duration-500 ${d ? 'text-blue-400/80 drop-shadow-md' : 'text-blue-500/70'}`}>Tracking Active</span>
+                  <span className={`text-[10px] font-mono tracking-[0.3em] uppercase transition-colors duration-500 ${d ? 'text-blue-400/80 drop-shadow-md' : 'text-blue-500/70'}`}>
+                    Tracking Active — Live Crime Scene Activity
+                  </span>
                   <div className={`h-[1px] w-12 bg-gradient-to-l from-transparent transition-colors duration-500 ${d ? 'to-blue-500/50' : 'to-blue-300/50'}`} />
                 </div>
               </div>
