@@ -273,14 +273,14 @@ export default function CustomSelect({
         >
           <span className="min-w-0 flex-1 text-left">
             {selectedOption ? (
-              <span className="flex flex-col items-start gap-0.5">
-                <span className="truncate font-medium text-gray-900">{selectedOption.label}</span>
+              <span className="flex flex-col items-start gap-0.5 min-w-0 w-full">
+                <span className="block w-full truncate font-medium text-gray-900">{selectedOption.label}</span>
                 {selectedOption.description ? (
-                  <span className="truncate text-xs text-gray-500">{selectedOption.description}</span>
+                  <span className="block w-full truncate text-xs text-gray-500">{selectedOption.description}</span>
                 ) : null}
               </span>
             ) : (
-              <span className="text-gray-400">{placeholder}</span>
+              <span className="block w-full truncate text-gray-400">{placeholder}</span>
             )}
           </span>
           <FaChevronDown
@@ -339,6 +339,7 @@ export default function CustomSelect({
                       id={`${listboxId}-option-${index}`}
                       role="option"
                       aria-selected={isSelected}
+                      title={option.description ? `${option.label} — ${option.description}` : option.label}
                       className={`cursor-pointer min-h-9 px-4 py-2 rounded-lg text-left text-sm transition-all duration-150 flex items-center justify-between gap-3 border ${
                         isSelected
                           ? 'bg-blue-600 text-white font-semibold border-blue-500 shadow-sm'
