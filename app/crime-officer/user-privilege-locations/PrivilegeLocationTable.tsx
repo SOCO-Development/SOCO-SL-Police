@@ -60,11 +60,10 @@ export default function PrivilegeLocationTable({
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-200 text-left text-xs font-semibold text-gray-500 uppercase">
-                            <th className="px-4 py-3">Privilege Type</th>
-                            <th className="px-4 py-3">Privilege Role</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3 min-w-[240px]">Privilege Location</th>
-                            <th className="px-4 py-3">Action</th>
+                            <th className="px-4 py-3">Privilege Category</th>
+                            <th className="px-4 py-3">Authorization Role</th>
+                            <th className="px-4 py-3 min-w-[240px]">Allowed Locations</th>
+                            <th className="px-4 py-3">Update</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,17 +76,6 @@ export default function PrivilegeLocationTable({
                                 <tr key={row.privilegeId} className="border-b border-gray-100 last:border-0">
                                     <td className="px-4 py-3 text-gray-700">{row.privilegeType}</td>
                                     <td className="px-4 py-3 text-gray-900 font-medium">{row.privilegeRole.trim()}</td>
-                                    <td className="px-4 py-3">
-                                        <span
-                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                                row.isActive
-                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                    : 'bg-gray-100 text-gray-500 border border-gray-200'
-                                            }`}
-                                        >
-                                            {row.isActive ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </td>
                                     <td className="px-4 py-3">
                                         <MultiSelect
                                             options={locationOptions}
