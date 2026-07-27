@@ -99,7 +99,7 @@ export default function VehicleConfigPage() {
             setIsLoading(true);
             try {
                 // Fetch locations first
-                const locations = await locationService.getAllLocations();
+                const locations = await locationService.getPrivilegedOrAllLocations();
                 const locationIds = locations.map((loc) => Number(loc.LOCATION_ID)).filter(Boolean);
 
                 // Fetch vehicles for all locations

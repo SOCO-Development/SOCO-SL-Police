@@ -304,7 +304,7 @@ export default function CreateCrimeSceneForm({
       try {
         const [userInfo, allLocations] = await Promise.all([
           userService.getCurrentUserInfo(),
-          locationService.getAllLocations(),
+          locationService.getPrivilegedOrAllLocations(),
         ]);
         if (cancelled) return;
 

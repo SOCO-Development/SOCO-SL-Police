@@ -579,7 +579,7 @@ export default function SubmittedCrimeScenesPage() {
 
   useEffect(() => {
     // 1. Load SOCO labs list
-    locationService.getAllLocations()
+    locationService.getPrivilegedOrAllLocations()
       .then((data) => {
         if (data) {
           const sorted = [...data].sort((a, b) => a.LOCATION_NAME.localeCompare(b.LOCATION_NAME));
