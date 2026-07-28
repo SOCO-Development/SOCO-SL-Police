@@ -59,7 +59,7 @@ export default function ReportsPage() {
     {
       title: 'User Management',
       icon: <Users className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
-      href: '/crime-officer/user-management',
+      href: '/reports/user-management',
     },
   ];
 

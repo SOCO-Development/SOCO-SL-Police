@@ -317,7 +317,7 @@ export default function UserManagementPage() {
         <>
             <PageLayout>
                 <PageHeader
-                    backHref="/crime-officer"
+                    backHref="/reports"
                     title="User Management"
                     description={
                         hasSearched
