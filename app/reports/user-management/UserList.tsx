@@ -26,6 +26,7 @@ export interface ManagedUser {
     locationName: string;
     role: string;
     privileges: string;
+    privilegeLocations: string;
 }
 
 export interface UserListProps {
@@ -68,6 +69,14 @@ export default function UserList({
                 sortable: true,
                 render: (_, row) => (
                     <span className="text-gray-700">{row.role || '-'}</span>
+                ),
+            },
+            {
+                key: 'privilegeLocations',
+                label: 'Privilege Locations',
+                sortable: true,
+                render: (_, row) => (
+                    <span className="text-gray-700">{row.privilegeLocations || '-'}</span>
                 ),
             }
         ],
