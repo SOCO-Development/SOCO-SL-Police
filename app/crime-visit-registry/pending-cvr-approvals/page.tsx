@@ -6,7 +6,7 @@ import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import MultiSelect from '@/components/forms/MultiSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { userService, locationService, crimeService, officerService } from '@/lib/api';
+import { locationService, crimeService, officerService } from '@/lib/api';
 import { getUsername } from '@/lib/api/authStorage';
 import { showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
@@ -19,8 +19,8 @@ import { Eye } from 'lucide-react';
 type FilterTab = 'REQUESTS' | 'REVISIONS';
 
 const tabs: { label: string; value: FilterTab }[] = [
-  { label: 'Permission Requests', value: 'REQUESTS' },
-  { label: 'Revised CVR', value: 'REVISIONS' },
+  { label: 'Pending CVRs', value: 'REQUESTS' },
+  { label: 'Approved CVRs', value: 'REVISIONS' },
 ];
 
 /** Accepts DD-MM-YYYY (DatePicker) or YYYY-MM-DD. */
@@ -58,6 +58,83 @@ export default function PendingCvrApprovalsPage() {
   const [dateTo, setDateTo] = useState('');
 
   const [isApproving, setIsApproving] = useState(false);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [loadingRevisions, setLoadingRevisions] = useState(false);
+
+  async function resolveCurrentOfficerId(): Promise<number | null> {
+    const username = getUsername();
+    if (!username) return null;
+    try {
+      const officers = await officerService.getAllOfficers();
+      const match = officers.find((o) => o.USER_REGI_NO === username || o.USERNAME === username);
+      if (match && match.SYSTEM_USER_ID) {
+        return Number(match.SYSTEM_USER_ID) || null;
+      }
+    } catch (err) {
+      console.error('Failed to resolve current officer id', err);
+    }
+    return null;
+  }
+
+  async function loadPendingRequestsFromBackend() {
+    setLoadingRequests(true);
+    try {
+      const officerId = await resolveCurrentOfficerId();
+      if (!officerId) {
+        console.error('Could not resolve current officer id for pending CVR approvals');
+        setRequests([]);
+        return;
+      }
+      const items = await crimeService.getPendingApprovalsByUserId(officerId);
+      const mapped: CrimeScene[] = items.map((item) => {
+        const id = String(item.CVR_ID ?? item.INITIATE_CVR_ID ?? '');
+        return {
+          id,
+          cvrNo: String(item.CVR_NO ?? id),
+          cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
+          visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
+          createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+          updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+        } as CrimeScene;
+      });
+      setRequests(mapped);
+    } catch (err) {
+      console.error('Failed to load pending CVR approvals', err);
+      setRequests([]);
+    } finally {
+      setLoadingRequests(false);
+    }
+  }
+
+  async function loadApprovedCrimeScenesFromBackend() {
+    setLoadingRevisions(true);
+    try {
+      const officerId = await resolveCurrentOfficerId();
+      if (!officerId) {
+        console.error('Could not resolve current officer id for approved CVRs');
+        setRevisions([]);
+        return;
+      }
+      const items = await crimeService.getApprovedCrimeScenesByUserId(officerId);
+      const mapped: CrimeScene[] = items.map((item) => {
+        const id = String(item.CVR_ID ?? item.INITIATE_CVR_ID ?? '');
+        return {
+          id,
+          cvrNo: String(item.CVR_NO ?? id),
+          cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
+          visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
+          createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+          updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+        } as CrimeScene;
+      });
+      setRevisions(mapped);
+    } catch (err) {
+      console.error('Failed to load approved CVRs', err);
+      setRevisions([]);
+    } finally {
+      setLoadingRevisions(false);
+    }
+  }
 
   async function handleApproveBackend(scene: CrimeScene, onApproveLocal: () => void) {
     const initiateId = Number(scene.cvrId);
@@ -68,19 +145,8 @@ export default function PendingCvrApprovalsPage() {
 
     setIsApproving(true);
     try {
-      let approvedBy = 2;
-      const username = getUsername();
-      if (username) {
-        try {
-          const officers = await officerService.getAllOfficers();
-          const match = officers.find(o => o.USER_REGI_NO === username || o.USERNAME === username);
-          if (match && match.SYSTEM_USER_ID) {
-            approvedBy = Number(match.SYSTEM_USER_ID) || 2;
-          }
-        } catch {
-          // ignore privilege issue
-        }
-      }
+      const resolvedId = await resolveCurrentOfficerId();
+      const approvedBy = resolvedId ?? 2;
 
       const response = await crimeService.approveCrimeScene({
         cvrId: initiateId,
@@ -92,18 +158,16 @@ export default function PendingCvrApprovalsPage() {
       } else {
         showSuccessAlert('Approved (Staging Mock)', 'Crime scene approved successfully.');
       }
-      
-      crimeSceneService.updateApprovalStatus(scene.id, 'Approved');
+
       onApproveLocal();
     } catch (err) {
       console.error('Failed to approve crime scene on backend:', err);
       const msg = err instanceof Error ? err.message : 'API call failed.';
       showErrorAlert(
-        'Staging Role Permission Check', 
+        'Staging Role Permission Check',
         `Backend returned: "${msg}". Approving locally for testing purposes.`
       );
-      
-      crimeSceneService.updateApprovalStatus(scene.id, 'Approved');
+
       onApproveLocal();
     } finally {
       setIsApproving(false);
@@ -111,8 +175,8 @@ export default function PendingCvrApprovalsPage() {
   }
 
   function reload() {
-    setRequests(crimeSceneService.getPendingAmendmentRequests());
-    setRevisions(crimeSceneService.getPendingRevisionApprovals());
+    loadPendingRequestsFromBackend();
+    loadApprovedCrimeScenesFromBackend();
   }
 
   useEffect(() => {
@@ -127,23 +191,15 @@ export default function PendingCvrApprovalsPage() {
       .catch((err) => {
         console.error('Failed to load SOCO labs', err);
       });
-
-    userService
-      .getCurrentUserInfo()
-      .then((userInfo) => {
-        if (userInfo && userInfo.locationId) {
-          setSelectedLabIds([String(userInfo.locationId)]);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to load user info', err);
-      });
   }, []);
 
-  const handleView = useCallback(() => {
+  const handleView = useCallback(async () => {
     if (selectedLabIds.length === 0) return;
     setLoadingLabsData(true);
-    reload();
+    await Promise.all([
+      loadPendingRequestsFromBackend(),
+      loadApprovedCrimeScenesFromBackend(),
+    ]);
     setHasLoaded(true);
     setLoadingLabsData(false);
   }, [selectedLabIds]);
@@ -452,7 +508,7 @@ export default function PendingCvrApprovalsPage() {
                 sortKey={requestSortKey}
                 sortAsc={requestSortAsc}
                 onSort={handleRequestSort}
-                emptyMessage="No pending update requests."
+                emptyMessage="No pending CVRs"
                 variant="card"
               />
             ) : null}
@@ -466,7 +522,7 @@ export default function PendingCvrApprovalsPage() {
                   sortKey={revisionSortKey}
                   sortAsc={revisionSortAsc}
                   onSort={handleRevisionSort}
-                  emptyMessage="No amended records waiting for approval."
+                  emptyMessage="No approved CVRs"
                   variant="card"
                 />
 

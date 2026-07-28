@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { useDropdownBodyScrollLock } from '@/lib/useDropdownBodyScrollLock';
 import { FaChevronDown } from 'react-icons/fa';
 
 interface MultiSelectProps {
@@ -36,8 +35,6 @@ export default function MultiSelect({
   const selectRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const portalId = useId().replace(/:/g, '');
-
-  useDropdownBodyScrollLock(isOpen);
 
   const updatePosition = useCallback(() => {
     const btn = buttonRef.current;

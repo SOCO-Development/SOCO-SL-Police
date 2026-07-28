@@ -33,6 +33,8 @@ import type {
   FullCvrDetails,
   ApproveCrimeSceneRequest,
   ApproveCrimeSceneResponse,
+  PendingCvrApprovalItemApi,
+  ApprovedCrimeSceneItemApi,
 } from './types';
 
 /**
@@ -322,5 +324,29 @@ export async function approveCrimeScene(
   return apiRequest<ApproveCrimeSceneResponse>('Cvr/ApproveCrimeScene', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Get pending CVR approvals for a given (approver) user id
+ */
+export async function getPendingApprovalsByUserId(
+  userId: number,
+): Promise<PendingCvrApprovalItemApi[]> {
+  return apiRequest<PendingCvrApprovalItemApi[]>('Cvr/GetPendingApprovalsByUserId', {
+    method: 'GET',
+    params: { userId },
+  });
+}
+
+/**
+ * Get approved crime scenes for a given (approver) user id
+ */
+export async function getApprovedCrimeScenesByUserId(
+  userId: number,
+): Promise<ApprovedCrimeSceneItemApi[]> {
+  return apiRequest<ApprovedCrimeSceneItemApi[]>('Cvr/GetApprovedCrimeScenesByUserId', {
+    method: 'GET',
+    params: { userId },
   });
 }
