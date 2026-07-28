@@ -20,14 +20,13 @@ export const PRIVILEGE_OPTIONS: { value: PrivilegeType; label: string }[] = [
 export interface ManagedUser {
     id: string;
     fullName: string;
+    regNo: string;
     mobileNumber: string;
     locationId: string;
     locationName: string;
-    role: UserRole;
-    privileges: PrivilegeType[];
+    role: string;
+    privileges: string;
 }
-
-
 
 export interface UserListProps {
     users: ManagedUser[];
@@ -35,10 +34,6 @@ export interface UserListProps {
     sortAsc?: boolean;
     onSort?: (key: keyof ManagedUser | string) => void;
     emptyMessage?: string;
-    onEdit?: (user: ManagedUser) => void;
-    onDelete?: (user: ManagedUser) => void;
-    onRoleChange?: (userId: string, role: UserRole) => void;
-    onPrivilegesChange?: (userId: string, privileges: PrivilegeType[]) => void;
 }
 
 export default function UserList({
@@ -47,68 +42,36 @@ export default function UserList({
     sortAsc = true,
     onSort,
     emptyMessage = 'No users found.',
-    onEdit,
-    onDelete,
-    onRoleChange,
-    onPrivilegesChange,
 }: UserListProps) {
     const columns: AppTableColumn<ManagedUser>[] = useMemo(
         () => [
             { key: 'fullName', label: 'Full Name', sortable: true, className: 'font-semibold text-gray-800' },
-            { key: 'mobileNumber', label: 'Mobile Number', sortable: true, className: 'font-mono text-xs text-gray-600' },
-            { key: 'locationName', label: 'SOCO Location', sortable: true },
-            {
-                key: 'role',
-                label: 'Role',
-                sortable: true,
-                render: (_, row) => (
-                    <div className="min-w-[120px]">
-                        <CustomSelect
-                            options={[
-                                { value: 'Officer', label: 'Officer' },
-                                { value: 'Admin', label: 'Admin' },
-                            ]}
-                            value={row.role}
-                            onChange={(val) => onRoleChange?.(row.id, val as UserRole)}
-                        />
-                    </div>
-                ),
+            { 
+                key: 'regNo', 
+                label: 'Reg. No', 
+                sortable: true, 
+                render: (_, row) => <span className="font-mono text-xs text-blue-700 font-semibold">{row.regNo || '-'}</span> 
             },
+            { key: 'mobileNumber', label: 'Mobile No.', sortable: true, className: 'font-mono text-xs text-gray-600' },
+            { key: 'locationName', label: 'SOCO Lab', sortable: true },
             {
                 key: 'privileges',
-                label: 'Privileges',
+                label: 'Privilege Type',
+                sortable: true,
                 render: (_, row) => (
-                    <div className="min-w-[220px]">
-                        <MultiSelect
-                            options={PRIVILEGE_OPTIONS}
-                            value={row.privileges}
-                            onChange={(val) => onPrivilegesChange?.(row.id, val as PrivilegeType[])}
-                            placeholder="Select privileges"
-                        />
-                    </div>
+                    <span className="text-gray-700">{row.privileges || '-'}</span>
                 ),
             },
             {
-                key: 'id',
-                label: 'Actions',
-                align: 'right' as const,
+                key: 'role',
+                label: 'Authorization Role',
+                sortable: true,
                 render: (_, row) => (
-                    <div className="flex items-center justify-end gap-1">
-                        {onEdit && (
-                            <TableIconButton variant="edit" onClick={() => onEdit(row)} title="Edit User">
-                                <Pencil size={15} />
-                            </TableIconButton>
-                        )}
-                        {onDelete && (
-                            <TableIconButton variant="delete" onClick={() => onDelete(row)} title="Delete User">
-                                <Trash2 size={15} />
-                            </TableIconButton>
-                        )}
-                    </div>
+                    <span className="text-gray-700">{row.role || '-'}</span>
                 ),
-            },
+            }
         ],
-        [onEdit, onDelete, onRoleChange, onPrivilegesChange],
+        [],
     );
 
     return (
