@@ -625,6 +625,7 @@ export default function ViewOfficersPage() {
                                         value={newPassword}
                                         onChange={(e) => {
                                             setNewPassword(e.target.value);
+                                            if (!e.target.value.trim()) setConfirmPassword('');
                                         }}
                                         autoComplete="new-password"
                                         placeholder="Enter new password"
@@ -653,7 +654,8 @@ export default function ViewOfficersPage() {
                                         }}
                                         autoComplete="new-password"
                                         placeholder="Re-enter new password"
-                                        className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors pr-10"
+                                        disabled={!newPassword.trim()}
+                                        className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors pr-10 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                                     />
                                     <button
                                         type="button"
