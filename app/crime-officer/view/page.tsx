@@ -87,6 +87,7 @@ export default function ViewOfficersPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [privilegeDesignationId, setPrivilegeDesignationId] = useState('');
     const [privilegeLoading, setPrivilegeLoading] = useState(false);
+    const [privilegeLocationIds, setPrivilegeLocationIds] = useState<string[]>([]);
     const [popup, showPopup, closePopup] = useResultPopup();
     const [showPrivilegePassword, setShowPrivilegePassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -190,6 +191,25 @@ export default function ViewOfficersPage() {
         }
     };
 
+    useEffect(() => {
+        if (!privilegeOfficer) return;
+        let cancelled = false;
+        officerService.getUserPrivilegeMatrix(parseInt(privilegeOfficer.id, 10))
+            .then((items) => {
+                if (cancelled) return;
+                const locationIds = new Set<string>();
+                items.forEach((item) => {
+                    item.locations.forEach((loc) => locationIds.add(String(loc.locationId)));
+                });
+                setPrivilegeLocationIds(Array.from(locationIds));
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                console.error('Failed to load current privilege locations:', err);
+            });
+        return () => { cancelled = true; };
+    }, [privilegeOfficer]);
+
     const handleGrantPrivilege = async () => {
         if (!privilegeOfficer) return;
         if (newPassword.trim() && newPassword !== confirmPassword) {
@@ -200,12 +220,16 @@ export default function ViewOfficersPage() {
         try {
             const messages: string[] = [];
             const desId = privilegeDesignationId ? parseInt(privilegeDesignationId, 10) : undefined;
+            const locationIds = privilegeLocationIds
+                .map((id) => parseInt(id, 10))
+                .filter((id) => !isNaN(id));
 
             if (newPassword.trim()) {
                 await officerService.grantLoginAccess({
                     systemUserId: parseInt(privilegeOfficer.id, 10),
                     userKey: newPassword.trim(),
                     ...(desId !== undefined ? { designationId: desId } : {}),
+                    ...(locationIds.length > 0 ? { locationIds } : {}),
                 });
                 messages.push('Login access granted successfully. Password updated.');
                 if (desId !== undefined) messages.push('Designation updated.');
@@ -238,6 +262,7 @@ export default function ViewOfficersPage() {
             setNewPassword('');
             setConfirmPassword('');
             setPrivilegeDesignationId('');
+            setPrivilegeLocationIds([]);
             setPrivilegeOfficer(null);
             fetchOfficers({ cancelled: false });
         } catch (err) {
@@ -375,7 +400,7 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); }}>
+                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); setPrivilegeLocationIds([]); }}>
                             <Shield className="w-3 h-3" /> Privilege
                         </ActionChipButton>
                     </div>
@@ -589,7 +614,7 @@ export default function ViewOfficersPage() {
             {privilegeOfficer && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-                    onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                    onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); setPrivilegeLocationIds([]); }}
                 >
                     <div
                         className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto border border-gray-200 animate-fade-in"
@@ -603,7 +628,7 @@ export default function ViewOfficersPage() {
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); setPrivilegeLocationIds([]); }}
                                 className="!min-h-9 !w-9 !p-2"
                                 aria-label="Close"
                             >
@@ -679,12 +704,24 @@ export default function ViewOfficersPage() {
                                     placeholder="No change"
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                    Allowed Locations
+                                </label>
+                                <MultiSelect
+                                    value={privilegeLocationIds}
+                                    onChange={setPrivilegeLocationIds}
+                                    options={locationOptions}
+                                    placeholder="Select allowed locations"
+                                />
+                            </div>
                         </div>
                         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-end gap-2">
                             <Button
                                 type="button"
                                 variant="secondary"
-                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); setPrivilegeLocationIds([]); }}
                             >
                                 Cancel
                             </Button>
