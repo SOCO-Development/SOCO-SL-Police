@@ -633,6 +633,14 @@ export interface UserPrivilegeLocationTypeGroup {
   privileges: UserPrivilegeLocationEntry[];
 }
 
+/** GetUserPrivilegeMatrix returns assigned privilege roles and locations for a user. */
+export interface UserPrivilegeMatrixItem {
+  privilegeId: number;
+  privilegeConfigurationId: number;
+  privilegeRole: string;
+  locations: PrivilegeLocationOption[];
+}
+
 // ─── Crime API Types ──────────────────────────────────────────────────
 
 export interface AddVehicleRequest {
