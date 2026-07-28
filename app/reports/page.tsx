@@ -11,6 +11,7 @@ import {
   DeviceMobile,
   SquaresFour,
   ShieldWarning,
+  Users,
 } from 'phosphor-react';
 
 export default function ReportsPage() {
@@ -54,6 +55,11 @@ export default function ReportsPage() {
       title: 'Lost Phone Management',
       icon: <DeviceMobile className="w-12 h-12" weight="fill" style={{ color: '#ec4899' }} />,
       href: '/reports/lost-phone',
+    },
+    {
+      title: 'User Management',
+      icon: <Users className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
+      href: '/crime-officer/user-management',
     },
   ];
 

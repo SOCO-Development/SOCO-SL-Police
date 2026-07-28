@@ -20,13 +20,7 @@ export default function CrimeOfficerPage() {
             href: '/crime-officer/view',
             icon: <Users className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
         },
-        {
-            title: 'User Management',
-            subtitle: 'පරිශීලක කළමනාකරණය',
-            description: 'View users by SOCO location, add new users and manage privileges.',
-            href: '/crime-officer/user-management',
-            icon: <Users className="w-12 h-12" weight="fill" style={{ color: '#10b981' }} />,
-        },
+
         {
             title: 'User Configurations',
             subtitle: 'පරිශීලක වින්‍යාසයන්',

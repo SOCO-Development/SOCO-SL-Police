@@ -27,25 +27,7 @@ export interface ManagedUser {
     privileges: PrivilegeType[];
 }
 
-const DUMMY_NAMES: Array<{ fullName: string; mobileNumber: string; role: UserRole; privileges: PrivilegeType[] }> = [
-    { fullName: 'Kasun Perera', mobileNumber: '0771234567', role: 'Admin', privileges: ['ADDING_USERS', 'VIEW_ACCESS', 'EDIT_ACCESS'] },
-    { fullName: 'Nimali Fernando', mobileNumber: '0712345678', role: 'Officer', privileges: ['VIEW_ACCESS'] },
-    { fullName: 'Sampath Wickramasinghe', mobileNumber: '0763456789', role: 'Officer', privileges: ['VIEW_ACCESS'] },
-    { fullName: 'Dilani Rathnayake', mobileNumber: '0754567890', role: 'Officer', privileges: ['VIEW_ACCESS', 'EDIT_ACCESS'] },
-];
 
-/** Sample users for a location, used to demo the list before real data is wired up. */
-export function getDummyUsers(locationId: string, locationName: string): ManagedUser[] {
-    return DUMMY_NAMES.map((u, idx) => ({
-        id: `DUMMY-${locationId}-${idx}`,
-        fullName: u.fullName,
-        mobileNumber: u.mobileNumber,
-        locationId,
-        locationName,
-        role: u.role,
-        privileges: u.privileges,
-    }));
-}
 
 export interface UserListProps {
     users: ManagedUser[];
