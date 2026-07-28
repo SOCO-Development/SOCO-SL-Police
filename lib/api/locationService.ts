@@ -14,6 +14,26 @@ export async function getAllLocations(): Promise<ApiLocation[]> {
   return apiRequest<ApiLocation[]>('Location/GetAllLocations');
 }
 
+export async function getMyPrivilegedLocations(): Promise<ApiLocation[]> {
+  return apiRequest<ApiLocation[]>('Location/GetMyPrivilegedLocations');
+}
+
+/**
+ * Get privileged locations for the current logged-in user.
+ * Falls back to all locations if privileged locations request returns empty or fails.
+ */
+export async function getPrivilegedOrAllLocations(): Promise<ApiLocation[]> {
+  try {
+    const privileged = await getMyPrivilegedLocations();
+    if (Array.isArray(privileged) && privileged.length > 0) {
+      return privileged;
+    }
+  } catch (err) {
+    console.warn('Failed to load privileged locations, falling back to all locations', err);
+  }
+  return getAllLocations();
+}
+
 export async function getAllProvinces(): Promise<ApiProvince[]> {
   return apiRequest<ApiProvince[]>('Location/GetAllProvinces');
 }
@@ -114,7 +134,7 @@ async function fetchLocationRegistry(): Promise<LocationRegistry> {
       }));
 
   const [apiLocations, divisionGroups] = await Promise.all([
-    getAllLocations(),
+    getPrivilegedOrAllLocations(),
     Promise.all(
       provinceList.map(async (prov) => {
         try {

@@ -40,7 +40,7 @@ export default function UserManagementPage() {
         const loadLocations = async () => {
             setIsLoadingLocations(true);
             try {
-                const locations = await locationService.getAllLocations();
+                const locations = await locationService.getPrivilegedOrAllLocations();
                 const options = locations.map((loc) => ({
                     value: String(loc.LOCATION_ID),
                     label: loc.LOCATION_NAME,

@@ -31,6 +31,7 @@ import type {
   UserPrivilegeTypeGroup,
   SetPrivilegeLocationsRequest,
   UserPrivilegeLocationTypeGroup,
+  UserPrivilegeMatrixItem,
 } from './types';
 
 /**
@@ -299,5 +300,16 @@ export async function setPrivilegeLocations(
   return apiRequest<string>('UserPrivilege/SetPrivilegeLocations', {
     method: 'POST',
     body: payload,
+  });
+}
+
+/**
+ * Get user privilege matrix by systemUserId.
+ */
+export async function getUserPrivilegeMatrix(
+  systemUserId: number,
+): Promise<UserPrivilegeMatrixItem[]> {
+  return apiRequest<UserPrivilegeMatrixItem[]>('UserPrivilege/GetUserPrivilegeMatrix', {
+    params: { systemUserId },
   });
 }

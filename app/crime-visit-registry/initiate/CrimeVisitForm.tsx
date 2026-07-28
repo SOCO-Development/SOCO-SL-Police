@@ -547,7 +547,7 @@ export default function CrimeVisitForm({
       // 2. Get locations
       let locations: any[] = [];
       try {
-        locations = await locationService.getAllLocations();
+        locations = await locationService.getPrivilegedOrAllLocations();
       } catch (err) {
         console.error("Failed to load locations", err);
       }
