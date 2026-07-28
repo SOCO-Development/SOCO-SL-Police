@@ -567,6 +567,72 @@ export interface UpdateUserDesignationRequest {
   designationId: number;
 }
 
+// ─── Privilege Catalog / Set User Privileges ────────────────────────
+
+export interface PrivilegeConfiguration {
+  privilegeConfigurationId: number;
+  privilegeRole: string;
+}
+
+export interface PrivilegeTypeGroup {
+  privilegeTypeId: number;
+  privilegeType: string;
+  configurations: PrivilegeConfiguration[];
+}
+
+export interface SetUserPrivilegesRequest {
+  systemUserId: number;
+  privilegeConfigurationIds: number[];
+}
+
+/**
+ * Configuration entry as returned by GetUserPrivileges: the full catalog entry
+ * plus whether it's currently assigned to the queried user (isActive).
+ */
+export interface UserPrivilegeConfiguration {
+  privilegeConfigurationId: number;
+  privilegeRole: string;
+  isActive: boolean;
+  privilegeId: number | null;
+}
+
+/** GetUserPrivileges returns the full catalog grouped by type, annotated with isActive per config. */
+export interface UserPrivilegeTypeGroup {
+  privilegeTypeId: number;
+  privilegeType: string;
+  configurations: UserPrivilegeConfiguration[];
+}
+
+// ─── Set Privilege Locations ─────────────────────────────────────────
+
+export interface SetPrivilegeLocationsRequest {
+  systemUserId: number;
+  privilegeId: number;
+  locationIds: number[];
+}
+
+/** A single selectable location option for a privilege, as returned by GetUserPrivilegeLocations. */
+export interface PrivilegeLocationOption {
+  locationId: number;
+  locationName: string;
+}
+
+/** One privilege entry within GetUserPrivilegeLocations, with its allowed location options. */
+export interface UserPrivilegeLocationEntry {
+  privilegeId: number;
+  privilegeConfigurationId: number;
+  privilegeRole: string;
+  locations: PrivilegeLocationOption[];
+}
+
+/** GetUserPrivilegeLocations returns the full privilege catalog grouped by type,
+ * each privilege annotated with its list of assignable locations. */
+export interface UserPrivilegeLocationTypeGroup {
+  privilegeTypeId: number;
+  privilegeType: string;
+  privileges: UserPrivilegeLocationEntry[];
+}
+
 // ─── Crime API Types ──────────────────────────────────────────────────
 
 export interface AddVehicleRequest {

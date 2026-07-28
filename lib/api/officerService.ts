@@ -26,6 +26,11 @@ import type {
   OfficerListItem,
   OfficerDetailBundle,
   GrantLoginAccessRequest,
+  PrivilegeTypeGroup,
+  SetUserPrivilegesRequest,
+  UserPrivilegeTypeGroup,
+  SetPrivilegeLocationsRequest,
+  UserPrivilegeLocationTypeGroup,
 } from './types';
 
 /**
@@ -238,6 +243,60 @@ export async function updateUserDesignation(
   payload: UpdateUserDesignationRequest,
 ): Promise<string> {
   return apiRequest<string>('UserPrivilege/UpdateDesignation', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Get the full catalog of privilege types and their configurations,
+ * used to populate the privilege selection dropdown.
+ */
+export async function getPrivilegeCatalog(): Promise<PrivilegeTypeGroup[]> {
+  return apiRequest<PrivilegeTypeGroup[]>('UserPrivilege/GetPrivilegeCatalog');
+}
+
+/**
+ * Replace a user's full set of privileges with the given configuration IDs.
+ */
+export async function setUserPrivileges(
+  payload: SetUserPrivilegesRequest,
+): Promise<string> {
+  return apiRequest<string>('UserPrivilege/SetUserPrivileges', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Get the full privilege catalog for a user, annotated with which
+ * configurations are currently active (assigned) for them.
+ */
+export async function getUserPrivileges(systemUserId: number): Promise<UserPrivilegeTypeGroup[]> {
+  return apiRequest<UserPrivilegeTypeGroup[]>('UserPrivilege/GetUserPrivileges', {
+    params: { systemUserId },
+  });
+}
+
+/**
+ * Get the full privilege catalog for a user, each privilege annotated with
+ * the list of locations assignable/assigned to it.
+ */
+export async function getUserPrivilegeLocations(
+  systemUserId: number,
+): Promise<UserPrivilegeLocationTypeGroup[]> {
+  return apiRequest<UserPrivilegeLocationTypeGroup[]>('UserPrivilege/GetUserPrivilegeLocations', {
+    params: { systemUserId },
+  });
+}
+
+/**
+ * Set the location(s) a specific privilege is scoped to, for a given user.
+ */
+export async function setPrivilegeLocations(
+  payload: SetPrivilegeLocationsRequest,
+): Promise<string> {
+  return apiRequest<string>('UserPrivilege/SetPrivilegeLocations', {
     method: 'POST',
     body: payload,
   });
