@@ -87,6 +87,7 @@ export default function ViewOfficersPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [privilegeDesignationId, setPrivilegeDesignationId] = useState('');
     const [privilegeLoading, setPrivilegeLoading] = useState(false);
+    const [privilegeLocationIds, setPrivilegeLocationIds] = useState<string[]>([]);
     const [popup, showPopup, closePopup] = useResultPopup();
     const [showPrivilegePassword, setShowPrivilegePassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -190,54 +191,50 @@ export default function ViewOfficersPage() {
         }
     };
 
+    useEffect(() => {
+        if (!privilegeOfficer) return;
+        let cancelled = false;
+        officerService.getUserPrivilegeMatrix(parseInt(privilegeOfficer.id, 10))
+            .then((items) => {
+                if (cancelled) return;
+                const locationIds = new Set<string>();
+                items.forEach((item) => {
+                    item.locations.forEach((loc) => locationIds.add(String(loc.locationId)));
+                });
+                setPrivilegeLocationIds(Array.from(locationIds));
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                console.error('Failed to load current privilege locations:', err);
+            });
+        return () => { cancelled = true; };
+    }, [privilegeOfficer]);
+
     const handleGrantPrivilege = async () => {
         if (!privilegeOfficer) return;
-        if (newPassword.trim() && newPassword !== confirmPassword) {
+        if (newPassword !== confirmPassword) {
             showPopup('error', 'Error', 'Passwords do not match.');
             return;
         }
         setPrivilegeLoading(true);
         try {
-            const messages: string[] = [];
-            const desId = privilegeDesignationId ? parseInt(privilegeDesignationId, 10) : undefined;
+            const desId = parseInt(privilegeDesignationId, 10);
+            const locationIds = privilegeLocationIds
+                .map((id) => parseInt(id, 10))
+                .filter((id) => !isNaN(id));
 
-            if (newPassword.trim()) {
-                await officerService.grantLoginAccess({
-                    systemUserId: parseInt(privilegeOfficer.id, 10),
-                    userKey: newPassword.trim(),
-                    ...(desId !== undefined ? { designationId: desId } : {}),
-                });
-                messages.push('Login access granted successfully. Password updated.');
-                if (desId !== undefined) messages.push('Designation updated.');
-            } else if (desId !== undefined && desId !== parseInt(privilegeOfficer.designationId || '0', 10)) {
-                const bundle = await officerService.getOfficerById(parseInt(privilegeOfficer.id, 10));
-                const p = bundle.personalInfo[0];
-                if (p) {
-                    await officerService.updatePersonalInfo({
-                        systemUserId: parseInt(privilegeOfficer.id, 10),
-                        userFullName: p.USER_FULL_NAME || '',
-                        userCallingName: p.USER_CALLING_NAME || '',
-                        locationId: parseInt(p.LOCATION_ID, 10) || 1,
-                        userDesignationId: desId,
-                        userDob: p.USER_DOB || '',
-                        phoneMobile: p.PHONE_MOBILE || '',
-                        phoneOffice: p.PHONE_OFFICE || '',
-                        phoneHome: p.PHONE_HOME || '',
-                        userImageUrl: p.USER_IMAGE_URL || '',
-                        civilStatus: p.CIVIL_STATUS || '',
-                        currentRank: parseInt(p.CURRENT_RANK || '', 10) || 1,
-                        appointRank: parseInt(p.APPOINT_RANK || '', 10) || 1,
-                        courseNo: p.COURSE_NO || '',
-                        socoJoinedDate: p.SOCO_JOINED_DATE || '',
-                    });
-                    messages.push('Designation updated.');
-                }
-            }
+            await officerService.grantLoginAccess({
+                systemUserId: parseInt(privilegeOfficer.id, 10),
+                userKey: newPassword.trim(),
+                designationId: desId,
+                locationIds,
+            });
 
-            showPopup('success', 'Privilege Updated', messages.join(' ') || 'No changes made.');
+            showPopup('success', 'Privilege Updated', 'Login access granted successfully.');
             setNewPassword('');
             setConfirmPassword('');
             setPrivilegeDesignationId('');
+            setPrivilegeLocationIds([]);
             setPrivilegeOfficer(null);
             fetchOfficers({ cancelled: false });
         } catch (err) {
@@ -375,7 +372,7 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); }}>
+                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); setPrivilegeLocationIds([]); }}>
                             <Shield className="w-3 h-3" /> Privilege
                         </ActionChipButton>
                     </div>
@@ -589,7 +586,6 @@ export default function ViewOfficersPage() {
             {privilegeOfficer && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-                    onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
                 >
                     <div
                         className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto border border-gray-200 animate-fade-in"
@@ -603,7 +599,7 @@ export default function ViewOfficersPage() {
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); setPrivilegeLocationIds([]); }}
                                 className="!min-h-9 !w-9 !p-2"
                                 aria-label="Close"
                             >
@@ -621,7 +617,7 @@ export default function ViewOfficersPage() {
 
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                                    New Password / User Key <span className="text-gray-400 normal-case">(optional)</span>
+                                    New Password / User Key
                                 </label>
                                 <div className="relative">
                                     <input
@@ -629,7 +625,9 @@ export default function ViewOfficersPage() {
                                         value={newPassword}
                                         onChange={(e) => {
                                             setNewPassword(e.target.value);
+                                            if (!e.target.value.trim()) setConfirmPassword('');
                                         }}
+                                        autoComplete="new-password"
                                         placeholder="Enter new password"
                                         className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors pr-10"
                                     />
@@ -645,7 +643,7 @@ export default function ViewOfficersPage() {
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                                    Confirm New Password <span className="text-gray-400 normal-case">(optional)</span>
+                                    Confirm New Password
                                 </label>
                                 <div className="relative">
                                     <input
@@ -654,8 +652,10 @@ export default function ViewOfficersPage() {
                                         onChange={(e) => {
                                             setConfirmPassword(e.target.value);
                                         }}
+                                        autoComplete="new-password"
                                         placeholder="Re-enter new password"
-                                        className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors pr-10"
+                                        disabled={!newPassword.trim()}
+                                        className="w-full min-h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-fuchsia-200 focus:border-fuchsia-500 hover:border-gray-400 transition-colors pr-10 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                                     />
                                     <button
                                         type="button"
@@ -666,6 +666,9 @@ export default function ViewOfficersPage() {
                                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
                                 </div>
+                                {confirmPassword.trim() !== '' && newPassword !== confirmPassword && (
+                                    <p className="mt-1.5 text-xs font-medium text-red-600">Passwords do not match.</p>
+                                )}
                             </div>
 
                             <div>
@@ -675,8 +678,20 @@ export default function ViewOfficersPage() {
                                 <CustomSelect
                                     value={privilegeDesignationId}
                                     onChange={(val) => setPrivilegeDesignationId(val)}
-                                    options={[{ value: '', label: 'No change' }, ...designations.map((d) => ({ value: d.id, label: d.name }))]}
-                                    placeholder="No change"
+                                    options={designations.map((d) => ({ value: d.id, label: d.name }))}
+                                    placeholder="Select designation"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                                    Allowed Locations
+                                </label>
+                                <MultiSelect
+                                    value={privilegeLocationIds}
+                                    onChange={setPrivilegeLocationIds}
+                                    options={locationOptions}
+                                    placeholder="Select allowed locations"
                                 />
                             </div>
                         </div>
@@ -684,7 +699,7 @@ export default function ViewOfficersPage() {
                             <Button
                                 type="button"
                                 variant="secondary"
-                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); }}
+                                onClick={() => { setPrivilegeOfficer(null); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(''); setPrivilegeLocationIds([]); }}
                             >
                                 Cancel
                             </Button>
@@ -692,7 +707,14 @@ export default function ViewOfficersPage() {
                                 type="button"
                                 variant="primary"
                                 onClick={handleGrantPrivilege}
-                                disabled={privilegeLoading || (newPassword.trim() !== '' && newPassword !== confirmPassword)}
+                                disabled={
+                                    privilegeLoading ||
+                                    !newPassword.trim() ||
+                                    !confirmPassword.trim() ||
+                                    newPassword !== confirmPassword ||
+                                    !privilegeDesignationId ||
+                                    privilegeLocationIds.length === 0
+                                }
                             >
                                 {privilegeLoading ? 'Saving...' : 'Save Changes'}
                             </Button>
