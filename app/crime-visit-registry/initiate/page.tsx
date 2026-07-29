@@ -1,11 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import CrimeVisitForm from './CrimeVisitForm';
 import { crimeService } from '@/lib/api';
 import type { CrimeVisitFormData } from '@/types/crimeVisit';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 import { PageHeader, PageLayout } from '@/components/ui';
 
 function toApiDate(ddmmyyyy: string): string {
@@ -26,8 +26,7 @@ function toApiTime(timeStr: string): string {
 
 export default function InitiateCrimeVisitPage() {
   const router = useRouter();
-  const [popup, showPopup, closePopup] = useResultPopup();
-  const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
 
   async function handleSubmit(data: CrimeVisitFormData) {
     setLoading(true);
@@ -50,11 +49,11 @@ export default function InitiateCrimeVisitPage() {
       };
 
       const response = await crimeService.initiateVisit(payload);
-      showPopup('success', 'Visit Initiated', `Visit initiated successfully — ID: ${response.visitId}`);
+      showSuccessAlert('Visit Initiated', `Visit initiated successfully — ID: ${response.visitId}`);
       setTimeout(() => router.push('/crime-visit-registry'), 2500);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      showPopup('error', 'Submission Failed', msg);
+      showErrorAlert('Submission Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -72,7 +71,6 @@ export default function InitiateCrimeVisitPage() {
         onCancel={() => router.push('/crime-visit-registry')}
       />
 
-      <ResultPopup {...popup} onClose={closePopup} />
-    </PageLayout>
+          </PageLayout>
   );
 }

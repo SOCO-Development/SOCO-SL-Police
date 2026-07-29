@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { PageHeader, PageLayout } from '@/components/ui';
 
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,7 @@ import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
 import type { CrimeScene, CrimeSceneCourtDetails } from '@/types/crimeScene';
 import { emptyCrimeSceneCourtDetails } from '@/types/crimeScene';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 
 function visitTypeLabel(scene: CrimeScene) {
   return scene.visitType === 'REVISIT'
@@ -46,7 +46,6 @@ export default function UpdateCourtDetailsPage() {
   const [isEditingProductionSentToCourt, setIsEditingProductionSentToCourt] = useState(false);
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [popup, showPopup, closePopup] = useResultPopup();
 
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
@@ -167,14 +166,14 @@ export default function UpdateCourtDetailsPage() {
     if (!selectedSceneId || !selectedScene) {
       setError('Select a crime scene first.');
       setSavedOk(false);
-      showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
+      showErrorAlert('No Scene Selected', 'Select a crime scene first.');
       return;
     }
     const v = validateProductionSentToCourtSection(courtDraft);
     if (v) {
       setError(v);
       setSavedOk(false);
-      showPopup('error', 'Validation Error', v);
+      showErrorAlert('Validation Error', v);
       return;
     }
 
@@ -224,7 +223,7 @@ export default function UpdateCourtDetailsPage() {
       const msg = err instanceof Error ? err.message : 'Backend API update failed.';
       setError(msg);
       setSavedOk(false);
-      showPopup('error', 'API Save Failed', msg);
+      showErrorAlert('API Save Failed', msg);
       return;
     }
 
@@ -233,7 +232,7 @@ export default function UpdateCourtDetailsPage() {
       const msg = 'Could not save. The visit record may have been removed.';
       setError(msg);
       setSavedOk(false);
-      showPopup('error', 'Save Failed', msg);
+      showErrorAlert('Save Failed', msg);
       return;
     }
     setScenes(crimeSceneService.getAll());
@@ -241,7 +240,7 @@ export default function UpdateCourtDetailsPage() {
     setError('');
     setSavedOk(true);
     setIsEditingProductionSentToCourt(false);
-    showPopup('success', 'Production Details Saved', 'Production sent to court details have been saved successfully.');
+    showSuccessAlert('Production Details Saved', 'Production sent to court details have been saved successfully.');
     setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
@@ -440,7 +439,6 @@ export default function UpdateCourtDetailsPage() {
         )}
       </PageLayout>
 
-      <ResultPopup {...popup} onClose={closePopup} />
-    </>
+          </>
   );
 }

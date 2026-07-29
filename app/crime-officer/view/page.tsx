@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { MagnifyingGlass } from 'phosphor-react';
 import { Plus, Eye, EyeOff, Pencil, Shield } from 'lucide-react';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 
 const RANK_FILTER_OPTIONS = [{ value: '', label: 'All Ranks' }, ...ANNEX_12_RANK.map((r) => ({ value: r, label: r }))];
 
@@ -88,8 +88,7 @@ export default function ViewOfficersPage() {
     const [privilegeDesignationId, setPrivilegeDesignationId] = useState('');
     const [privilegeLoading, setPrivilegeLoading] = useState(false);
     const [privilegeLocationIds, setPrivilegeLocationIds] = useState<string[]>([]);
-    const [popup, showPopup, closePopup] = useResultPopup();
-    const [showPrivilegePassword, setShowPrivilegePassword] = useState(false);
+        const [showPrivilegePassword, setShowPrivilegePassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [officers, setOfficers] = useState<OfficerRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -169,7 +168,7 @@ export default function ViewOfficersPage() {
         } catch (err) {
             if (signal?.cancelled) return;
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officers');
-            showPopup('error', 'Error', apiError.message || 'Failed to load officers');
+            showErrorAlert('Error', apiError.message || 'Failed to load officers');
         } finally {
             if (!signal?.cancelled) setLoading(false);
         }
@@ -213,7 +212,7 @@ export default function ViewOfficersPage() {
     const handleGrantPrivilege = async () => {
         if (!privilegeOfficer) return;
         if (newPassword !== confirmPassword) {
-            showPopup('error', 'Error', 'Passwords do not match.');
+            showErrorAlert('Error', 'Passwords do not match.');
             return;
         }
         setPrivilegeLoading(true);
@@ -230,7 +229,7 @@ export default function ViewOfficersPage() {
                 locationIds,
             });
 
-            showPopup('success', 'Privilege Updated', 'Login access granted successfully.');
+            showSuccessAlert('Privilege Updated', 'Login access granted successfully.');
             setNewPassword('');
             setConfirmPassword('');
             setPrivilegeDesignationId('');
@@ -239,7 +238,7 @@ export default function ViewOfficersPage() {
             fetchOfficers({ cancelled: false });
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to grant login access');
-            showPopup('error', 'Error', apiError.message || 'An error occurred.');
+            showErrorAlert('Error', apiError.message || 'An error occurred.');
         } finally {
             setPrivilegeLoading(false);
         }
@@ -247,7 +246,7 @@ export default function ViewOfficersPage() {
 
     const handleView = () => {
         if (filterLocations.length === 0 || filterDesignations.length === 0) {
-            showPopup('error', 'Error', 'Please select both SOCO Location and Designation to view the records.');
+            showErrorAlert('Error', 'Please select both SOCO Location and Designation to view the records.');
             return;
         }
         setAppliedLocations(filterLocations);
@@ -722,7 +721,6 @@ export default function ViewOfficersPage() {
                     </div>
                 </div>
             )}
-        <ResultPopup {...popup} onClose={closePopup} />
-        </>
+                </>
     );
 }

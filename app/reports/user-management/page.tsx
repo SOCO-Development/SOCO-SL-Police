@@ -11,14 +11,13 @@ import { PageHeader, PageLayout, Button, SearchInput, PaginationControls } from 
 import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert, getErrorMessage } from '@/lib/alerts';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100].map((n) => ({ value: String(n), label: `${n} per page` }));
 
 export default function UserManagementPage() {
     const { locations } = useLocationData();
     const { rankIdToName } = useUserData();
-    const [popup, showPopup, closePopup] = useResultPopup();
 
     // ── Filter state ──────────────────────────────────────────────────
     const [filterLocations, setFilterLocations] = useState<string[]>([]);
@@ -50,8 +49,6 @@ export default function UserManagementPage() {
     const [mobileNumber, setMobileNumber] = useState('');
     const [fullName, setFullName] = useState('');
     const [userLocation, setUserLocation] = useState('');
-    const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null);
 
@@ -95,6 +92,7 @@ export default function UserManagementPage() {
                 }
             } catch (err) {
                 console.error('Failed to load designations:', err);
+                showErrorAlert('Error', getErrorMessage(err, 'Failed to load designations.'));
             }
         };
         loadDesignations();
@@ -124,12 +122,12 @@ export default function UserManagementPage() {
             } catch (err) {
                 if (signal?.cancelled) return;
                 const apiError = err instanceof ApiError ? err : new ApiError('Failed to load users');
-                showPopup('error', 'Error', apiError.message || 'Failed to load users.');
+                showErrorAlert('Error', apiError.message || 'Failed to load users.');
             } finally {
                 if (!signal?.cancelled) setLoading(false);
             }
         },
-        [locationIdToName, appliedLocations, appliedDesignations, showPopup],
+        [locationIdToName, appliedLocations, appliedDesignations],
     );
 
     useEffect(() => {
@@ -187,7 +185,7 @@ export default function UserManagementPage() {
 
     const handleView = () => {
         if (filterLocations.length === 0 || filterDesignations.length === 0) {
-            showPopup('error', 'Error', 'Please select both SOCO Location and Designation to view the records.');
+            showErrorAlert('Error', 'Please select both SOCO Location and Designation to view the records.');
             return;
         }
         setAppliedLocations(filterLocations);
@@ -233,7 +231,7 @@ export default function UserManagementPage() {
     const confirmDelete = () => {
         if (!deleteTarget) return;
         setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-        showPopup('error', 'Deleted', `${deleteTarget.fullName} has been removed.`);
+        showSuccessAlert('Deleted', `${deleteTarget.fullName} has been removed.`);
         setDeleteTarget(null);
     };
 
@@ -251,8 +249,7 @@ export default function UserManagementPage() {
         setUsers((prev) =>
             prev.map((u) => (pendingChanges[u.id] ? { ...u, ...pendingChanges[u.id] } : u)),
         );
-        showPopup(
-            'success',
+        showSuccessAlert(
             'Success',
             `Privilege changes have been submitted for ${pendingChangeCount} user${pendingChangeCount === 1 ? '' : 's'}.`,
         );
@@ -262,16 +259,14 @@ export default function UserManagementPage() {
 
     const onSubmitUser = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        setError('');
-        setSuccessMessage('');
 
         if (!mobileNumber.trim() || !fullName.trim() || !userLocation) {
-            setError('Mobile number, full name and SOCO location are required.');
+            showErrorAlert('Error', 'Mobile number, full name and SOCO location are required.');
             return;
         }
 
         if (!/^0\d{9}$/.test(mobileNumber.trim())) {
-            setError('Mobile number must be 10 digits and start with 0 (e.g. 0771234567).');
+            showErrorAlert('Error', 'Mobile number must be 10 digits and start with 0 (e.g. 0771234567).');
             return;
         }
 
@@ -292,8 +287,7 @@ export default function UserManagementPage() {
                         : u,
                 ),
             );
-            setSuccessMessage('User has been updated successfully.');
-            showPopup('success', 'Success', 'User has been updated successfully.');
+            showSuccessAlert('Success', 'User has been updated successfully.');
         } else {
             const newUser: ManagedUser = {
                 id: `USR-${Date.now()}`,
@@ -305,8 +299,7 @@ export default function UserManagementPage() {
                 privileges: ['VIEW_ACCESS'],
             };
             setUsers((prev) => [newUser, ...prev]);
-            setSuccessMessage('User has been added successfully.');
-            showPopup('success', 'Success', 'User has been added successfully.');
+            showSuccessAlert('Success', 'User has been added successfully.');
         }
 
         setIsModalOpen(false);
@@ -525,17 +518,6 @@ export default function UserManagementPage() {
                                 />
                             </div>
 
-                            {error && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-                                    {error}
-                                </div>
-                            )}
-                            {successMessage && (
-                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
-                                    {successMessage}
-                                </div>
-                            )}
-
                             <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl -mx-6 -mb-5 flex items-center justify-end gap-2">
                                 <Button variant="secondary" type="button" onClick={closeModal}>
                                     Cancel
@@ -601,7 +583,6 @@ export default function UserManagementPage() {
                 </div>
             )}
 
-            <ResultPopup {...popup} onClose={closePopup} />
         </>
     );
 }

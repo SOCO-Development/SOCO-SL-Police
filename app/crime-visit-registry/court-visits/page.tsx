@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, ActionChipButton } from '@/components/ui';
 
 import { useRouter } from 'next/navigation';
@@ -18,7 +18,7 @@ import {
   emptyCrimeSceneCourtDetails,
   normalizeCourtVisitUpdate,
 } from '@/types/crimeScene';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 
 function visitTypeLabel(scene: CrimeScene) {
   return scene.visitType === 'REVISIT'
@@ -124,8 +124,7 @@ export default function CourtVisitsPage() {
   const [savedOk, setSavedOk] = useState(false);
   const [prevVisits, setPrevVisits] = useState<any[]>([]);
   const [prevVisitsLoading, setPrevVisitsLoading] = useState(false);
-  const [popup, showPopup, closePopup] = useResultPopup();
-
+  
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
   }, []);
@@ -187,14 +186,14 @@ export default function CourtVisitsPage() {
       return;
     }
     if (file.size > MAX_COURT_VISIT_ATTACHMENT_BYTES) {
-      showPopup('error', 'File Too Large', `Attachment is too large (max ${Math.round(MAX_COURT_VISIT_ATTACHMENT_BYTES / 1024 / 1024)} MB).`);
+      showErrorAlert('File Too Large', `Attachment is too large (max ${Math.round(MAX_COURT_VISIT_ATTACHMENT_BYTES / 1024 / 1024)} MB).`);
       return;
     }
     try {
       const dataUrl = await readFileAsDataUrl(file);
       patchCourtVisitRow(index, { attachmentFileName: file.name, attachmentDataUrl: dataUrl, attachmentFile: file });
     } catch {
-      showPopup('error', 'File Error', 'Could not read the attachment.');
+      showErrorAlert('File Error', 'Could not read the attachment.');
     }
   }
 
@@ -255,14 +254,14 @@ export default function CourtVisitsPage() {
 
   async function handleSaveCourtVisit() {
     if (!selectedSceneId || !selectedScene) {
-      showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
+      showErrorAlert('No Scene Selected', 'Select a crime scene first.');
       return;
     }
     const v = validateCourtVisit();
     if (v) {
       setError(v);
       setSavedOk(false);
-      showPopup('error', 'Validation Error', v);
+      showErrorAlert('Validation Error', v);
       return;
     }
     const filled = courtVisitDraft.rows
@@ -340,7 +339,7 @@ export default function CourtVisitsPage() {
       const msg = err instanceof Error ? err.message : 'Backend API update failed.';
       setError(msg);
       setSavedOk(false);
-      showPopup('error', 'API Update Failed', msg);
+      showErrorAlert('API Update Failed', msg);
       return;
     }
 
@@ -350,7 +349,7 @@ export default function CourtVisitsPage() {
       const msg = 'Could not save. The visit record may have been removed.';
       setError(msg);
       setSavedOk(false);
-      showPopup('error', 'Save Failed', msg);
+      showErrorAlert('Save Failed', msg);
       return;
     }
     setScenes(crimeSceneService.getAll());
@@ -358,14 +357,14 @@ export default function CourtVisitsPage() {
     setCourtVisitDraft(mergeCourtVisit(updated.courtVisitUpdate));
     setError('');
     setSavedOk(true);
-    showPopup('success', 'Court Visit Saved', 'Court visit details have been saved successfully.');
+    showSuccessAlert('Court Visit Saved', 'Court visit details have been saved successfully.');
     setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
   async function handleUploadReport(courtVisitDetailId: string, file: File) {
     try {
       await fileService.uploadCourtVisitReport(file, Number(courtVisitDetailId));
-      showPopup('success', 'Upload Successful', 'Court visit report uploaded successfully.');
+      showSuccessAlert('Upload Successful', 'Court visit report uploaded successfully.');
 
       // Reload previous visits to reflect changes
       if (selectedScene?.cvrId) {
@@ -377,7 +376,7 @@ export default function CourtVisitsPage() {
     } catch (err) {
       console.error('Failed to upload report:', err);
       const msg = err instanceof Error ? err.message : 'Upload failed.';
-      showPopup('error', 'Upload Failed', msg);
+      showErrorAlert('Upload Failed', msg);
     }
   }
 
@@ -692,7 +691,6 @@ export default function CourtVisitsPage() {
         )}
       </PageLayout>
 
-      <ResultPopup {...popup} onClose={closePopup} />
-    </>
+          </>
   );
 }

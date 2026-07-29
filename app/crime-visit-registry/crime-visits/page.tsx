@@ -12,6 +12,7 @@ import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeVisit, CrimeVisitStatus, CrimeVisitFormData, DraftAdditions } from '@/types/crimeVisit';
 import { PageHeader, PageLayout, Button, TabBar, SearchInput } from '@/components/ui';
 import { CheckCircle, Plus } from 'lucide-react';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 
 type FilterTab = 'ALL' | CrimeVisitStatus;
 
@@ -118,18 +119,12 @@ function DetailView({ id }: { id: string }) {
   const router = useRouter();
   const [visit, setVisit] = useState<CrimeVisit | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     const found = crimeVisitService.getById(id);
     setVisit(found ?? null);
     setLoading(false);
   }, [id]);
-
-  function showToast(message: string, type: 'success' | 'error' = 'success') {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  }
 
   function handleSubmitDraft(data: CrimeVisitFormData) {
     try {
@@ -141,13 +136,13 @@ function DetailView({ id }: { id: string }) {
       if (updated) {
         const submitted = crimeVisitService.submit(id);
         if (submitted) {
-          showToast(`Submitted — ${submitted.referenceNo}`);
+          showSuccessAlert('Submitted', `Submitted — ${submitted.referenceNo}`);
           setVisit(submitted);
           setTimeout(() => router.push(`/crime-visit-registry/crime-visits?id=${id}`), 1200);
         }
       }
     } catch {
-      showToast('Failed to save and submit additions.', 'error');
+      showErrorAlert('Error', 'Failed to save and submit additions.');
     }
   }
 
@@ -208,12 +203,6 @@ function DetailView({ id }: { id: string }) {
                 onCancel={() => router.push('/crime-visit-registry/crime-visits')}
               />
         </PageLayout>
-        {toast && (
-          <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-            <CheckCircle className="w-4 h-4 flex-shrink-0" />
-            {toast.message}
-          </div>
-        )}
       </>
     );
   }
@@ -239,12 +228,6 @@ function DetailView({ id }: { id: string }) {
 
             <CrimeVisitDetailView visit={visit} />
       </PageLayout>
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-          {toast.message}
-        </div>
-      )}
     </>
   );
 }

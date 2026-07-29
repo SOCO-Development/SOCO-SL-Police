@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -13,7 +13,7 @@ import { PageHeader, PageLayout } from '@/components/ui';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import { validateSentToAnalysisSection } from '@/lib/courtDetailsValidation';
 import { emptyCrimeSceneCourtDetails, type CrimeSceneCourtDetails } from '@/types/crimeScene';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 
 function visitTypeLabel(scene: CrimeScene) {
   return scene.visitType === 'REVISIT'
@@ -51,8 +51,7 @@ export default function ProductionAnalysisPage() {
   const [isEditingSentToAnalysis, setIsEditingSentToAnalysis] = useState(false);
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [popup, showPopup, closePopup] = useResultPopup();
-
+  
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
   }, []);
@@ -166,7 +165,7 @@ export default function ProductionAnalysisPage() {
     const v = validateSentToAnalysisSection(courtDetailsDraft);
     if (v) {
       setCourtDetailsError(v);
-      showPopup('error', 'Validation Error', v);
+      showErrorAlert('Validation Error', v);
       return;
     }
 
@@ -203,7 +202,7 @@ export default function ProductionAnalysisPage() {
       console.error('Failed to update production analysis in backend', err);
       const msg = err instanceof Error ? err.message : 'Backend API update failed.';
       setCourtDetailsError(msg);
-      showPopup('error', 'API Update Failed', msg);
+      showErrorAlert('API Update Failed', msg);
       return;
     }
 
@@ -215,14 +214,14 @@ export default function ProductionAnalysisPage() {
     if (!updated) {
       const msg = 'Could not save. The visit record may have been removed.';
       setCourtDetailsError(msg);
-      showPopup('error', 'Save Failed', msg);
+      showErrorAlert('Save Failed', msg);
       return;
     }
     setScenes(crimeSceneService.getAll());
     setCourtDetailsDraft(mergeCourtDetails(updated.courtDetails));
     setCourtDetailsError('');
     setIsEditingSentToAnalysis(false);
-    showPopup('success', 'Analysis Details Saved', 'Productions sent to analysis institutes have been saved successfully.');
+    showSuccessAlert('Analysis Details Saved', 'Productions sent to analysis institutes have been saved successfully.');
     setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
@@ -442,7 +441,6 @@ export default function ProductionAnalysisPage() {
               </>
             )}
       </PageLayout>
-      <ResultPopup {...popup} onClose={closePopup} />
-    </>
+          </>
   );
 }
