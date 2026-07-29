@@ -25,9 +25,9 @@ export interface ManagedUser {
     mobileNumber: string;
     locationId: string;
     locationName: string;
-    role: string;
-    privileges: string;
-    privilegeLocations: string;
+    role: string[];
+    privileges: string[];
+    privilegeLocations: string[];
 }
 
 export interface UserListProps {
@@ -67,7 +67,11 @@ export default function UserList({
                 label: 'Privilege Type',
                 sortable: true,
                 render: (_, row) => (
-                    <span className="text-gray-700">{row.privileges || '-'}</span>
+                    <div className="flex flex-col gap-1">
+                        {row.privileges?.length > 0 ? row.privileges.map((p, i) => (
+                            <span key={i} className="text-gray-700 whitespace-nowrap">{p}</span>
+                        )) : <span className="text-gray-700">-</span>}
+                    </div>
                 ),
             },
             {
@@ -75,7 +79,11 @@ export default function UserList({
                 label: 'Authorization Role',
                 sortable: true,
                 render: (_, row) => (
-                    <span className="text-gray-700">{row.role || '-'}</span>
+                    <div className="flex flex-col gap-1">
+                        {row.role?.length > 0 ? row.role.map((r, i) => (
+                            <span key={i} className="text-gray-700 whitespace-nowrap">{r}</span>
+                        )) : <span className="text-gray-700">-</span>}
+                    </div>
                 ),
             },
             {
@@ -83,7 +91,11 @@ export default function UserList({
                 label: 'Privilege Locations',
                 sortable: true,
                 render: (_, row) => (
-                    <span className="text-gray-700">{row.privilegeLocations || '-'}</span>
+                    <div className="flex flex-col gap-1">
+                        {row.privilegeLocations?.length > 0 ? row.privilegeLocations.map((l, i) => (
+                            <span key={i} className="text-gray-700 whitespace-nowrap">{l}</span>
+                        )) : <span className="text-gray-700">-</span>}
+                    </div>
                 ),
             }
         ],

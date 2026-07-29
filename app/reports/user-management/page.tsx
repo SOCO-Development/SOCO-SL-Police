@@ -101,8 +101,8 @@ export default function UserManagementPage() {
                 if (signal?.cancelled) return;
 
                 const rows: ManagedUser[] = await Promise.all(raw.map(async (o) => {
-                    let privTypes = '-';
-                    let authRoles = '-';
+                    let privTypes: string[] = [];
+                    let authRoles: string[] = [];
                     try {
                         const privs = await officerService.getUserPrivileges(Number(o.SYSTEM_USER_ID));
                         const activeTypes = new Set<string>();
@@ -119,13 +119,13 @@ export default function UserManagementPage() {
                                 activeTypes.add(g.privilegeType);
                             }
                         });
-                        if (activeTypes.size > 0) privTypes = Array.from(activeTypes).join(', ');
-                        if (activeRoles.size > 0) authRoles = Array.from(activeRoles).join(', ');
+                        if (activeTypes.size > 0) privTypes = Array.from(activeTypes);
+                        if (activeRoles.size > 0) authRoles = Array.from(activeRoles);
                     } catch (e) {
                         console.error(`Failed to load privileges for user ${o.SYSTEM_USER_ID}`, e);
                     }
 
-                    let privLocs = '-';
+                    let privLocs: string[] = [];
                     try {
                         const locs = await officerService.getUserPrivilegeLocations(Number(o.SYSTEM_USER_ID));
                         const locationNames = new Set<string>();
@@ -134,7 +134,7 @@ export default function UserManagementPage() {
                                 (p.locations || []).forEach(l => locationNames.add(l.locationName));
                             });
                         });
-                        if (locationNames.size > 0) privLocs = Array.from(locationNames).join(', ');
+                        if (locationNames.size > 0) privLocs = Array.from(locationNames);
                     } catch (e) {
                         console.error(`Failed to load privilege locations for user ${o.SYSTEM_USER_ID}`, e);
                     }
@@ -245,9 +245,9 @@ export default function UserManagementPage() {
             'Designation': u.designation || '-',
             'Mobile No.': u.mobileNumber || '-',
             'SOCO Lab': u.locationName || '-',
-            'Privilege Type': u.privileges || '-',
-            'Authorization Role': u.role || '-',
-            'Privilege Locations': u.privilegeLocations || '-',
+            'Privilege Type': u.privileges?.length ? u.privileges.join('\n') : '-',
+            'Authorization Role': u.role?.length ? u.role.join('\n') : '-',
+            'Privilege Locations': u.privilegeLocations?.length ? u.privilegeLocations.join('\n') : '-',
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
@@ -306,9 +306,9 @@ export default function UserManagementPage() {
                 u.designation || '-',
                 u.mobileNumber || '-',
                 u.locationName || '-',
-                u.privileges || '-',
-                u.role || '-',
-                u.privilegeLocations || '-'
+                u.privileges?.length ? u.privileges.join('\n') : '-',
+                u.role?.length ? u.role.join('\n') : '-',
+                u.privilegeLocations?.length ? u.privilegeLocations.join('\n') : '-'
             ]),
             theme: 'grid',
             headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
