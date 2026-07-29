@@ -467,6 +467,16 @@ select:active {
   transition: transform 0.2s ease-in-out;
 }
 
+/* Hide native browser password-reveal icons so they don't double up with our custom eye toggle */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-strong-password-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Print: hide layout chrome on complaint report so only report content prints */
 @media print {
 
