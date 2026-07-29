@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
-import { subscribeToAlerts, type AlertPayload } from '@/lib/alerts';
+import { subscribeToAlerts, subscribeToClearAlerts, type AlertPayload } from '@/lib/alerts';
 
 const AUTO_DISMISS_MS = 4500;
 
@@ -16,6 +16,10 @@ export default function GlobalAlertHost() {
         setAlerts((prev) => prev.filter((item) => item.id !== alert.id));
       }, AUTO_DISMISS_MS);
     });
+  }, []);
+
+  useEffect(() => {
+    return subscribeToClearAlerts(() => setAlerts([]));
   }, []);
 
   if (alerts.length === 0) return null;
