@@ -17,7 +17,7 @@ interface MultiSelectProps {
   optionRowClassName?: string;
 }
 
-type MenuPos = { top: number; left: number; width: number; listMaxHeight: number };
+type MenuPos = { top?: number; bottom?: number; left: number; width: number; listMaxHeight: number };
 
 export default function MultiSelect({
   label,
@@ -41,22 +41,37 @@ export default function MultiSelect({
     if (!btn || typeof window === 'undefined') return;
     const rect = btn.getBoundingClientRect();
     const gap = 4;
-    const top = rect.bottom + gap;
     const padding = 8;
     const vw = window.innerWidth;
+    const vh = window.innerHeight;
     const left = Math.max(padding, Math.min(rect.left, vw - rect.width - padding));
-    const viewportBottom = window.innerHeight - padding;
-    /** Room below trigger for the floating panel (search + actions + scroll list). */
-    const availableBelow = viewportBottom - top;
     const headerApprox = 108;
-    const listMaxHeight = Math.max(120, Math.min(240, availableBelow - headerApprox));
+    const minListHeight = 120;
+    const minPanelHeight = headerApprox + minListHeight;
 
-    setMenuPos({
-      top,
-      left,
-      width: rect.width,
-      listMaxHeight,
-    });
+    const availableBelow = vh - padding - (rect.bottom + gap);
+    const availableAbove = rect.top - gap - padding;
+
+    /** Prefer opening below; flip above only if below is too cramped but above has more room. */
+    const openAbove = availableBelow < minPanelHeight && availableAbove > availableBelow;
+
+    if (openAbove) {
+      const listMaxHeight = Math.max(minListHeight, Math.min(240, availableAbove - headerApprox));
+      setMenuPos({
+        bottom: vh - rect.top + gap,
+        left,
+        width: rect.width,
+        listMaxHeight,
+      });
+    } else {
+      const listMaxHeight = Math.max(minListHeight, Math.min(240, availableBelow - headerApprox));
+      setMenuPos({
+        top: rect.bottom + gap,
+        left,
+        width: rect.width,
+        listMaxHeight,
+      });
+    }
   }, []);
 
   useLayoutEffect(() => {
@@ -146,7 +161,7 @@ export default function MultiSelect({
         id={`multiselect-portal-${portalId}`}
         style={{
           position: 'fixed',
-          top: menuPos.top,
+          ...(menuPos.top !== undefined ? { top: menuPos.top } : { bottom: menuPos.bottom }),
           left: menuPos.left,
           width: menuPos.width,
           zIndex: 99999,

@@ -24,6 +24,7 @@ export default function SearchInput({
       ) : null}
       <input
         type="search"
+        autoComplete="off"
         className={cn(inputClass, 'py-2 text-sm', icon ? 'pl-9 pr-3' : undefined, className)}
         {...props}
       />
