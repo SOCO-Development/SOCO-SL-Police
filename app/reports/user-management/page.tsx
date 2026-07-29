@@ -143,6 +143,7 @@ export default function UserManagementPage() {
                         id: o.SYSTEM_USER_ID,
                         fullName: o.USER_FULL_NAME,
                         regNo: o.USER_REGI_NO || '',
+                        designation: designationMap.get(o.USER_DESIGNATION_ID || '') || '-',
                         mobileNumber: o.PHONE_MOBILE || '',
                         locationId: o.LOCATION_ID,
                         locationName: locationIdToName.get(o.LOCATION_ID) || `Location #${o.LOCATION_ID}`,
@@ -237,10 +238,11 @@ export default function UserManagementPage() {
     const handleExportExcel = () => {
         if (filteredUsers.length === 0) return;
 
-        const headers = ['Full Name', 'Reg. No', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations'];
+        const headers = ['Full Name', 'Reg. No', 'Designation', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations'];
         const data = filteredUsers.map((u) => ({
             'Full Name': u.fullName || '-',
             'Reg. No': u.regNo || '-',
+            'Designation': u.designation || '-',
             'Mobile No.': u.mobileNumber || '-',
             'SOCO Lab': u.locationName || '-',
             'Privilege Type': u.privileges || '-',
@@ -297,10 +299,11 @@ export default function UserManagementPage() {
 
         autoTable(doc, {
             startY: 35,
-            head: [['Full Name', 'Reg. No', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations']],
+            head: [['Full Name', 'Reg. No', 'Designation', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations']],
             body: filteredUsers.map((u) => [
                 u.fullName || '-',
                 u.regNo || '-',
+                u.designation || '-',
                 u.mobileNumber || '-',
                 u.locationName || '-',
                 u.privileges || '-',

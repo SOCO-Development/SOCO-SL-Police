@@ -21,6 +21,7 @@ export interface ManagedUser {
     id: string;
     fullName: string;
     regNo: string;
+    designation: string;
     mobileNumber: string;
     locationId: string;
     locationName: string;
@@ -52,6 +53,12 @@ export default function UserList({
                 label: 'Reg. No', 
                 sortable: true, 
                 render: (_, row) => <span className="font-mono text-xs text-blue-700 font-semibold">{row.regNo || '-'}</span> 
+            },
+            {
+                key: 'designation',
+                label: 'Designation',
+                sortable: true,
+                render: (_, row) => <span className="text-gray-700">{row.designation || '-'}</span>
             },
             { key: 'mobileNumber', label: 'Mobile No.', sortable: true, className: 'font-mono text-xs text-gray-600' },
             { key: 'locationName', label: 'SOCO Lab', sortable: true },
