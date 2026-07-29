@@ -3,10 +3,21 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --primary: #1e40af;
+  --primary: #1e3a5f;
   --primary-dark: #1e3a8a;
   --secondary: #0d9488;
   --accent: #3b82f6;
+
+  /* Crime Scene form theme (scrollspy card layout) */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --muted: #e8edf4;
+  --muted-foreground: #64748b;
+  --border-subtle: rgba(15, 23, 42, 0.1);
+  --input-background: #f8fafc;
+  --ring: #93c5fd;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
 
   /* Filter & layout (one place to change brand) */
   --filter-bar-from: #f0fdfa;

@@ -3,6 +3,17 @@
 import { AddRowButton, RemoveRowButton, Button, IconButton } from '@/components/ui';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
+  Clock,
+  FileText,
+  MapPin,
+  AlertCircle,
+  Search,
+  Users,
+  Scale,
+  Package,
+  Paperclip,
+} from 'lucide-react';
+import {
   crimeSceneUsesNewVisitFields,
   crimeSceneUsesRevisitFields,
   emptyCrimeSceneCourtDetails,
@@ -80,6 +91,66 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
           : 'bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400'
       } transition-colors ${className}`}
     />
+  );
+}
+
+// ─── Section Card / Scrollspy Helpers ──────────────────────────────────────────
+
+interface SectionAccent {
+  border: string;
+  dot: string;
+}
+
+interface SectionCardProps {
+  id: string;
+  title: string;
+  accent: SectionAccent;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  children: React.ReactNode;
+}
+function SectionCard({ id, title, accent, icon: Icon, children }: SectionCardProps) {
+  return (
+    <section
+      id={id}
+      className={`bg-[var(--card)] rounded-xl border border-[var(--border-subtle)] border-l-4 ${accent.border} shadow-sm scroll-mt-2`}
+    >
+      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-[var(--border-subtle)] flex items-center gap-2.5">
+        <Icon size={15} className={accent.dot} />
+        <h4 className="text-sm font-bold text-[var(--card-foreground)] uppercase tracking-wide">{title}</h4>
+      </div>
+      <div className="px-4 sm:px-5 py-5 space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function SubHead({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="w-0.5 h-5 rounded-full bg-[var(--primary)]/40 inline-block flex-shrink-0" />
+      <span className="text-sm font-semibold text-[var(--card-foreground)]">{label}</span>
+    </div>
+  );
+}
+
+interface RadioOptionProps {
+  name: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}
+function RadioOption({ name, label, checked, onChange }: RadioOptionProps) {
+  return (
+    <label className="inline-flex items-center gap-2 cursor-pointer select-none group min-w-0">
+      <span
+        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+          checked ? 'border-[var(--primary)] bg-[var(--primary)]' : 'border-gray-300 group-hover:border-[var(--primary)]/50'
+        }`}
+      >
+        {checked && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+      </span>
+      <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
+      <span className="text-sm text-gray-700 truncate">{label}</span>
+    </label>
   );
 }
 
@@ -861,7 +932,7 @@ export default function CreateCrimeSceneForm({
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ minHeight: '600px' }}>
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border-subtle)] flex flex-col" style={{ minHeight: '600px' }}>
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="animate-fade-in space-y-5">
 
@@ -875,12 +946,7 @@ export default function CreateCrimeSceneForm({
 
           {/* ── Visit Times Panel ── */}
           {!isEditMode && (
-            <div className="p-4 sm:p-5 rounded-xl border border-teal-200 bg-teal-50/60">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-teal-500 inline-block flex-shrink-0" />
-                Visit Times
-              </h4>
-              
+            <SectionCard id="visit-times" title="Visit Times" accent={{ border: 'border-l-blue-500', dot: 'text-blue-600' }} icon={Clock}>
               {/* Visit ID with Date selector */}
               <div className="mb-5">
                 <FieldGroup label="Visit ID with Date">
@@ -1008,16 +1074,12 @@ export default function CreateCrimeSceneForm({
                   </div>
                 </div>
               )}
-            </div>
+            </SectionCard>
           )}
 
           {/* ── Scene Basics ── */}
           {isEditMode ? (
-            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
-                Visit reference (locked)
-              </h4>
+            <SectionCard id="scene-basics" title="Visit reference (locked)" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600' }} icon={FileText}>
               <p className="text-sm text-gray-800">
                 <span className="font-semibold text-gray-900">CVR: </span>
                 <span className="font-mono">{(form.cvrNo || form.revisitCvrNo || '—').trim()}</span>
@@ -1029,32 +1091,22 @@ export default function CreateCrimeSceneForm({
               <p className="text-xs text-gray-500 mt-2">
                 CVR and visit type cannot be changed here. Use other registry actions for new visits.
               </p>
-            </div>
+            </SectionCard>
           ) : (
-            <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
-                Scene Basics
-              </h4>
+            <SectionCard id="scene-basics" title="Scene Basics" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600' }} icon={FileText}>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FieldGroup label="Visit Type">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                  <div className="flex flex-wrap items-center gap-5 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                     {VISIT_TYPES.map((option) => (
-                      <label
+                      <RadioOption
                         key={option.value}
-                        className="inline-flex items-center gap-2 text-sm text-gray-700"
-                      >
-                        <input
-                          type="radio"
-                          name="crimeSceneVisitType"
-                          checked={form.visitType === option.value}
-                          onChange={() =>
-                            setForm((prev) => ({ ...prev, visitType: option.value as CrimeSceneVisitType }))
-                          }
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        {option.label}
-                      </label>
+                        name="crimeSceneVisitType"
+                        label={option.label}
+                        checked={form.visitType === option.value}
+                        onChange={() =>
+                          setForm((prev) => ({ ...prev, visitType: option.value as CrimeSceneVisitType }))
+                        }
+                      />
                     ))}
                   </div>
                 </FieldGroup>
@@ -1080,15 +1132,11 @@ export default function CreateCrimeSceneForm({
                   )}
                 </FieldGroup>
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* ── Location ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
-              Location
-            </h4>
+          <SectionCard id="location" title="Location" accent={{ border: 'border-l-emerald-500', dot: 'text-emerald-600' }} icon={MapPin}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <FieldGroup label="SOCO Lab">
                 <CustomSelect
@@ -1125,15 +1173,12 @@ export default function CreateCrimeSceneForm({
                 />
               </FieldGroup>
             </div>
-          </div>
+          </SectionCard>
 
           {/* ── Reporting Times ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-            <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/80 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
-                Reported to Police
-              </h4>
+          <SectionCard id="reporting" title="Reporting" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600' }} icon={AlertCircle}>
+            <div className="bg-[var(--muted)]/50 rounded-xl p-4 space-y-3">
+              <SubHead label="Reported to Police" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FieldGroup label="Date">
                   <DatePicker
@@ -1154,11 +1199,8 @@ export default function CreateCrimeSceneForm({
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block flex-shrink-0" />
-                Reported to SOCO Lab
-              </h4>
+            <div className="bg-[var(--muted)]/50 rounded-xl p-4 space-y-3">
+              <SubHead label="Reported to SOCO Lab" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FieldGroup label="Date">
                   <DatePicker
@@ -1178,15 +1220,10 @@ export default function CreateCrimeSceneForm({
                 </FieldGroup>
               </div>
             </div>
-          </div>
+          </SectionCard>
 
           {/* ── Scene Times & Details ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-cyan-200 bg-cyan-50/70 space-y-3">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-cyan-500 inline-block flex-shrink-0" />
-              Scene Times & Details
-            </h4>
-
+          <SectionCard id="scene-details" title="Scene Details" accent={{ border: 'border-l-red-500', dot: 'text-red-600' }} icon={Search}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Scene In Time">
                 <TimePicker
@@ -1242,24 +1279,21 @@ export default function CreateCrimeSceneForm({
             {/* Offence Type */}
             <FieldGroup label="Offence Type">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="grid grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2 md:col-span-1">
+                <div className="flex flex-wrap items-center gap-4 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2 md:col-span-1">
                   {OFFENCE_TYPES.map((option) => (
-                    <label key={option.value} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="radio"
-                        name="crimeSceneOffenceType"
-                        checked={(form.offenceType ?? '') === option.value}
-                        onChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            offenceType: option.value,
-                            offenceTypeOther: option.value === 'Other' ? prev.offenceTypeOther : '',
-                          }))
-                        }
-                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      {option.label}
-                    </label>
+                    <RadioOption
+                      key={option.value}
+                      name="crimeSceneOffenceType"
+                      label={option.label}
+                      checked={(form.offenceType ?? '') === option.value}
+                      onChange={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          offenceType: option.value,
+                          offenceTypeOther: option.value === 'Other' ? prev.offenceTypeOther : '',
+                        }))
+                      }
+                    />
                   ))}
                 </div>
                 {(form.offenceType ?? '') === 'Other' && (
@@ -1313,37 +1347,34 @@ export default function CreateCrimeSceneForm({
             <div className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FieldGroup label="Incident date (exactly known)?">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                  <div className="flex flex-wrap items-center gap-4 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                     {(['Yes', 'No'] as const).map((opt) => (
-                      <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="radio"
-                          name="create-scene-incident-exactly-known"
-                          checked={
+                      <RadioOption
+                        key={opt}
+                        name="create-scene-incident-exactly-known"
+                        label={opt}
+                        checked={
+                          opt === 'Yes'
+                            ? form.incidentDateExactlyKnown === true
+                            : form.incidentDateExactlyKnown === false
+                        }
+                        onChange={() =>
+                          setForm((prev) =>
                             opt === 'Yes'
-                              ? form.incidentDateExactlyKnown === true
-                              : form.incidentDateExactlyKnown === false
-                          }
-                          onChange={() =>
-                            setForm((prev) =>
-                              opt === 'Yes'
-                                ? {
-                                    ...prev,
-                                    incidentDateExactlyKnown: true,
-                                    incidentFrom: { date: '', time: '' },
-                                    incidentTo: { date: '', time: '' },
-                                  }
-                                : {
-                                    ...prev,
-                                    incidentDateExactlyKnown: false,
-                                    incidentKnown: { date: '', time: '' },
-                                  },
-                            )
-                          }
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        {opt}
-                      </label>
+                              ? {
+                                  ...prev,
+                                  incidentDateExactlyKnown: true,
+                                  incidentFrom: { date: '', time: '' },
+                                  incidentTo: { date: '', time: '' },
+                                }
+                              : {
+                                  ...prev,
+                                  incidentDateExactlyKnown: false,
+                                  incidentKnown: { date: '', time: '' },
+                                },
+                          )
+                        }
+                      />
                     ))}
                   </div>
                   {form.incidentDateExactlyKnown === null && (
@@ -1436,14 +1467,12 @@ export default function CreateCrimeSceneForm({
               )}
             </div>
 
-          </div>
+          </SectionCard>
 
-          {/* ── In-Charge Officer ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-emerald-200 bg-emerald-50/70">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-green-500 inline-block flex-shrink-0" />
-                Team Leader
-            </h4>
+          {/* ── Team ── */}
+          <SectionCard id="team" title="Team" accent={{ border: 'border-l-indigo-500', dot: 'text-indigo-600' }} icon={Users}>
+            <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
+            <SubHead label="Team Leader" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Name">
                 <CustomSelect
@@ -1488,41 +1517,32 @@ export default function CreateCrimeSceneForm({
                 />
               </FieldGroup>
             </div>
-          </div>
+            </div>
 
-          {/* ── Support Officers ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/65">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-pink-500 inline-block flex-shrink-0" />
-              Support Officers
-            </h4>
+            {/* ── Support Officers ── */}
+            <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
+            <SubHead label="Support Officers" />
             <div className="space-y-3">
               {form.socoOfficers.map((officer, index) => {
                 return (
-                  <div key={`officer-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-3">
+                  <div key={`officer-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--card)] p-3">
                     <FieldGroup label="Team Role">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
                         <div className="min-w-0">
-                          <div className="grid w-full grid-cols-4 gap-x-2 sm:gap-x-3 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                             {TEAM_ROLE_OPTIONS.map((option) => (
-                              <label
+                              <RadioOption
                                 key={option.value}
-                                className="flex min-w-0 w-full items-center gap-2 text-sm text-gray-700 cursor-pointer"
-                              >
-                                <input
-                                  type="radio"
-                                  name={`team-role-${index}`}
-                                  checked={(officer.teamRole ?? 'Other') === option.value}
-                                  onChange={() =>
-                                    updateOfficer(index, {
-                                      teamRole: option.value,
-                                      teamRoleOther: option.value === 'Other' ? (officer.teamRoleOther ?? '') : '',
-                                    })
-                                  }
-                                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                />
-                                {option.label}
-                              </label>
+                                name={`team-role-${index}`}
+                                label={option.label}
+                                checked={(officer.teamRole ?? 'Other') === option.value}
+                                onChange={() =>
+                                  updateOfficer(index, {
+                                    teamRole: option.value,
+                                    teamRoleOther: option.value === 'Other' ? (officer.teamRoleOther ?? '') : '',
+                                  })
+                                }
+                              />
                             ))}
                           </div>
                         </div>
@@ -1584,17 +1604,14 @@ export default function CreateCrimeSceneForm({
             >
               Add Officer
             </AddRowButton>
-          </div>
+            </div>
 
-          {/* ── Expert Teams ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-orange-200 bg-orange-50/65">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-orange-500 inline-block flex-shrink-0" />
-              Expert Teams
-            </h4>
+            {/* ── Expert Teams ── */}
+            <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
+            <SubHead label="Expert Teams" />
             <div className="space-y-4">
               {form.specialistTeams.map((team, index) => (
-                <div key={`specialist-${index}`} className="border border-gray-200 rounded-lg p-3 space-y-3 bg-white">
+                <div key={`specialist-${index}`} className="border border-[var(--border-subtle)] rounded-lg p-3 space-y-3 bg-[var(--card)]">
                   <div className="flex justify-between items-start">
                     <div className="text-sm font-medium text-gray-700">Expert Team {index + 1}</div>
                     <RemoveRowButton
@@ -1664,14 +1681,11 @@ export default function CreateCrimeSceneForm({
             >
               Add Expert Team
             </AddRowButton>
-          </div>
+            </div>
 
-          {/* ── Investigation Officers ── */}
-          <div id="cvr-section-investigation" className="p-4 sm:p-5 rounded-xl border border-fuchsia-200 bg-fuchsia-50/65 scroll-mt-24">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-fuchsia-500 inline-block flex-shrink-0" />
-              Investigation Officer
-            </h4>
+            {/* ── Investigation Officers ── */}
+            <div id="cvr-section-investigation" className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3 scroll-mt-2">
+            <SubHead label="Investigation Officer" />
             <div className="space-y-3">
               {(form.investigationOfficers ?? []).map((officer, index) => (
                 <div key={`inv-officer-${index}`} className="flex items-end gap-3">
@@ -1737,14 +1751,11 @@ export default function CreateCrimeSceneForm({
             >
               Add Investigation Officer
             </AddRowButton>
-          </div>
+            </div>
 
-          {/* ── Scene Guards ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-yellow-200 bg-yellow-50/70">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-yellow-500 inline-block flex-shrink-0" />
-              Scene Guard
-            </h4>
+            {/* ── Scene Guards ── */}
+            <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
+            <SubHead label="Scene Guard" />
             <div className="space-y-3">
               {(form.sceneGuards ?? []).map((guard, index) => (
                 <div key={`snc-guard-${index}`} className="flex items-end gap-3">
@@ -1800,15 +1811,12 @@ export default function CreateCrimeSceneForm({
             >
               Add Guard
             </AddRowButton>
-          </div>
+            </div>
+          </SectionCard>
 
           {/* ── Court Details ── */}
-          <div id="cvr-section-court" className="p-4 sm:p-5 rounded-xl border border-orange-200 bg-orange-50/70 scroll-mt-24">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-orange-500 inline-block flex-shrink-0" />
-              Court Details
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SectionCard id="court" title="Court" accent={{ border: 'border-l-yellow-600', dot: 'text-yellow-700' }} icon={Scale}>
+            <div id="cvr-section-court" className="scroll-mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Court name">
                 <CustomSelect
                   value={form.courtDetails?.courtName ?? ''}
@@ -1861,46 +1869,39 @@ export default function CreateCrimeSceneForm({
                 />
               </FieldGroup>
             </div>
-          </div>
+          </SectionCard>
 
           {/* ── Production details ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-amber-200 bg-amber-50/70">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-amber-500 inline-block flex-shrink-0" />
-              Production details
-            </h4>
+          <SectionCard id="productions" title="Productions" accent={{ border: 'border-l-teal-500', dot: 'text-teal-600' }} icon={Package}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
                 <FieldGroup label="Production Availability">
                   <div className="flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
                     {(['Yes', 'No'] as const).map((opt) => (
-                      <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="radio"
-                          name="courtProductionPR"
-                          checked={(form.courtDetails?.productionPR ?? '') === opt}
-                          onChange={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              courtDetails: {
-                                ...emptyCrimeSceneCourtDetails(),
-                                ...prev.courtDetails,
-                                productionPR: opt,
-                                ...(opt === 'No'
-                                  ? {
-                                      productionPRTypes: [],
-                                      productionPROtherDetail: '',
-                                      productionSentToCourtRows: [],
-                                      sentToAnalysisRows: [],
-                                    }
-                                  : {}),
-                              },
-                            }))
-                          }
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        {opt}
-                      </label>
+                      <RadioOption
+                        key={opt}
+                        name="courtProductionPR"
+                        label={opt}
+                        checked={(form.courtDetails?.productionPR ?? '') === opt}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            courtDetails: {
+                              ...emptyCrimeSceneCourtDetails(),
+                              ...prev.courtDetails,
+                              productionPR: opt,
+                              ...(opt === 'No'
+                                ? {
+                                    productionPRTypes: [],
+                                    productionPROtherDetail: '',
+                                    productionSentToCourtRows: [],
+                                    sentToAnalysisRows: [],
+                                  }
+                                : {}),
+                            },
+                          }))
+                        }
+                      />
                     ))}
                   </div>
                 </FieldGroup>
@@ -2070,39 +2071,36 @@ export default function CreateCrimeSceneForm({
                         <FieldGroup label="Sent for analysis?">
                           <div className="flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
                             {(['Yes', 'No'] as const).map((opt) => (
-                              <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                                <input
-                                  type="radio"
-                                  name={`production-sent-analysis-${index}`}
-                                  checked={(row.sentToAnalysis ?? '') === opt}
-                                  onChange={() =>
-                                    setForm((prev) => {
-                                      const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
-                                      rows[index] =
-                                        opt === 'Yes'
-                                          ? { ...rows[index], sentToAnalysis: 'Yes' }
-                                          : {
-                                              ...rows[index],
-                                              sentToAnalysis: 'No',
-                                              institution: '',
-                                              institutionOtherDetail: '',
-                                              date: '',
-                                              refNo: '',
-                                            };
-                                      return {
-                                        ...prev,
-                                        courtDetails: {
-                                          ...emptyCrimeSceneCourtDetails(),
-                                          ...prev.courtDetails,
-                                          sentToAnalysisRows: rows,
-                                        },
-                                      };
-                                    })
-                                  }
-                                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                />
-                                {opt}
-                              </label>
+                              <RadioOption
+                                key={opt}
+                                name={`production-sent-analysis-${index}`}
+                                label={opt}
+                                checked={(row.sentToAnalysis ?? '') === opt}
+                                onChange={() =>
+                                  setForm((prev) => {
+                                    const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
+                                    rows[index] =
+                                      opt === 'Yes'
+                                        ? { ...rows[index], sentToAnalysis: 'Yes' }
+                                        : {
+                                            ...rows[index],
+                                            sentToAnalysis: 'No',
+                                            institution: '',
+                                            institutionOtherDetail: '',
+                                            date: '',
+                                            refNo: '',
+                                          };
+                                    return {
+                                      ...prev,
+                                      courtDetails: {
+                                        ...emptyCrimeSceneCourtDetails(),
+                                        ...prev.courtDetails,
+                                        sentToAnalysisRows: rows,
+                                      },
+                                    };
+                                  })
+                                }
+                              />
                             ))}
                           </div>
                         </FieldGroup>
@@ -2286,38 +2284,35 @@ export default function CreateCrimeSceneForm({
                         <FieldGroup label="Sent to court?">
                           <div className="flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
                             {(['Yes', 'No'] as const).map((opt) => (
-                              <label key={opt} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                                <input
-                                  type="radio"
-                                  name={`production-sent-court-${index}`}
-                                  checked={(row.sentToCourt ?? '') === opt}
-                                  onChange={() =>
-                                    setForm((prev) => {
-                                      const rows = [...(prev.courtDetails?.productionSentToCourtRows ?? [])];
-                                      rows[index] =
-                                        opt === 'Yes'
-                                          ? { ...rows[index], sentToCourt: 'Yes' }
-                                          : {
-                                              ...rows[index],
-                                              sentToCourt: 'No',
-                                              date: '',
-                                              courtName: '',
-                                              courtCaseNo: '',
-                                            };
-                                      return {
-                                        ...prev,
-                                        courtDetails: {
-                                          ...emptyCrimeSceneCourtDetails(),
-                                          ...prev.courtDetails,
-                                          productionSentToCourtRows: rows,
-                                        },
-                                      };
-                                    })
-                                  }
-                                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                />
-                                {opt}
-                              </label>
+                              <RadioOption
+                                key={opt}
+                                name={`production-sent-court-${index}`}
+                                label={opt}
+                                checked={(row.sentToCourt ?? '') === opt}
+                                onChange={() =>
+                                  setForm((prev) => {
+                                    const rows = [...(prev.courtDetails?.productionSentToCourtRows ?? [])];
+                                    rows[index] =
+                                      opt === 'Yes'
+                                        ? { ...rows[index], sentToCourt: 'Yes' }
+                                        : {
+                                            ...rows[index],
+                                            sentToCourt: 'No',
+                                            date: '',
+                                            courtName: '',
+                                            courtCaseNo: '',
+                                          };
+                                    return {
+                                      ...prev,
+                                      courtDetails: {
+                                        ...emptyCrimeSceneCourtDetails(),
+                                        ...prev.courtDetails,
+                                        productionSentToCourtRows: rows,
+                                      },
+                                    };
+                                  })
+                                }
+                              />
                             ))}
                           </div>
                         </FieldGroup>
@@ -2393,31 +2388,36 @@ export default function CreateCrimeSceneForm({
                 </div>
               </div>
             </div>
-          </div>
+          </SectionCard>
 
           {/* ── Attachments ── */}
-          <div className="p-4 sm:p-5 rounded-xl border border-red-200 bg-red-50/65">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-red-500 inline-block flex-shrink-0" />
-              Attachments
-            </h4>
-            <div className="space-y-3">
+          <SectionCard id="attachments" title="Attachments" accent={{ border: 'border-l-rose-500', dot: 'text-rose-600' }} icon={Paperclip}>
+            <div className="divide-y divide-[var(--border-subtle)]">
               {(['photoZipName', 'sketchFileName', 'reportFileName'] as const).map((field, i) => (
-                <FieldGroup key={field} label={['Photo ZIP', 'Sketch', 'Report'][i]}>
-                  <input
-                    type="file"
-                    accept={field === 'photoZipName' ? '.zip,application/zip' : undefined}
-                    onChange={(e) => {
-                      const fileName = e.target.files?.[0]?.name ?? '';
-                      setForm((prev) => ({ ...prev, [field]: fileName }));
-                    }}
-                    className="w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 file:px-3 file:py-2 hover:file:bg-blue-100"
-                  />
-                  {form[field] && <p className="text-xs text-gray-500 mt-1">Selected: {form[field]}</p>}
-                </FieldGroup>
+                <div key={field} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <label className="w-28 flex-shrink-0 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    {['Photo / GIF', 'Sketch', 'Report'][i]}
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Paperclip size={13} />
+                    Choose File
+                    <input
+                      type="file"
+                      accept={field === 'photoZipName' ? '.zip,application/zip' : undefined}
+                      onChange={(e) => {
+                        const fileName = e.target.files?.[0]?.name ?? '';
+                        setForm((prev) => ({ ...prev, [field]: fileName }));
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                  <span className="text-xs italic text-gray-500">
+                    {form[field] ? form[field] : 'No file chosen'}
+                  </span>
+                </div>
               ))}
             </div>
-          </div>
+          </SectionCard>
 
           {/* ── Error ── */}
           {error && (
@@ -2430,13 +2430,18 @@ export default function CreateCrimeSceneForm({
       </div>
 
       {/* ── Bottom Action Bar ── */}
-      <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
+      <div className="flex-shrink-0 border-t border-[var(--border-subtle)] bg-[var(--card)]/95 backdrop-blur px-5 py-3 rounded-b-xl flex items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <div />
         <div className="flex items-center gap-2">
           <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
-          <Button variant="success" type="button" onClick={handleSave}>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="inline-flex items-center justify-center gap-2 min-h-[42px] px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1"
+            style={{ backgroundColor: 'var(--primary)' }}
+          >
             {isEditMode && amendmentMode ? 'Submit for approval' : 'Save Crime Scene'}
-          </Button>
+          </button>
         </div>
         <div />
       </div>
