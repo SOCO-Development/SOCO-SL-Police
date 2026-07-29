@@ -37,7 +37,7 @@ export default function LoginPage() {
         saveUserDisplayInfo(info.callingName, info.designationName);
       } catch {}
       setLoginSuccess(true);
-      router.replace("/crime-visit-registry");
+      setTimeout(() => router.replace("/crime-visit-registry"), 750);
     } catch (err) {
       const message = getErrorMessage(err, "Invalid username or password. Please try again.");
       showErrorAlert('Login Failed', message);
