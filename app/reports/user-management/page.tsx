@@ -1,9 +1,10 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { X, Table, FileText } from 'lucide-react';
 import { MagnifyingGlass } from 'phosphor-react';
 import FormInput from '@/components/forms/FormInput';
+import { exportTableToExcelHtml, exportTableToPdf, type ExportColumn } from '@/lib/exportUtils';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
 import UserList, { type ManagedUser, type PrivilegeType, type UserRole } from './UserList';
@@ -355,7 +356,38 @@ export default function UserManagementPage() {
         resetForm();
     };
 
+    const exportColumns: ExportColumn<ManagedUser>[] = [
+        { header: 'Full Name', key: 'fullName' },
+        { header: 'Reg. No', key: 'regNo' },
+        { header: 'Designation', key: 'designation' },
+        { header: 'Mobile No.', key: 'mobileNumber' },
+        { header: 'SOCO Lab', key: 'locationName' },
+        { header: 'Privilege Type', key: 'privileges' },
+        { header: 'Authorization Role', key: 'role' },
+        { header: 'Privilege Locations', key: 'privilegeLocations' },
+    ];
 
+    const handleExportExcel = () => {
+        if (filteredUsers.length === 0) return;
+        exportTableToExcelHtml({
+            filename: `SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.xls`,
+            title: 'SRI LANKA POLICE - SOCO USERS REPORT',
+            subtitle: 'User Summary',
+            columns: exportColumns,
+            data: filteredUsers
+        });
+    };
+
+    const handleExportPDF = () => {
+        if (filteredUsers.length === 0) return;
+        exportTableToPdf({
+            filename: `SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.pdf`,
+            title: 'SRI LANKA POLICE - SOCO USERS REPORT',
+            subtitle: 'User Summary',
+            columns: exportColumns,
+            data: filteredUsers
+        });
+    };
 
     return (
         <>
@@ -428,9 +460,9 @@ export default function UserManagementPage() {
                         </div>
                     </div>
 
-                    {/* Search input — only enabled after a search */}
+                    {/* Search input and Export — only enabled after a search */}
                     {hasSearched && (
-                        <div className="mt-3 flex flex-wrap items-center gap-4">
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
                             <div className="w-full max-w-md">
                                 <SearchInput
                                     value={search}
@@ -442,6 +474,25 @@ export default function UserManagementPage() {
                                     wrapperClassName="w-full"
                                     icon={<MagnifyingGlass size={15} />}
                                 />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleExportExcel}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    <Table className="w-3.5 h-3.5 text-emerald-600" />
+                                    Export Excel (CSV)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleExportPDF}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    <FileText className="w-3.5 h-3.5 text-red-500" />
+                                    Export PDF
+                                </button>
                             </div>
                         </div>
                     )}
