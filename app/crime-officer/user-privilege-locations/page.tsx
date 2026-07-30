@@ -102,19 +102,20 @@ export default function UserPrivilegeLocationsPage() {
     ): PrivilegeLocationRow[] =>
         (groups ?? []).flatMap((group) =>
             (group.privileges ?? []).map((privilege) => {
-                const uniqueLocations = Array.from(
+                const uniqueAssignedLocations = Array.from(
                     new Map((privilege.locations ?? []).map((loc) => [loc.locationId, loc])).values()
                 );
+                const assignedOptions = uniqueAssignedLocations.map((loc) => ({
+                    value: String(loc.locationId),
+                    label: loc.locationName,
+                }));
                 return {
                     privilegeId: privilege.privilegeId,
                     privilegeTypeId: group.privilegeTypeId,
                     privilegeType: group.privilegeType,
                     privilegeRole: privilege.privilegeRole,
-                    locationOptions: uniqueLocations.map((loc) => ({
-                        value: String(loc.locationId),
-                        label: loc.locationName,
-                    })),
-                    locationIds: [],
+                    locationOptions: assignedOptions,
+                    locationIds: assignedOptions.map((o) => o.value),
                 };
             })
         );
@@ -158,11 +159,7 @@ export default function UserPrivilegeLocationsPage() {
                     const freshRow = freshRows.find((r) => r.privilegeId === row.privilegeId);
                     if (!freshRow) return;
                     setPrivilegeRows((prev) =>
-                        prev.map((r) =>
-                            r.privilegeId === row.privilegeId
-                                ? { ...freshRow, locationIds }
-                                : r
-                        )
+                        prev.map((r) => (r.privilegeId === row.privilegeId ? freshRow : r))
                     );
                 })
                 .catch((err) => {
