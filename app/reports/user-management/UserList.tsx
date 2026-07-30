@@ -4,8 +4,6 @@ import { useMemo } from 'react';
 import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
-import { TableIconButton } from '@/components/ui';
-import { Pencil, Trash2 } from 'lucide-react';
 
 export type UserRole = 'Admin' | 'Officer' | string;
 
@@ -36,8 +34,6 @@ export interface UserListProps {
     sortAsc?: boolean;
     onSort?: (key: keyof ManagedUser | string) => void;
     emptyMessage?: string;
-    onEdit?: (user: ManagedUser) => void;
-    onDelete?: (user: ManagedUser) => void;
     onRoleChange?: (userId: string, role: UserRole) => void;
     onPrivilegesChange?: (userId: string, privileges: PrivilegeType[]) => void;
 }
@@ -48,8 +44,6 @@ export default function UserList({
     sortAsc = true,
     onSort,
     emptyMessage = 'No users found.',
-    onEdit,
-    onDelete,
     onRoleChange,
     onPrivilegesChange,
 }: UserListProps) {
@@ -196,32 +190,9 @@ export default function UserList({
                 },
             ];
 
-            if (onEdit || onDelete) {
-                cols.push({
-                    key: 'id',
-                    label: 'Actions',
-                    align: 'right' as const,
-                    className: '!align-top min-w-[90px]',
-                    render: (_, row) => (
-                        <div className="flex items-center justify-end gap-1">
-                            {onEdit && (
-                                <TableIconButton variant="edit" onClick={() => onEdit(row)} title="Edit User">
-                                    <Pencil size={15} />
-                                </TableIconButton>
-                            )}
-                            {onDelete && (
-                                <TableIconButton variant="delete" onClick={() => onDelete(row)} title="Delete User">
-                                    <Trash2 size={15} />
-                                </TableIconButton>
-                            )}
-                        </div>
-                    ),
-                });
-            }
-
             return cols;
         },
-        [onEdit, onDelete, onRoleChange, onPrivilegesChange],
+        [onRoleChange, onPrivilegesChange],
     );
 
     return (

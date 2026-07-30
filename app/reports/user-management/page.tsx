@@ -590,17 +590,6 @@ export default function UserManagementPage() {
                                     Submit Privileges ({pendingChangeCount})
                                 </Button>
                             )}
-                            <Button
-                                type="button"
-                                variant="success"
-                                onClick={() => {
-                                    resetForm();
-                                    setIsModalOpen(true);
-                                }}
-                                className="!min-h-[38px] !py-2 !text-sm px-4"
-                            >
-                                + Add User
-                            </Button>
                         </div>
                     </div>
 
@@ -667,8 +656,6 @@ export default function UserManagementPage() {
                                 sortKey={sortKey}
                                 sortAsc={sortAsc}
                                 onSort={handleSort}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
                                 onRoleChange={handleRoleChange}
                                 onPrivilegesChange={handlePrivilegesChange}
                                 emptyMessage="No users found for the selected SOCO location."
