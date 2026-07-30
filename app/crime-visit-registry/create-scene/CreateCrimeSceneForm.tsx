@@ -67,11 +67,15 @@ interface FieldGroupProps {
   label: string;
   children: React.ReactNode;
   className?: string;
+  required?: boolean;
 }
-function FieldGroup({ label, children, className = '' }: FieldGroupProps) {
+function FieldGroup({ label, children, className = '', required = false }: FieldGroupProps) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
-      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{label}</label>
+      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+        {label}
+        {required && <span className="text-red-600 text-base leading-none align-middle ml-1">*</span>}
+      </label>
       {children}
     </div>
   );
@@ -150,6 +154,28 @@ function RadioOption({ name, label, checked, onChange }: RadioOptionProps) {
       </span>
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
       <span className="text-sm text-gray-700 truncate">{label}</span>
+    </label>
+  );
+}
+
+interface SegmentedOptionProps {
+  name: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}
+/** Toggle-button style radio — used where selection needs to be unmistakable at a glance (e.g. Offence Type, Team Role). */
+function SegmentedOption({ name, label, checked, onChange }: SegmentedOptionProps) {
+  return (
+    <label
+      className={`inline-flex items-center justify-center gap-1.5 min-w-0 px-3 py-1.5 rounded-lg border text-sm font-semibold cursor-pointer select-none transition-colors ${
+        checked
+          ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm'
+          : 'border-gray-300 bg-white text-gray-700 hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/5'
+      }`}
+    >
+      <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
+      <span className="truncate">{label}</span>
     </label>
   );
 }
@@ -246,7 +272,7 @@ function defaultForm(): CrimeSceneFormData {
     placeOfCrimeScene: '',
     crimeSceneType: '',
     crimeSceneTypeOther: '',
-    incidentDateExactlyKnown: true,
+    incidentDateExactlyKnown: null,
     incidentKnown: { date: '', time: '' },
     incidentFrom: { date: '', time: '' },
     incidentTo: { date: '', time: '' },
@@ -623,8 +649,16 @@ export default function CreateCrimeSceneForm({
     [form.incidentFrom, form.incidentTo],
   );
   const incidentMode = form.incidentDateExactlyKnown;
-  const showIncidentExact = incidentMode === true || incidentMode === null;
-  const showIncidentDuration = incidentMode === false || incidentMode === null;
+  const hasLegacyIncidentTimingData = Boolean(
+    form.incidentKnown?.date?.trim() ||
+    form.incidentKnown?.time?.trim() ||
+    form.incidentFrom?.date?.trim() ||
+    form.incidentFrom?.time?.trim() ||
+    form.incidentTo?.date?.trim() ||
+    form.incidentTo?.time?.trim(),
+  );
+  const showIncidentExact = incidentMode === true || (incidentMode == null && hasLegacyIncidentTimingData);
+  const showIncidentDuration = incidentMode === false || (incidentMode == null && hasLegacyIncidentTimingData);
   const getProductionTypeLabel = useCallback(
     (value: string) => productionTypeLabelMap.get(value) ?? getProductionPRDisplayLabel(value),
     [productionTypeLabelMap],
@@ -725,6 +759,10 @@ export default function CreateCrimeSceneForm({
     }
     const incidentErr = validateIncidentTimingSection(form);
     if (incidentErr) return incidentErr;
+
+    if (form.courtDetails?.productionPR !== 'Yes' && form.courtDetails?.productionPR !== 'No') {
+      return 'Please select Production Availability (Yes or No).';
+    }
 
     const analysisRows = form.courtDetails?.sentToAnalysisRows ?? [];
     for (let i = 0; i < analysisRows.length; i++) {
@@ -949,7 +987,7 @@ export default function CreateCrimeSceneForm({
             <SectionCard id="visit-times" title="Visit Times" accent={{ border: 'border-l-blue-500', dot: 'text-blue-600' }} icon={Clock}>
               {/* Visit ID with Date selector */}
               <div className="mb-5">
-                <FieldGroup label="Visit ID with Date">
+                <FieldGroup label="Visit ID with Date" required>
                   <CustomSelect
                     value={form.visitId}
                     onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
@@ -1115,6 +1153,7 @@ export default function CreateCrimeSceneForm({
               <div className="mt-3">
                 <FieldGroup
                   label={crimeSceneUsesNewVisitFields(form.visitType) ? 'CVR Number (Format: SOCO Lab Name/Number/Year e.g. Ampara/01/2026)' : 'CVR Number'}
+                  required
                 >
                   {crimeSceneUsesNewVisitFields(form.visitType) ? (
                     <TextInput
@@ -1138,7 +1177,7 @@ export default function CreateCrimeSceneForm({
           {/* ── Location ── */}
           <SectionCard id="location" title="Location" accent={{ border: 'border-l-emerald-500', dot: 'text-emerald-600' }} icon={MapPin}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <FieldGroup label="SOCO Lab">
+              <FieldGroup label="SOCO Lab" required>
                 <CustomSelect
                   value={form.division}
                   onChange={(value) => setForm((prev) => {
@@ -1154,7 +1193,7 @@ export default function CreateCrimeSceneForm({
                   placeholder="Select SOCO lab"
                 />
               </FieldGroup>
-              <FieldGroup label="Police Station">
+              <FieldGroup label="Police Station" required>
                 <CustomSelect
                   value={form.policeStation}
                   onChange={(value) => setForm((prev) => {
@@ -1180,7 +1219,7 @@ export default function CreateCrimeSceneForm({
             <div className="bg-[var(--muted)]/50 rounded-xl p-4 space-y-3">
               <SubHead label="Reported to Police" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldGroup label="Date">
+                <FieldGroup label="Date" required>
                   <DatePicker
                     value={form.reportedToPoliceStation.date}
                     onChange={(value) =>
@@ -1188,7 +1227,7 @@ export default function CreateCrimeSceneForm({
                     }
                   />
                 </FieldGroup>
-                <FieldGroup label="Time">
+                <FieldGroup label="Time" required>
                   <TimePicker
                     value={form.reportedToPoliceStation.time}
                     onChange={(value) =>
@@ -1202,7 +1241,7 @@ export default function CreateCrimeSceneForm({
             <div className="bg-[var(--muted)]/50 rounded-xl p-4 space-y-3">
               <SubHead label="Reported to SOCO Lab" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldGroup label="Date">
+                <FieldGroup label="Date" required>
                   <DatePicker
                     value={form.reportedToSocoLab.date}
                     onChange={(value) =>
@@ -1210,7 +1249,7 @@ export default function CreateCrimeSceneForm({
                     }
                   />
                 </FieldGroup>
-                <FieldGroup label="Time">
+                <FieldGroup label="Time" required>
                   <TimePicker
                     value={form.reportedToSocoLab.time}
                     onChange={(value) =>
@@ -1225,13 +1264,13 @@ export default function CreateCrimeSceneForm({
           {/* ── Scene Times & Details ── */}
           <SectionCard id="scene-details" title="Scene Details" accent={{ border: 'border-l-red-500', dot: 'text-red-600' }} icon={Search}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FieldGroup label="Scene In Time">
+              <FieldGroup label="Scene In Time" required>
                 <TimePicker
                   value={form.sceneInTime}
                   onChange={(value) => setForm((prev) => ({ ...prev, sceneInTime: value }))}
                 />
               </FieldGroup>
-              <FieldGroup label="Scene Out Time">
+              <FieldGroup label="Scene Out Time" required>
                 <TimePicker
                   value={form.sceneOutTime}
                   onChange={(value) => setForm((prev) => ({ ...prev, sceneOutTime: value }))}
@@ -1279,9 +1318,9 @@ export default function CreateCrimeSceneForm({
             {/* Offence Type */}
             <FieldGroup label="Offence Type">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="flex flex-wrap items-center gap-4 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2 md:col-span-1">
+                <div className="flex flex-wrap items-center gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2 md:col-span-1">
                   {OFFENCE_TYPES.map((option) => (
-                    <RadioOption
+                    <SegmentedOption
                       key={option.value}
                       name="crimeSceneOffenceType"
                       label={option.label}
@@ -1307,7 +1346,7 @@ export default function CreateCrimeSceneForm({
               </div>
             </FieldGroup>
 
-            <FieldGroup label="Place of Crime Scene">
+            <FieldGroup label="Place of Crime Scene" required>
               <TextInput
                 value={form.placeOfCrimeScene}
                 onChange={(e) => setForm((prev) => ({ ...prev, placeOfCrimeScene: e.target.value }))}
@@ -1315,7 +1354,7 @@ export default function CreateCrimeSceneForm({
               />
             </FieldGroup>
 
-            <FieldGroup label="Type of Crime Scene">
+            <FieldGroup label="Type of Crime Scene" required>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
                 <div className="min-w-0">
                   <CustomSelect
@@ -1346,7 +1385,7 @@ export default function CreateCrimeSceneForm({
 
             <div className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FieldGroup label="Incident date (exactly known)?">
+                <FieldGroup label="Incident date (exactly known)?" required>
                   <div className="flex flex-wrap items-center gap-4 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                     {(['Yes', 'No'] as const).map((opt) => (
                       <RadioOption
@@ -1377,9 +1416,9 @@ export default function CreateCrimeSceneForm({
                       />
                     ))}
                   </div>
-                  {form.incidentDateExactlyKnown === null && (
+                  {form.incidentDateExactlyKnown == null && (
                     <p className="text-xs text-gray-500 mt-1.5">
-                      This record uses both exact and duration fields. Choose Yes or No to use one set only.
+                      Select Yes or No to show the relevant date fields.
                     </p>
                   )}
                 </FieldGroup>
@@ -1474,7 +1513,7 @@ export default function CreateCrimeSceneForm({
             <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
             <SubHead label="Team Leader" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FieldGroup label="Name">
+              <FieldGroup label="Name" required>
                 <CustomSelect
                   value={form.inChargeOfficer.name}
                   onChange={(value) => {
@@ -1529,9 +1568,9 @@ export default function CreateCrimeSceneForm({
                     <FieldGroup label="Team Role">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
                         <div className="min-w-0">
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                          <div className="flex flex-wrap gap-2 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                             {TEAM_ROLE_OPTIONS.map((option) => (
-                              <RadioOption
+                              <SegmentedOption
                                 key={option.value}
                                 name={`team-role-${index}`}
                                 label={option.label}
@@ -1875,7 +1914,7 @@ export default function CreateCrimeSceneForm({
           <SectionCard id="productions" title="Productions" accent={{ border: 'border-l-teal-500', dot: 'text-teal-600' }} icon={Package}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-                <FieldGroup label="Production Availability">
+                <FieldGroup label="Production Availability" required>
                   <div className="flex flex-wrap gap-4 min-h-10 items-center rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
                     {(['Yes', 'No'] as const).map((opt) => (
                       <RadioOption
@@ -2434,14 +2473,9 @@ export default function CreateCrimeSceneForm({
         <div />
         <div className="flex items-center gap-2">
           <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="inline-flex items-center justify-center gap-2 min-h-[42px] px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1"
-            style={{ backgroundColor: 'var(--primary)' }}
-          >
+          <Button variant="success" type="button" onClick={handleSave}>
             {isEditMode && amendmentMode ? 'Submit for approval' : 'Save Crime Scene'}
-          </button>
+          </Button>
         </div>
         <div />
       </div>
