@@ -89,11 +89,10 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
     <input
       {...props}
       readOnly={isReadOnly}
-      className={`w-full min-h-10 px-3 py-2 text-sm rounded-lg border ${
-        isReadOnly
+      className={`w-full min-h-10 px-3 py-2 text-sm rounded-lg border ${isReadOnly
           ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
           : 'bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400'
-      } transition-colors ${className}`}
+        } transition-colors ${className}`}
     />
   );
 }
@@ -146,9 +145,8 @@ function RadioOption({ name, label, checked, onChange }: RadioOptionProps) {
   return (
     <label className="inline-flex items-center gap-2 cursor-pointer select-none group min-w-0">
       <span
-        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-          checked ? 'border-[var(--primary)] bg-[var(--primary)]' : 'border-gray-300 group-hover:border-[var(--primary)]/50'
-        }`}
+        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked ? 'border-[var(--primary)] bg-[var(--primary)]' : 'border-gray-300 group-hover:border-[var(--primary)]/50'
+          }`}
       >
         {checked && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
       </span>
@@ -168,11 +166,10 @@ interface SegmentedOptionProps {
 function SegmentedOption({ name, label, checked, onChange }: SegmentedOptionProps) {
   return (
     <label
-      className={`inline-flex items-center justify-center gap-1.5 min-w-0 px-3 py-1.5 rounded-lg border text-sm font-semibold cursor-pointer select-none transition-colors ${
-        checked
+      className={`inline-flex items-center justify-center gap-1.5 min-w-0 px-3 py-1.5 rounded-lg border text-sm font-semibold cursor-pointer select-none transition-colors ${checked
           ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm'
           : 'border-gray-300 bg-white text-gray-700 hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/5'
-      }`}
+        }`}
     >
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
       <span className="truncate">{label}</span>
@@ -365,7 +362,7 @@ export default function CreateCrimeSceneForm({
         console.error("Failed to load offences from API", err);
       });
 
-      crimeService.getAllCourts()
+    crimeService.getAllCourts()
       .then((courts) => {
         const mapped = courts.map((court) => ({
           value: String(court.COURT_NAME ?? court.courtName ?? ''),
@@ -533,7 +530,7 @@ export default function CreateCrimeSceneForm({
       .finally(() => {
         setVisitsLoading(false);
       });
-    
+
     // Load existing CVRs from localStorage (fallback only) — merge in without
     // clobbering any real API-sourced entries (with real INITIATE_CVR_IDs)
     // loaded by the other effect above.
@@ -565,21 +562,21 @@ export default function CreateCrimeSceneForm({
     return () => window.clearTimeout(t);
   }, [focusSection, editSceneId, form.cvrNo]);
 
-  const visitOptions = apiVisits.length > 0 
+  const visitOptions = apiVisits.length > 0
     ? apiVisits
-        .slice()
-        .sort((a, b) => b.VISIT_ID.localeCompare(a.VISIT_ID))
-        .map((visit) => ({
-          value: visit.VISIT_ID,
-          label: `${visit.VISIT_ID} - ${visit.OUT_DATE} ${visit.OUT_TIME}`,
-        }))
+      .slice()
+      .sort((a, b) => b.VISIT_ID.localeCompare(a.VISIT_ID))
+      .map((visit) => ({
+        value: visit.VISIT_ID,
+        label: `${visit.VISIT_ID} - ${visit.OUT_DATE} ${visit.OUT_TIME}`,
+      }))
     : allVisits
-        .slice()
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map((visit) => ({
-          value: visit.id,
-          label: `${visit.referenceNo ?? visit.id} - ${formatDateTimeDDMMYYYY(visit.createdAt)}`,
-        }));
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((visit) => ({
+        value: visit.id,
+        label: `${visit.referenceNo ?? visit.id} - ${formatDateTimeDDMMYYYY(visit.createdAt)}`,
+      }));
 
   // Derive the currently selected visit object
   const selectedVisit = allVisits.find((v) => v.id === form.visitId) ?? null;
@@ -633,7 +630,7 @@ export default function CreateCrimeSceneForm({
       .finally(() => {
         setVisitDetailsLoading(false);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.visitId, apiVisits.length]);
 
   const handleSaveVisitInTime = async () => {
@@ -1445,16 +1442,16 @@ export default function CreateCrimeSceneForm({
                           setForm((prev) =>
                             opt === 'Yes'
                               ? {
-                                  ...prev,
-                                  incidentDateExactlyKnown: true,
-                                  incidentFrom: { date: '', time: '' },
-                                  incidentTo: { date: '', time: '' },
-                                }
+                                ...prev,
+                                incidentDateExactlyKnown: true,
+                                incidentFrom: { date: '', time: '' },
+                                incidentTo: { date: '', time: '' },
+                              }
                               : {
-                                  ...prev,
-                                  incidentDateExactlyKnown: false,
-                                  incidentKnown: { date: '', time: '' },
-                                },
+                                ...prev,
+                                incidentDateExactlyKnown: false,
+                                incidentKnown: { date: '', time: '' },
+                              },
                           )
                         }
                       />
@@ -1555,361 +1552,346 @@ export default function CreateCrimeSceneForm({
           {/* ── Team ── */}
           <SectionCard id="team" title="Team" accent={{ border: 'border-l-indigo-500', dot: 'text-indigo-600' }} icon={Users}>
             <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
-            <SubHead label="Team Leader" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FieldGroup label="Name" required>
-                <CustomSelect
-                  value={form.inChargeOfficer.name}
-                  onChange={(value) => {
-                    const selected = teamLeaders.find(t => t.value === value);
-                    if (selected) {
-                      setForm((prev) => ({
-                        ...prev,
-                        inChargeOfficer: {
-                          ...prev.inChargeOfficer,
-                          name: selected.value,
-                          regNo: selected.regNo,
-                          rank: selected.rank,
-                        }
-                      }));
-                    } else {
-                      setForm((prev) => ({
-                        ...prev,
-                        inChargeOfficer: { ...prev.inChargeOfficer, name: value }
-                      }));
-                    }
-                  }}
-                  options={teamLeaders}
-                  placeholder="Select Team Leader"
-                  searchable
-                  searchPlaceholder="Search Name"
-                />
-              </FieldGroup>
-              <FieldGroup label="Reg. Number">
-                <TextInput
-                  value={form.inChargeOfficer.regNo}
-                  onChange={(e) => setForm((prev) => ({ ...prev, inChargeOfficer: { ...prev.inChargeOfficer, regNo: e.target.value } }))}
-                  placeholder="Reg. No"
-                />
-              </FieldGroup>
-              <FieldGroup label="Rank">
-                <TextInput
-                  value={form.inChargeOfficer.rank}
-                  onChange={(e) => setForm((prev) => ({ ...prev, inChargeOfficer: { ...prev.inChargeOfficer, rank: e.target.value } }))}
-                  placeholder="Rank"
-                />
-              </FieldGroup>
-            </div>
+              <SubHead label="Team Leader" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FieldGroup label="Name" required>
+                  <CustomSelect
+                    value={form.inChargeOfficer.name}
+                    onChange={(value) => {
+                      const selected = teamLeaders.find(t => t.value === value);
+                      if (selected) {
+                        setForm((prev) => ({
+                          ...prev,
+                          inChargeOfficer: {
+                            ...prev.inChargeOfficer,
+                            name: selected.value,
+                            regNo: selected.regNo,
+                            rank: selected.rank,
+                          }
+                        }));
+                      } else {
+                        setForm((prev) => ({
+                          ...prev,
+                          inChargeOfficer: { ...prev.inChargeOfficer, name: value }
+                        }));
+                      }
+                    }}
+                    options={teamLeaders}
+                    placeholder="Select Team Leader"
+                    searchable
+                    searchPlaceholder="Search Name"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Reg. Number">
+                  <TextInput
+                    value={form.inChargeOfficer.regNo}
+                    onChange={(e) => setForm((prev) => ({ ...prev, inChargeOfficer: { ...prev.inChargeOfficer, regNo: e.target.value } }))}
+                    placeholder="Reg. No"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Rank">
+                  <TextInput
+                    value={form.inChargeOfficer.rank}
+                    onChange={(e) => setForm((prev) => ({ ...prev, inChargeOfficer: { ...prev.inChargeOfficer, rank: e.target.value } }))}
+                    placeholder="Rank"
+                  />
+                </FieldGroup>
+              </div>
             </div>
 
             {/* ── Support Officers ── */}
             <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
-            <SubHead label="Support Officers" />
-            <div className="space-y-3">
-              {form.socoOfficers.map((officer, index) => {
-                return (
-                  <div key={`officer-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--card)] p-3">
-                    <FieldGroup label="Team Role">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap gap-2 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
-                            {TEAM_ROLE_OPTIONS.map((option) => (
-                              <SegmentedOption
-                                key={option.value}
-                                name={`team-role-${index}`}
-                                label={option.label}
-                                checked={(officer.teamRole ?? '') === option.value}
-                                onChange={() =>
-                                  updateOfficer(index, {
-                                    teamRole: option.value,
-                                    teamRoleOther: option.value === 'Other' ? (officer.teamRoleOther ?? '') : '',
-                                  })
-                                }
-                              />
-                            ))}
-                            {officer.teamRole && (
-                              <button
-                                type="button"
-                                onClick={() => updateOfficer(index, { teamRole: '', teamRoleOther: '' })}
-                                className="text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-2 py-1.5 transition-colors"
-                              >
-                                Clear
-                              </button>
-                            )}
+              <SubHead label="Support Officers" />
+              <div className="space-y-3">
+                {form.socoOfficers.map((officer, index) => {
+                  return (
+                    <div key={`officer-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--card)] p-3">
+                      <FieldGroup label="Team Role">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap gap-2 min-h-10 items-center rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                              {TEAM_ROLE_OPTIONS.map((option) => (
+                                <SegmentedOption
+                                  key={option.value}
+                                  name={`team-role-${index}`}
+                                  label={option.label}
+                                  checked={(officer.teamRole ?? '') === option.value}
+                                  onChange={() =>
+                                    updateOfficer(index, {
+                                      teamRole: option.value,
+                                      teamRoleOther: option.value === 'Other' ? (officer.teamRoleOther ?? '') : '',
+                                    })
+                                  }
+                                />
+                              ))}
+                              {officer.teamRole && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateOfficer(index, { teamRole: '', teamRoleOther: '' })}
+                                  className="text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-2 py-1.5 transition-colors"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </FieldGroup>
+                      </FieldGroup>
 
-                    {officer.teamRole && (
-                      <div className="flex items-end gap-3">
-                        <FieldGroup label="Name" className="flex-1">
-                          <CustomSelect
-                            value={officer.name}
-                            onChange={(value) => {
-                              const selected = teamLeaders.find(t => t.value === value);
-                              if (selected) {
-                                updateOfficer(index, {
-                                  name: selected.value,
-                                  regNo: selected.regNo,
-                                  rank: selected.rank,
-                                });
-                              } else {
-                                updateOfficer(index, { name: value });
-                              }
-                            }}
-                            options={teamLeaders}
-                            placeholder="Select Support Officers"
-                            searchable
-                            searchPlaceholder="Search Name"
-                          />
-                        </FieldGroup>
-                        <FieldGroup label="Reg. No" className="flex-1">
-                          <TextInput
-                            value={officer.regNo}
-                            onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
-                            placeholder="Reg. No"
-                          />
-                        </FieldGroup>
-                        <FieldGroup label="Rank" className="flex-1">
-                          <TextInput
-                            value={officer.rank}
-                            onChange={(e) => updateOfficer(index, { rank: e.target.value })}
-                            placeholder="Rank"
-                          />
-                        </FieldGroup>
-                        <div className="shrink-0">
-                          <RemoveRowButton
-                            onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
-                            className="h-10 self-end whitespace-nowrap px-3 text-xs"
-                            disabled={form.socoOfficers.length <= 1}
-                            aria-label="Remove officer"
-                          />
+                      {officer.teamRole && (
+                        <div className="flex items-end gap-3">
+                          <FieldGroup label="Name" className="flex-1">
+                            <CustomSelect
+                              value={officer.name}
+                              onChange={(value) => {
+                                const selected = teamLeaders.find(t => t.value === value);
+                                if (selected) {
+                                  updateOfficer(index, {
+                                    name: selected.value,
+                                    regNo: selected.regNo,
+                                    rank: selected.rank,
+                                  });
+                                } else {
+                                  updateOfficer(index, { name: value });
+                                }
+                              }}
+                              options={teamLeaders}
+                              placeholder="Select Support Officers"
+                              searchable
+                              searchPlaceholder="Search Name"
+                            />
+                          </FieldGroup>
+                          <FieldGroup label="Reg. No" className="flex-1">
+                            <TextInput
+                              value={officer.regNo}
+                              onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
+                              placeholder="Reg. No"
+                            />
+                          </FieldGroup>
+                          <FieldGroup label="Rank" className="flex-1">
+                            <TextInput
+                              value={officer.rank}
+                              onChange={(e) => updateOfficer(index, { rank: e.target.value })}
+                              placeholder="Rank"
+                            />
+                          </FieldGroup>
+                          <div className="shrink-0">
+                            <RemoveRowButton
+                              onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
+                              className="h-10 self-end whitespace-nowrap px-3 text-xs"
+                              disabled={form.socoOfficers.length <= 1}
+                              aria-label="Remove officer"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <AddRowButton
-              onClick={() => setForm((prev) => ({ ...prev, socoOfficers: [...prev.socoOfficers, emptyOfficer()] }))}
-              className="mt-3"
-            >
-              Add Officer
-            </AddRowButton>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <AddRowButton
+                onClick={() => setForm((prev) => ({ ...prev, socoOfficers: [...prev.socoOfficers, emptyOfficer()] }))}
+                className="mt-3"
+              >
+                Add Officer
+              </AddRowButton>
             </div>
 
             {/* ── Expert Teams ── */}
             <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
-            <SubHead label="Expert Teams" />
-            <div className="space-y-4">
-              {form.specialistTeams.map((team, index) => (
-                <div key={`specialist-${index}`} className="border border-[var(--border-subtle)] rounded-lg p-3 space-y-3 bg-[var(--card)]">
-                  <div className="flex justify-between items-start">
-                    <div className="text-sm font-medium text-gray-700">Expert Team {index + 1}</div>
-                    <RemoveRowButton
-                      onClick={() => setForm((prev) => ({ ...prev, specialistTeams: prev.specialistTeams.filter((_, i) => i !== index) }))}
-                      className="h-8 px-2.5 text-xs"
-                      disabled={form.specialistTeams.length <= 1}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <FieldGroup label="Expert Role">
-                      <CustomSelect
-                        value={team.role}
-                        onChange={(value) => updateSpecialist(index, { role: value })}
-                        options={SPECIALIST_ROLE_OPTIONS}
-                        placeholder="Select expert role"
+              <SubHead label="Expert Teams" />
+              <div className="space-y-4">
+                {form.specialistTeams.map((team, index) => (
+                  <div key={`specialist-${index}`} className="border border-[var(--border-subtle)] rounded-lg p-3 space-y-3 bg-[var(--card)]">
+                    <div className="flex justify-between items-start">
+                      <div className="text-sm font-medium text-gray-700">Expert Team {index + 1}</div>
+                      <RemoveRowButton
+                        onClick={() => setForm((prev) => ({ ...prev, specialistTeams: prev.specialistTeams.filter((_, i) => i !== index) }))}
+                        className="h-8 px-2.5 text-xs"
+                        disabled={form.specialistTeams.length <= 1}
                       />
-                      {team.role && <ClearLink onClick={() => updateSpecialist(index, { role: '' })} />}
-                    </FieldGroup>
-                    <FieldGroup label="In Time">
-                      <TimePicker
-                        value={team.inTime ?? ''}
-                        onChange={(value) => updateSpecialist(index, { inTime: value })}
-                      />
-                    </FieldGroup>
-                    <FieldGroup label="Out Time">
-                      <TimePicker
-                        value={team.outTime ?? ''}
-                        onChange={(value) => updateSpecialist(index, { outTime: value })}
-                      />
-                    </FieldGroup>
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-200 space-y-2">
-                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-                      Expert Team Members
-                    </h4>
-                    <div className="space-y-2">
-                      {(team.members || []).map((member, mIndex) => (
-                        <div key={`m-${mIndex}`} className="flex items-end gap-3">
-                          <FieldGroup label={mIndex === 0 ? 'Team Leader' : `Member ${mIndex}`} className="mb-0 flex-1">
-                            <TextInput
-                              value={member.name}
-                              onChange={(e) => updateSpecialistMember(index, mIndex, { name: e.target.value })}
-                              placeholder={mIndex === 0 ? 'Team Leader Name' : 'Member Name'}
-                            />
-                          </FieldGroup>
-                          {mIndex > 0 && (
-                            <div className="shrink-0">
-                              <RemoveRowButton onClick={() => removeSpecialistMember(index, mIndex)} />
-                            </div>
-                          )}
-                          {mIndex === 0 && (
-                            <div className="h-10 w-[74px] shrink-0" aria-hidden />
-                          )}
-                        </div>
-                      ))}
                     </div>
-                    <AddRowButton onClick={() => addSpecialistMember(index)} className="mt-2">
-                      Add Member
-                    </AddRowButton>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <FieldGroup label="Expert Role">
+                        <CustomSelect
+                          value={team.role}
+                          onChange={(value) => updateSpecialist(index, { role: value })}
+                          options={SPECIALIST_ROLE_OPTIONS}
+                          placeholder="Select expert role"
+                        />
+                        {team.role && <ClearLink onClick={() => updateSpecialist(index, { role: '' })} />}
+                      </FieldGroup>
+                      <FieldGroup label="In Time">
+                        <TimePicker
+                          value={team.inTime ?? ''}
+                          onChange={(value) => updateSpecialist(index, { inTime: value })}
+                        />
+                      </FieldGroup>
+                      <FieldGroup label="Out Time">
+                        <TimePicker
+                          value={team.outTime ?? ''}
+                          onChange={(value) => updateSpecialist(index, { outTime: value })}
+                        />
+                      </FieldGroup>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-200 space-y-2">
+                      <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
+                        Expert Team Members
+                      </h4>
+                      <div className="space-y-2">
+                        {(team.members || []).map((member, mIndex) => (
+                          <div key={`m-${mIndex}`} className="flex items-end gap-3">
+                            <FieldGroup label={mIndex === 0 ? 'Team Leader' : `Member ${mIndex}`} className="mb-0 flex-1">
+                              <TextInput
+                                value={member.name}
+                                onChange={(e) => updateSpecialistMember(index, mIndex, { name: e.target.value })}
+                                placeholder={mIndex === 0 ? 'Team Leader Name' : 'Member Name'}
+                              />
+                            </FieldGroup>
+                            {mIndex > 0 && (
+                              <div className="shrink-0">
+                                <RemoveRowButton onClick={() => removeSpecialistMember(index, mIndex)} />
+                              </div>
+                            )}
+                            {mIndex === 0 && (
+                              <div className="h-10 w-[74px] shrink-0" aria-hidden />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <AddRowButton onClick={() => addSpecialistMember(index)} className="mt-2">
+                        Add Member
+                      </AddRowButton>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <AddRowButton
-              onClick={() => setForm((prev) => ({ ...prev, specialistTeams: [...prev.specialistTeams, emptySpecialist()] }))}
-              className="mt-3"
-            >
-              Add Expert Team
-            </AddRowButton>
+                ))}
+              </div>
+              <AddRowButton
+                onClick={() => setForm((prev) => ({ ...prev, specialistTeams: [...prev.specialistTeams, emptySpecialist()] }))}
+                className="mt-3"
+              >
+                Add Expert Team
+              </AddRowButton>
             </div>
 
             {/* ── Investigation Officers ── */}
             <div id="cvr-section-investigation" className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3 scroll-mt-2">
-            <SubHead label="Investigation Officer" />
-            <div className="space-y-3">
-              {(form.investigationOfficers ?? []).map((officer, index) => (
-                <div key={`inv-officer-${index}`} className="flex items-start gap-3">
-                  <FieldGroup label="Name" className="mb-0 flex-1">
-                    <CustomSelect
-                      value={officer.name}
-                      onChange={(value) => {
-                        const selected = teamLeaders.find(t => t.value === value);
-                        if (selected) {
-                          updateInvestigationOfficer(index, {
-                            name: selected.value,
-                            regNo: selected.regNo,
-                            rank: selected.rank,
-                          });
-                        } else {
-                          updateInvestigationOfficer(index, { name: value });
+              <SubHead label="Investigation Officer" />
+              <div className="space-y-3">
+                {(form.investigationOfficers ?? []).map((officer, index) => (
+                  <div key={`inv-officer-${index}`} className="flex items-start gap-3">
+                    <FieldGroup label="Name" className="mb-0 flex-1">
+                      <TextInput
+                        value={officer.name}
+                        onChange={(e) => updateInvestigationOfficer(index, { name: e.target.value })}
+                        placeholder="Enter Name"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Reg. Number" className="mb-0 flex-1">
+                      <TextInput
+                        value={officer.regNo ?? ''}
+                        onChange={(e) => updateInvestigationOfficer(index, { regNo: e.target.value })}
+                        placeholder="Reg. No"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Rank" className="mb-0 flex-1">
+                      <TextInput
+                        value={officer.rank ?? ''}
+                        onChange={(e) => updateInvestigationOfficer(index, { rank: e.target.value })}
+                        placeholder="Rank"
+                      />
+                    </FieldGroup>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wide invisible">Remove</span>
+                      <RemoveRowButton
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            investigationOfficers: (prev.investigationOfficers ?? []).filter((_, i) => i !== index),
+                          }))
                         }
-                      }}
-                      options={teamLeaders}
-                      placeholder="Select Investigation Officer"
-                      searchable
-                      searchPlaceholder="Search Name"
-                    />
-                    {officer.name && <ClearLink onClick={() => updateInvestigationOfficer(index, { name: '', regNo: '', rank: '' })} />}
-                  </FieldGroup>
-                  <FieldGroup label="Reg. Number" className="mb-0 flex-1">
-                    <TextInput
-                      value={officer.regNo ?? ''}
-                      onChange={(e) => updateInvestigationOfficer(index, { regNo: e.target.value })}
-                      placeholder="Reg. No"
-                    />
-                  </FieldGroup>
-                  <FieldGroup label="Rank" className="mb-0 flex-1">
-                    <TextInput
-                      value={officer.rank ?? ''}
-                      onChange={(e) => updateInvestigationOfficer(index, { rank: e.target.value })}
-                      placeholder="Rank"
-                    />
-                  </FieldGroup>
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <span className="text-xs font-semibold uppercase tracking-wide invisible">Remove</span>
-                    <RemoveRowButton
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          investigationOfficers: (prev.investigationOfficers ?? []).filter((_, i) => i !== index),
-                        }))
-                      }
-                      className="h-10 px-3 text-xs"
-                      disabled={(form.investigationOfficers ?? []).length <= 1}
-                      aria-label="Remove investigation officer"
-                    />
+                        className="h-10 px-3 text-xs"
+                        disabled={(form.investigationOfficers ?? []).length <= 1}
+                        aria-label="Remove investigation officer"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <AddRowButton
-              onClick={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  investigationOfficers: [...(prev.investigationOfficers ?? []), emptyOfficer()],
-                }))
-              }
-              className="mt-3"
-            >
-              Add Investigation Officer
-            </AddRowButton>
+                ))}
+              </div>
+              <AddRowButton
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    investigationOfficers: [...(prev.investigationOfficers ?? []), emptyOfficer()],
+                  }))
+                }
+                className="mt-3"
+              >
+                Add Investigation Officer
+              </AddRowButton>
             </div>
 
             {/* ── Scene Guards ── */}
             <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
-            <SubHead label="Scene Guard" />
-            <div className="space-y-3">
-              {(form.sceneGuards ?? []).map((guard, index) => (
-                <div key={`snc-guard-${index}`} className="flex items-start gap-3">
-                  <FieldGroup label="Name" className="mb-0 flex-1">
-                    <CustomSelect
-                      value={guard.name}
-                      onChange={(value) => {
-                        const selected = teamLeaders.find(t => t.value === value);
-                        if (selected) {
-                          updateSceneGuard(index, {
-                            name: selected.value,
-                            regNo: selected.regNo,
-                            rank: selected.rank,
-                          });
-                        } else {
-                          updateSceneGuard(index, { name: value });
-                        }
-                      }}
-                      options={teamLeaders}
-                      placeholder="Select Scene Guard"
-                      searchable
-                      searchPlaceholder="Search Name"
-                    />
-                    {guard.name && <ClearLink onClick={() => updateSceneGuard(index, { name: '', regNo: '', rank: '' })} />}
-                  </FieldGroup>
-                  <FieldGroup label="Reg. Number" className="mb-0 flex-1">
-                    <TextInput
-                      value={guard.regNo ?? ''}
-                      onChange={(e) => updateSceneGuard(index, { regNo: e.target.value })}
-                      placeholder="Reg. No"
-                    />
-                  </FieldGroup>
-                  <FieldGroup label="Rank" className="mb-0 flex-1">
-                    <TextInput
-                      value={guard.rank ?? ''}
-                      onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
-                      placeholder="Rank"
-                    />
-                  </FieldGroup>
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <span className="text-xs font-semibold uppercase tracking-wide invisible">Remove</span>
-                    <RemoveRowButton
-                      onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
-                      className="h-10 px-3 text-xs"
-                      disabled={(form.sceneGuards ?? []).length <= 1}
-                      aria-label="Remove guard"
-                    />
+              <SubHead label="Scene Guard" />
+              <div className="space-y-3">
+                {(form.sceneGuards ?? []).map((guard, index) => (
+                  <div key={`snc-guard-${index}`} className="flex items-start gap-3">
+                    <FieldGroup label="Name" className="mb-0 flex-1">
+                      <CustomSelect
+                        value={guard.name}
+                        onChange={(value) => {
+                          const selected = teamLeaders.find(t => t.value === value);
+                          if (selected) {
+                            updateSceneGuard(index, {
+                              name: selected.value,
+                              regNo: selected.regNo,
+                              rank: selected.rank,
+                            });
+                          } else {
+                            updateSceneGuard(index, { name: value });
+                          }
+                        }}
+                        options={teamLeaders}
+                        placeholder="Select Scene Guard"
+                        searchable
+                        searchPlaceholder="Search Name"
+                      />
+                      {guard.name && <ClearLink onClick={() => updateSceneGuard(index, { name: '', regNo: '', rank: '' })} />}
+                    </FieldGroup>
+                    <FieldGroup label="Reg. Number" className="mb-0 flex-1">
+                      <TextInput
+                        value={guard.regNo ?? ''}
+                        onChange={(e) => updateSceneGuard(index, { regNo: e.target.value })}
+                        placeholder="Reg. No"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Rank" className="mb-0 flex-1">
+                      <TextInput
+                        value={guard.rank ?? ''}
+                        onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
+                        placeholder="Rank"
+                      />
+                    </FieldGroup>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wide invisible">Remove</span>
+                      <RemoveRowButton
+                        onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
+                        className="h-10 px-3 text-xs"
+                        disabled={(form.sceneGuards ?? []).length <= 1}
+                        aria-label="Remove guard"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <AddRowButton
-              onClick={() => setForm((prev) => ({ ...prev, sceneGuards: [...(prev.sceneGuards ?? []), emptyOfficer()] }))}
-              className="mt-3"
-            >
-              Add Guard
-            </AddRowButton>
+                ))}
+              </div>
+              <AddRowButton
+                onClick={() => setForm((prev) => ({ ...prev, sceneGuards: [...(prev.sceneGuards ?? []), emptyOfficer()] }))}
+                className="mt-3"
+              >
+                Add Guard
+              </AddRowButton>
             </div>
           </SectionCard>
 
@@ -2001,11 +1983,11 @@ export default function CreateCrimeSceneForm({
                               productionPR: opt,
                               ...(opt === 'No'
                                 ? {
-                                    productionPRTypes: [],
-                                    productionPROtherDetail: '',
-                                    productionSentToCourtRows: [],
-                                    sentToAnalysisRows: [],
-                                  }
+                                  productionPRTypes: [],
+                                  productionPROtherDetail: '',
+                                  productionSentToCourtRows: [],
+                                  sentToAnalysisRows: [],
+                                }
                                 : {}),
                             },
                           }))
@@ -2085,7 +2067,7 @@ export default function CreateCrimeSceneForm({
                 ) : null}
               </div>
               {form.courtDetails?.productionPR === 'Yes' &&
-              (form.courtDetails?.productionPRTypes ?? []).length > 0 ? (
+                (form.courtDetails?.productionPRTypes ?? []).length > 0 ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2.5">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
                     Selected production types
@@ -2096,7 +2078,7 @@ export default function CreateCrimeSceneForm({
                         key={t}
                         className="inline-flex items-center rounded-full border border-amber-200 bg-white px-2.5 py-0.5 text-xs font-medium text-amber-900"
                       >
-                          {getProductionTypeLabel(t)}
+                        {getProductionTypeLabel(t)}
                       </span>
                     ))}
                   </div>
@@ -2192,13 +2174,13 @@ export default function CreateCrimeSceneForm({
                                       opt === 'Yes'
                                         ? { ...rows[index], sentToAnalysis: 'Yes' }
                                         : {
-                                            ...rows[index],
-                                            sentToAnalysis: 'No',
-                                            institution: '',
-                                            institutionOtherDetail: '',
-                                            date: '',
-                                            refNo: '',
-                                          };
+                                          ...rows[index],
+                                          sentToAnalysis: 'No',
+                                          institution: '',
+                                          institutionOtherDetail: '',
+                                          date: '',
+                                          refNo: '',
+                                        };
                                     return {
                                       ...prev,
                                       courtDetails: {
@@ -2405,12 +2387,12 @@ export default function CreateCrimeSceneForm({
                                       opt === 'Yes'
                                         ? { ...rows[index], sentToCourt: 'Yes' }
                                         : {
-                                            ...rows[index],
-                                            sentToCourt: 'No',
-                                            date: '',
-                                            courtName: '',
-                                            courtCaseNo: '',
-                                          };
+                                          ...rows[index],
+                                          sentToCourt: 'No',
+                                          date: '',
+                                          courtName: '',
+                                          courtCaseNo: '',
+                                        };
                                     return {
                                       ...prev,
                                       courtDetails: {
