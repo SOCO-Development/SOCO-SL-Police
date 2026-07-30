@@ -575,6 +575,9 @@ export default function SubmittedCrimeScenesPage() {
   const isDetailMode = Boolean(detailCvrParam || sceneId);
 
   useEffect(() => {
+    // Populate local scenes immediately on mount
+    setScenes(crimeSceneService.getAll());
+
     // 1. Load SOCO labs list
     locationService.getPrivilegedOrAllLocations()
       .then((data) => {
@@ -587,7 +590,7 @@ export default function SubmittedCrimeScenesPage() {
         console.error('Failed to load SOCO labs', err);
       });
 
-    // 2. Default selected lab to user's location (do not fetch scenes automatically)
+    // 2. Default selected lab to user's location
     userService.getCurrentUserInfo()
       .then((userInfo) => {
         if (userInfo && userInfo.locationId) {
@@ -609,14 +612,15 @@ export default function SubmittedCrimeScenesPage() {
       const allBackendVisits = results.flat();
       
       const latestLocal = crimeSceneService.getAll();
-      const mapped = allBackendVisits.map((item) => {
+      const mapped = allBackendVisits.map((item, index) => {
         const localMatch = latestLocal.find(
           (s) =>
             (s.cvrId && String(s.cvrId) === String(item.CVR_ID)) ||
             (s.cvrNo && s.cvrNo === item.CVR_NO)
         );
+        const visitKey = item.VISIT_ID || item.CVR_ID || item.INITIATE_CVR_ID || index;
         return {
-          id: String(item.CVR_ID || item.INITIATE_CVR_ID),
+          id: `backend_visit_${visitKey}_${item.CVR_NO || index}`,
           cvrNo: item.CVR_NO,
           cvrId: Number(item.CVR_ID),
           visitId: item.VISIT_ID,
@@ -643,15 +647,51 @@ export default function SubmittedCrimeScenesPage() {
         };
       });
 
-      const backendIds = new Set(mapped.map(s => String(s.cvrId)));
-      const uniqueLocal = latestLocal.filter(s => !s.cvrId || !backendIds.has(String(s.cvrId)));
-      setScenes([...mapped, ...uniqueLocal]);
+      const backendIds = new Set(
+        mapped
+          .map((s) => String(s.cvrId ?? ''))
+          .filter((id) => id !== '' && id !== 'undefined' && id !== '0' && id !== 'NaN')
+      );
+      const backendCvrNos = new Set(
+        mapped
+          .map((s) => (s.cvrNo ?? '').trim().toLowerCase())
+          .filter(Boolean)
+      );
+
+      const uniqueLocal = latestLocal.filter((s) => {
+        const localCvrId = String(s.cvrId ?? '').trim();
+        const localCvrNo = (s.cvrNo ?? '').trim().toLowerCase();
+
+        if (localCvrId && localCvrId !== '0' && localCvrId !== 'undefined' && backendIds.has(localCvrId)) {
+          return false;
+        }
+        if (localCvrNo && backendCvrNos.has(localCvrNo)) {
+          return false;
+        }
+        return true;
+      });
+
+      const seenSceneIds = new Set<string>();
+      const combinedScenes: CrimeScene[] = [];
+      for (const sc of [...mapped, ...uniqueLocal]) {
+        if (seenSceneIds.has(sc.id)) continue;
+        seenSceneIds.add(sc.id);
+        combinedScenes.push(sc);
+      }
+
+      setScenes(combinedScenes);
     } catch (err) {
       console.error('Failed to fetch crime scenes for selected SOCO labs', err);
     } finally {
       setLoadingLabsData(false);
     }
   }, [selectedLabIds]);
+
+  useEffect(() => {
+    if (selectedLabIds.length > 0) {
+      handleFetchForSelectedLabs();
+    }
+  }, [selectedLabIds, handleFetchForSelectedLabs]);
 
   const allGroups = useMemo(() => groupScenesByCvr(scenes), [scenes]);
 
@@ -750,20 +790,43 @@ export default function SubmittedCrimeScenesPage() {
   };
 
   const relatedScenesForDetail = useMemo(() => {
+    let list: CrimeScene[] = [];
     if (detailCvrParam) {
-      return scenes
-        .filter((s) => (s.cvrNo ?? '').trim() === detailCvrParam)
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    }
-    if (sceneId) {
-      const anchor = scenes.find((s) => s.id === sceneId);
+      const target = detailCvrParam.trim().toLowerCase();
+      list = scenes.filter((s) => (s.cvrNo ?? '').trim().toLowerCase() === target);
+      if (list.length === 0) {
+        const allLocal = crimeSceneService.getAll();
+        list = allLocal.filter((s) => (s.cvrNo ?? '').trim().toLowerCase() === target);
+      }
+    } else if (sceneId) {
+      let anchor = scenes.find((s) => s.id === sceneId);
+      if (!anchor) {
+        anchor = crimeSceneService.getById(sceneId);
+      }
       if (!anchor) return [];
       const key = normalizeCvrKey(anchor);
-      return scenes
-        .filter((s) => normalizeCvrKey(s) === key)
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      list = scenes.filter((s) => normalizeCvrKey(s) === key);
+      if (list.length === 0) {
+        const allLocal = crimeSceneService.getAll();
+        list = allLocal.filter((s) => normalizeCvrKey(s) === key);
+      }
+    } else {
+      return [];
     }
-    return [];
+
+    const unique: CrimeScene[] = [];
+    const seenSignatures = new Set<string>();
+
+    for (const item of list) {
+      const sig = item.visitId
+        ? `v_${item.visitId}_${item.visitType}`
+        : `${item.id}_${item.visitType}_${item.sceneInTime || ''}_${item.sceneOutTime || ''}`;
+      if (seenSignatures.has(sig)) continue;
+      seenSignatures.add(sig);
+      unique.push(item);
+    }
+
+    return unique.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [detailCvrParam, sceneId, scenes]);
 
   const detailTitle = useMemo(() => {
@@ -871,6 +934,17 @@ export default function SubmittedCrimeScenesPage() {
   }
 
   if (isDetailMode) {
+    if (loadingLabsData && relatedScenesForDetail.length === 0) {
+      return (
+        <PageLayout>
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-gray-500">
+            <div className="animate-spin w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full" />
+            <p className="text-sm font-medium">Loading crime scene details…</p>
+          </div>
+        </PageLayout>
+      );
+    }
+
     if (relatedScenesForDetail.length === 0) {
       return (
         <PageLayout>

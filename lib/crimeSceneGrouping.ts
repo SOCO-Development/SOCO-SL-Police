@@ -26,7 +26,20 @@ export function groupScenesByCvr(scenes: CrimeScene[]): CrimeSceneCvrGroup[] {
   const groups: CrimeSceneCvrGroup[] = [];
 
   for (const [groupKey, list] of byKey) {
-    const chron = [...list].sort(
+    // Deduplicate scene objects with identical visit attributes inside the same CVR group
+    const uniqueList: CrimeScene[] = [];
+    const seenSignatures = new Set<string>();
+
+    for (const item of list) {
+      const sig = item.visitId
+        ? `v_${item.visitId}_${item.visitType}`
+        : `${item.id}_${item.visitType}_${item.sceneInTime || ''}_${item.sceneOutTime || ''}`;
+      if (seenSignatures.has(sig)) continue;
+      seenSignatures.add(sig);
+      uniqueList.push(item);
+    }
+
+    const chron = [...uniqueList].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
     const newVisits = chron.filter((s) => s.visitType === 'NEW_VISIT');

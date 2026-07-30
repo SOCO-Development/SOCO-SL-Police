@@ -10,10 +10,7 @@ export default function CreateCrimeScenePage() {
 
   function handleSaved(payload: { cvrNo: string }) {
     showSuccessAlert('Crime Scene Saved', `Crime scene saved successfully — CVR: ${payload.cvrNo}`);
-    const redirectUrl = payload.cvrNo
-      ? `/crime-visit-registry/submitted-crime-scenes?cvrNo=${encodeURIComponent(payload.cvrNo)}`
-      : '/crime-visit-registry/submitted-crime-scenes';
-    setTimeout(() => router.push(redirectUrl), 2000);
+    setTimeout(() => router.push('/crime-visit-registry/submitted-crime-scenes'), 2000);
   }
 
   function handleCancel() {
