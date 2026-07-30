@@ -18,6 +18,10 @@ import { formatAnalysisInstitutionDisplay } from '@/lib/analysisInstitutions';
 import { COURT_REWARD_CATEGORY_LABELS, getCourtRewardTypesForCategory } from '@/lib/courtRewardUtils';
 import { registryWorkflowDisplayEntries } from '@/lib/registryWorkflowDisplay';
 import LinkedCrimeVisitPanel from './LinkedCrimeVisitPanel';
+import {
+  FileText, MapPin, AlertCircle, Search, Users, UserSearch,
+  FlaskConical, Gavel, Award, Scale, Package,
+} from 'lucide-react';
 
 interface CrimeSceneDetailViewProps {
   scene: CrimeScene;
@@ -56,13 +60,29 @@ function hasAnalysisReportData(r: AnalysisReportReceived | undefined): boolean {
   );
 }
 
-/** Coloured stripe in section titles — matches Create Crime Scene form. */
-function SectionTitle({ stripeClass, children }: { stripeClass: string; children: React.ReactNode }) {
+interface SectionAccent {
+  border: string;
+  dot: string;
+}
+interface DetailSectionProps {
+  title: string;
+  accent: SectionAccent;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  className?: string;
+  children: React.ReactNode;
+}
+/** Read-only section card — mirrors SectionCard from Create Crime Scene / Initiate Visit forms. */
+function DetailSection({ title, accent, icon: Icon, className = '', children }: DetailSectionProps) {
   return (
-    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-      <span className={`w-1.5 h-4 rounded-full inline-block flex-shrink-0 ${stripeClass}`} aria-hidden />
-      {children}
-    </h4>
+    <section
+      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${accent.border} shadow-sm ${className}`}
+    >
+      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-gray-200 flex items-center gap-2.5">
+        <Icon size={15} className={accent.dot} />
+        <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{title}</h4>
+      </div>
+      <div className="px-4 sm:px-5 py-5 space-y-4">{children}</div>
+    </section>
   );
 }
 
@@ -97,8 +117,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
 
   return (
     <div className="space-y-5">
-      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <SectionTitle stripeClass="bg-violet-500">Scene Basics</SectionTitle>
+      <DetailSection title="Scene Basics" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600' }} icon={FileText}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <DisplayField
             label="Visit Type"
@@ -131,37 +150,33 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             </div>
           </div>
         ) : null}
-      </div>
+      </DetailSection>
 
       <LinkedCrimeVisitPanel visitId={scene.visitId} />
 
-      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <SectionTitle stripeClass="bg-indigo-500">Location</SectionTitle>
+      <DetailSection title="Location" accent={{ border: 'border-l-emerald-500', dot: 'text-emerald-600' }} icon={MapPin}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <DisplayField label="Police Station" value={readValue(scene.policeStation)} />
           <DisplayField label="Division" value={readValue(scene.division)} />
         </div>
-      </div>
+      </DetailSection>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-3">
-          <SectionTitle stripeClass="bg-slate-500">Reported to Police</SectionTitle>
+        <DetailSection title="Reported to Police" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600' }} icon={AlertCircle}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <DisplayField label="Date" value={readValue(scene.reportedToPoliceStation?.date)} />
             <DisplayField label="Time" value={readValue(scene.reportedToPoliceStation?.time)} />
           </div>
-        </div>
-        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-3">
-          <SectionTitle stripeClass="bg-blue-500">Reported to SOCO Lab</SectionTitle>
+        </DetailSection>
+        <DetailSection title="Reported to SOCO Lab" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600' }} icon={AlertCircle}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <DisplayField label="Date" value={readValue(scene.reportedToSocoLab?.date)} />
             <DisplayField label="Time" value={readValue(scene.reportedToSocoLab?.time)} />
           </div>
-        </div>
+        </DetailSection>
       </div>
 
-      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <SectionTitle stripeClass="bg-cyan-500">Scene Times & Details</SectionTitle>
+      <DetailSection title="Scene Times & Details" accent={{ border: 'border-l-red-500', dot: 'text-red-600' }} icon={Search}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <DisplayField label="Scene In Time" value={readValue(scene.sceneInTime)} />
           <DisplayField label="Scene Out Time" value={readValue(scene.sceneOutTime)} />
@@ -274,19 +289,17 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             <div className="mt-1 text-sm text-gray-500">—</div>
           )}
         </div>
-      </div>
+      </DetailSection>
 
-      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <SectionTitle stripeClass="bg-green-500">Team Leader</SectionTitle>
+      <DetailSection title="Team Leader" accent={{ border: 'border-l-sky-500', dot: 'text-sky-600' }} icon={Users}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <DisplayField label="Team Leader Name" value={readValue(scene.inChargeOfficer?.name)} />
           <DisplayField label="Team Leader Reg. Number" value={readValue(scene.inChargeOfficer?.regNo)} />
           <DisplayField label="Team Leader Rank" value={readValue(scene.inChargeOfficer?.rank)} />
         </div>
-      </div>
+      </DetailSection>
 
-      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <SectionTitle stripeClass="bg-fuchsia-500">Investigation Officer</SectionTitle>
+      <DetailSection title="Investigation Officer" accent={{ border: 'border-l-fuchsia-500', dot: 'text-fuchsia-600' }} icon={UserSearch}>
         <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Investigation Officers
@@ -308,11 +321,10 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             <div className="mt-1 text-sm text-gray-500">—</div>
           )}
         </div>
-      </div>
+      </DetailSection>
 
       {hasAnalysisReportData(scene.analysisReportReceived) ? (
-        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-          <SectionTitle stripeClass="bg-cyan-600">Analysis reports received</SectionTitle>
+        <DetailSection title="Analysis reports received" accent={{ border: 'border-l-cyan-500', dot: 'text-cyan-600' }} icon={FlaskConical}>
           <p className="text-xs text-gray-500 mb-3">
             Updated via <span className="font-medium text-gray-700">Production Analysis</span>.
           </p>
@@ -355,12 +367,11 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
               </>
             )}
           </div>
-        </div>
+        </DetailSection>
       ) : null}
 
       {courtVisitUpdateHasDisplayableData(scene.courtVisitUpdate) ? (
-        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-4">
-          <SectionTitle stripeClass="bg-violet-600">Court visit (SOC officers)</SectionTitle>
+        <DetailSection title="Court visit (SOC officers)" accent={{ border: 'border-l-violet-600', dot: 'text-violet-700' }} icon={Gavel}>
           <p className="text-xs text-gray-500">
             Updated via <span className="font-medium text-gray-700">Update court details</span> → Court visit.
           </p>
@@ -416,12 +427,11 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
               </div>
             ))}
           </div>
-        </div>
+        </DetailSection>
       ) : null}
 
       {courtRewardsUpdateHasDisplayableData(scene.courtRewardsUpdate) ? (
-        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70 space-y-4">
-          <SectionTitle stripeClass="bg-teal-600">Court rewards</SectionTitle>
+        <DetailSection title="Court rewards" accent={{ border: 'border-l-teal-600', dot: 'text-teal-700' }} icon={Award}>
           <p className="text-xs text-gray-500">
             Updated via <span className="font-medium text-gray-700">Update court details</span> → Rewards.
           </p>
@@ -458,22 +468,20 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
               })}
             </div>
           ) : null}
-        </div>
+        </DetailSection>
       ) : null}
 
       {hasCourtDetails ? (
-        <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-          <SectionTitle stripeClass="bg-orange-500">Court details</SectionTitle>
+        <DetailSection title="Court details" accent={{ border: 'border-l-orange-500', dot: 'text-orange-600' }} icon={Scale}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <DisplayField label="Court name" value={readValue(scene.courtDetails?.courtName)} />
             <DisplayField label="Court case number" value={readValue(scene.courtDetails?.courtCaseNo)} />
             <DisplayField label="B number" value={readValue(scene.courtDetails?.bNumber)} />
           </div>
-        </div>
+        </DetailSection>
       ) : null}
 
-      <div className="p-5 rounded-xl border border-gray-200 bg-gray-50/70">
-        <SectionTitle stripeClass="bg-amber-500">Production details</SectionTitle>
+      <DetailSection title="Production details" accent={{ border: 'border-l-yellow-500', dot: 'text-yellow-600' }} icon={Package}>
         <div className="mb-3">
           <DisplayField label="Production Availability" value={readValue(scene.courtDetails?.productionPR)} />
         </div>
@@ -588,7 +596,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
             </div>
           </div>
         ) : null}
-      </div>
+      </DetailSection>
     </div>
   );
 }
