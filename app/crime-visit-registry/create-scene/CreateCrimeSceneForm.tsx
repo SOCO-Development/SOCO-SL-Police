@@ -180,6 +180,19 @@ function SegmentedOption({ name, label, checked, onChange }: SegmentedOptionProp
   );
 }
 
+/** Small text link to reset a dropdown/select value back to empty — shown only once a value is set. */
+function ClearLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="self-start mt-1 text-xs font-medium text-gray-500 hover:text-red-600 transition-colors"
+    >
+      Clear
+    </button>
+  );
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const FALLBACK_STATIONS: { value: string; label: string; division: string; id: string }[] = [
@@ -247,7 +260,7 @@ const CRIME_SCENE_TYPE_OPTIONS = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function emptyOfficer(): CrimeSceneOfficer {
-  return { name: '', regNo: '', rank: '', teamRole: 'Other', teamRoleOther: '', socoRole: 'Other' };
+  return { name: '', regNo: '', rank: '', teamRole: '', teamRoleOther: '', socoRole: 'Other' };
 }
 
 function emptySpecialist(): CrimeSceneSpecialistTeam {
@@ -323,6 +336,7 @@ export default function CreateCrimeSceneForm({
   const [apiVisits, setApiVisits] = useState<ApiVisit[]>([]);
   const [allVisits, setAllVisits] = useState<CrimeVisit[]>([]);
   const [existingCvrs, setExistingCvrs] = useState<{ cvrNo: string; initiateCvrId: string }[]>([]);
+  const [selectedInitiateCvrId, setSelectedInitiateCvrId] = useState<string>('');
   const [error, setError] = useState('');
   const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
   const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
@@ -520,11 +534,19 @@ export default function CreateCrimeSceneForm({
         setVisitsLoading(false);
       });
     
-    // Load existing CVRs
+    // Load existing CVRs from localStorage (fallback only) — merge in without
+    // clobbering any real API-sourced entries (with real INITIATE_CVR_IDs)
+    // loaded by the other effect above.
     const cvrs = Array.from(
       new Set(crimeSceneService.getAll().map((scene) => scene.cvrNo))
     ).filter(Boolean);
-    setExistingCvrs(cvrs.map(c => ({ cvrNo: c, initiateCvrId: '0' })));
+    setExistingCvrs((prev) => {
+      const known = new Set(prev.map((c) => c.cvrNo));
+      const additions = cvrs
+        .filter((cvrNo) => !known.has(cvrNo))
+        .map((cvrNo) => ({ cvrNo, initiateCvrId: '0' }));
+      return additions.length ? [...prev, ...additions] : prev;
+    });
   }, []);
 
   useEffect(() => {
@@ -638,7 +660,14 @@ export default function CreateCrimeSceneForm({
     }
   };
 
-  const cvrOptions = existingCvrs.map((cvr) => ({ value: cvr.cvrNo, label: cvr.cvrNo }));
+  const cvrNoOccurrences = existingCvrs.reduce<Record<string, number>>((acc, cvr) => {
+    acc[cvr.cvrNo] = (acc[cvr.cvrNo] ?? 0) + 1;
+    return acc;
+  }, {});
+  const cvrOptions = existingCvrs.map((cvr) => ({
+    value: cvr.initiateCvrId,
+    label: cvrNoOccurrences[cvr.cvrNo] > 1 ? `${cvr.cvrNo} (#${cvr.initiateCvrId})` : cvr.cvrNo,
+  }));
   const sceneDuration = formatDuration(form.sceneInTime, form.sceneOutTime);
   const incidentDuration = useMemo(
     () =>
@@ -736,7 +765,7 @@ export default function CreateCrimeSceneForm({
   // ── Validation & Save ─────────────────────────────────────────────────────
 
   const validate = (): string => {
-    if ((crimeSceneUsesNewVisitFields(form.visitType) || crimeSceneUsesRevisitFields(form.visitType)) && !form.visitId)
+    if (crimeSceneUsesNewVisitFields(form.visitType) && !form.visitId)
       return 'Please select a Visit ID.';
     if (crimeSceneUsesNewVisitFields(form.visitType) && !form.cvrNo?.trim())
       return 'Please enter a CVR number for the new visit.';
@@ -752,6 +781,8 @@ export default function CreateCrimeSceneForm({
       return 'Please add date and time reported to SOCO lab.';
     if (!form.sceneInTime || !form.sceneOutTime) return 'Please provide scene in and out times.';
     if (!form.division) return 'Please select division.';
+    const offenceArrayForValidation = Array.isArray(form.offence) ? form.offence : form.offence ? [form.offence] : [];
+    if (offenceArrayForValidation.length === 0) return 'Please select at least one offence.';
     if (!form.placeOfCrimeScene.trim()) return 'Please enter place of crime scene.';
     if (!form.crimeSceneType?.trim()) return 'Please select type of crime scene.';
     if (form.crimeSceneType === 'Others' && !form.crimeSceneTypeOther?.trim()) {
@@ -869,8 +900,8 @@ export default function CreateCrimeSceneForm({
     const isNewVisit = form.visitType === 'NEW_VISIT';
     const apiPayload: CreateCvrRequest = {
       cvrNo: isNewVisit ? (form.cvrNo?.trim() || '') : (form.revisitCvrNo?.trim() || ''),
-      initiateCvrId: isNewVisit ? 0 : Number(existingCvrs.find(c => c.cvrNo === form.revisitCvrNo)?.initiateCvrId) || 0,
-      visitId: isNewVisit ? (Number(form.visitId) || 0) : 0,
+      initiateCvrId: isNewVisit ? 0 : Number(selectedInitiateCvrId) || 0,
+      visitId: Number(form.visitId) || 0,
       visitTypeId: isNewVisit ? 1 : 2,
       locationId: Number(userLocationId) || 0,
       policeStationId: Number(policeStationId) || 0,
@@ -987,7 +1018,7 @@ export default function CreateCrimeSceneForm({
             <SectionCard id="visit-times" title="Visit Times" accent={{ border: 'border-l-blue-500', dot: 'text-blue-600' }} icon={Clock}>
               {/* Visit ID with Date selector */}
               <div className="mb-5">
-                <FieldGroup label="Visit ID with Date" required>
+                <FieldGroup label="Visit ID with Date" required={crimeSceneUsesNewVisitFields(form.visitType)}>
                   <CustomSelect
                     value={form.visitId}
                     onChange={(value) => setForm((prev) => ({ ...prev, visitId: value }))}
@@ -1163,8 +1194,12 @@ export default function CreateCrimeSceneForm({
                     />
                   ) : (
                     <CustomSelect
-                      value={form.revisitCvrNo}
-                      onChange={(value) => setForm((prev) => ({ ...prev, revisitCvrNo: value }))}
+                      value={selectedInitiateCvrId}
+                      onChange={(value) => {
+                        setSelectedInitiateCvrId(value);
+                        const selected = existingCvrs.find((c) => c.initiateCvrId === value);
+                        setForm((prev) => ({ ...prev, revisitCvrNo: selected?.cvrNo ?? '' }));
+                      }}
                       options={cvrOptions}
                       placeholder={cvrOptions.length ? 'Select existing CVR' : 'No CVR numbers found'}
                     />
@@ -1284,7 +1319,7 @@ export default function CreateCrimeSceneForm({
             </div>
 
             {/* Offences */}
-            <FieldGroup label="Offences">
+            <FieldGroup label="Offences" required>
               <MultiSelect
                 value={offenceArray}
                 onChange={(val) => setForm((f) => ({ ...f, offence: val }))}
@@ -1334,6 +1369,15 @@ export default function CreateCrimeSceneForm({
                       }
                     />
                   ))}
+                  {(form.offenceType ?? '') && (
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, offenceType: '', offenceTypeOther: '' }))}
+                      className="text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-2 py-1.5 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
                 {(form.offenceType ?? '') === 'Other' && (
                   <TextInput
@@ -1574,7 +1618,7 @@ export default function CreateCrimeSceneForm({
                                 key={option.value}
                                 name={`team-role-${index}`}
                                 label={option.label}
-                                checked={(officer.teamRole ?? 'Other') === option.value}
+                                checked={(officer.teamRole ?? '') === option.value}
                                 onChange={() =>
                                   updateOfficer(index, {
                                     teamRole: option.value,
@@ -1583,56 +1627,67 @@ export default function CreateCrimeSceneForm({
                                 }
                               />
                             ))}
+                            {officer.teamRole && (
+                              <button
+                                type="button"
+                                onClick={() => updateOfficer(index, { teamRole: '', teamRoleOther: '' })}
+                                className="text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-2 py-1.5 transition-colors"
+                              >
+                                Clear
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
                     </FieldGroup>
 
-                    <div className="flex items-end gap-3">
-                      <FieldGroup label="Name" className="flex-1">
-                        <CustomSelect
-                          value={officer.name}
-                          onChange={(value) => {
-                            const selected = teamLeaders.find(t => t.value === value);
-                            if (selected) {
-                              updateOfficer(index, {
-                                name: selected.value,
-                                regNo: selected.regNo,
-                                rank: selected.rank,
-                              });
-                            } else {
-                              updateOfficer(index, { name: value });
-                            }
-                          }}
-                          options={teamLeaders}
-                          placeholder="Select Support Officers"
-                          searchable
-                          searchPlaceholder="Search Name"
-                        />
-                      </FieldGroup>
-                      <FieldGroup label="Reg. No" className="flex-1">
-                        <TextInput
-                          value={officer.regNo}
-                          onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
-                          placeholder="Reg. No"
-                        />
-                      </FieldGroup>
-                      <FieldGroup label="Rank" className="flex-1">
-                        <TextInput
-                          value={officer.rank}
-                          onChange={(e) => updateOfficer(index, { rank: e.target.value })}
-                          placeholder="Rank"
-                        />
-                      </FieldGroup>
-                      <div className="shrink-0">
-                        <RemoveRowButton
-                          onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
-                          className="h-10 self-end whitespace-nowrap px-3 text-xs"
-                          disabled={form.socoOfficers.length <= 1}
-                          aria-label="Remove officer"
-                        />
+                    {officer.teamRole && (
+                      <div className="flex items-end gap-3">
+                        <FieldGroup label="Name" className="flex-1">
+                          <CustomSelect
+                            value={officer.name}
+                            onChange={(value) => {
+                              const selected = teamLeaders.find(t => t.value === value);
+                              if (selected) {
+                                updateOfficer(index, {
+                                  name: selected.value,
+                                  regNo: selected.regNo,
+                                  rank: selected.rank,
+                                });
+                              } else {
+                                updateOfficer(index, { name: value });
+                              }
+                            }}
+                            options={teamLeaders}
+                            placeholder="Select Support Officers"
+                            searchable
+                            searchPlaceholder="Search Name"
+                          />
+                        </FieldGroup>
+                        <FieldGroup label="Reg. No" className="flex-1">
+                          <TextInput
+                            value={officer.regNo}
+                            onChange={(e) => updateOfficer(index, { regNo: e.target.value })}
+                            placeholder="Reg. No"
+                          />
+                        </FieldGroup>
+                        <FieldGroup label="Rank" className="flex-1">
+                          <TextInput
+                            value={officer.rank}
+                            onChange={(e) => updateOfficer(index, { rank: e.target.value })}
+                            placeholder="Rank"
+                          />
+                        </FieldGroup>
+                        <div className="shrink-0">
+                          <RemoveRowButton
+                            onClick={() => setForm((prev) => ({ ...prev, socoOfficers: prev.socoOfficers.filter((_, i) => i !== index) }))}
+                            className="h-10 self-end whitespace-nowrap px-3 text-xs"
+                            disabled={form.socoOfficers.length <= 1}
+                            aria-label="Remove officer"
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -1667,6 +1722,7 @@ export default function CreateCrimeSceneForm({
                         options={SPECIALIST_ROLE_OPTIONS}
                         placeholder="Select expert role"
                       />
+                      {team.role && <ClearLink onClick={() => updateSpecialist(index, { role: '' })} />}
                     </FieldGroup>
                     <FieldGroup label="In Time">
                       <TimePicker
@@ -1727,7 +1783,7 @@ export default function CreateCrimeSceneForm({
             <SubHead label="Investigation Officer" />
             <div className="space-y-3">
               {(form.investigationOfficers ?? []).map((officer, index) => (
-                <div key={`inv-officer-${index}`} className="flex items-end gap-3">
+                <div key={`inv-officer-${index}`} className="flex items-start gap-3">
                   <FieldGroup label="Name" className="mb-0 flex-1">
                     <CustomSelect
                       value={officer.name}
@@ -1748,6 +1804,7 @@ export default function CreateCrimeSceneForm({
                       searchable
                       searchPlaceholder="Search Name"
                     />
+                    {officer.name && <ClearLink onClick={() => updateInvestigationOfficer(index, { name: '', regNo: '', rank: '' })} />}
                   </FieldGroup>
                   <FieldGroup label="Reg. Number" className="mb-0 flex-1">
                     <TextInput
@@ -1763,7 +1820,8 @@ export default function CreateCrimeSceneForm({
                       placeholder="Rank"
                     />
                   </FieldGroup>
-                  <div className="shrink-0">
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide invisible">Remove</span>
                     <RemoveRowButton
                       onClick={() =>
                         setForm((prev) => ({
@@ -1797,7 +1855,7 @@ export default function CreateCrimeSceneForm({
             <SubHead label="Scene Guard" />
             <div className="space-y-3">
               {(form.sceneGuards ?? []).map((guard, index) => (
-                <div key={`snc-guard-${index}`} className="flex items-end gap-3">
+                <div key={`snc-guard-${index}`} className="flex items-start gap-3">
                   <FieldGroup label="Name" className="mb-0 flex-1">
                     <CustomSelect
                       value={guard.name}
@@ -1818,6 +1876,7 @@ export default function CreateCrimeSceneForm({
                       searchable
                       searchPlaceholder="Search Name"
                     />
+                    {guard.name && <ClearLink onClick={() => updateSceneGuard(index, { name: '', regNo: '', rank: '' })} />}
                   </FieldGroup>
                   <FieldGroup label="Reg. Number" className="mb-0 flex-1">
                     <TextInput
@@ -1833,7 +1892,8 @@ export default function CreateCrimeSceneForm({
                       placeholder="Rank"
                     />
                   </FieldGroup>
-                  <div className="shrink-0">
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide invisible">Remove</span>
                     <RemoveRowButton
                       onClick={() => setForm((prev) => ({ ...prev, sceneGuards: (prev.sceneGuards ?? []).filter((_, i) => i !== index) }))}
                       className="h-10 px-3 text-xs"
@@ -1874,6 +1934,16 @@ export default function CreateCrimeSceneForm({
                   searchable
                   searchPlaceholder="Search court name"
                 />
+                {form.courtDetails?.courtName && (
+                  <ClearLink
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        courtDetails: { ...emptyCrimeSceneCourtDetails(), ...prev.courtDetails, courtName: '' },
+                      }))
+                    }
+                  />
+                )}
               </FieldGroup>
               <FieldGroup label="Court case number">
                 <TextInput
