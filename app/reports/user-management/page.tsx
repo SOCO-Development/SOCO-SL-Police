@@ -2,7 +2,10 @@
 
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
 import { X } from 'lucide-react';
-import { MagnifyingGlass } from 'phosphor-react';
+import { MagnifyingGlass, FileXls, FilePdf } from 'phosphor-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import FormInput from '@/components/forms/FormInput';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
@@ -109,15 +112,60 @@ export default function UserManagementPage() {
                 const raw = await officerService.getAllOfficers({ locationIds, designationIds });
                 if (signal?.cancelled) return;
 
-                const rows: ManagedUser[] = raw.map((o) => ({
-                    id: o.SYSTEM_USER_ID,
-                    fullName: o.USER_FULL_NAME,
-                    mobileNumber: o.PHONE_MOBILE || '',
-                    locationId: o.LOCATION_ID,
-                    locationName: locationIdToName.get(o.LOCATION_ID) || `Location #${o.LOCATION_ID}`,
-                    role: 'Officer' as UserRole,
-                    privileges: ['VIEW_ACCESS'] as PrivilegeType[],
-                }));
+                const rows: ManagedUser[] = await Promise.all(
+                    raw.map(async (o) => {
+                        let privTypes: string[] = [];
+                        let authRoles: string[] = [];
+                        try {
+                            const privs = await officerService.getUserPrivileges(Number(o.SYSTEM_USER_ID));
+                            const activeTypes = new Set<string>();
+                            const activeRoles = new Set<string>();
+                            (privs || []).forEach((g) => {
+                                let hasActive = false;
+                                g.configurations?.forEach((c) => {
+                                    if (c.isActive) {
+                                        activeRoles.add(c.privilegeRole);
+                                        hasActive = true;
+                                    }
+                                });
+                                if (hasActive) {
+                                    activeTypes.add(g.privilegeType);
+                                }
+                            });
+                            if (activeTypes.size > 0) privTypes = Array.from(activeTypes);
+                            if (activeRoles.size > 0) authRoles = Array.from(activeRoles);
+                        } catch (e) {
+                            console.error(`Failed to load privileges for user ${o.SYSTEM_USER_ID}`, e);
+                        }
+
+                        let privLocs: string[] = [];
+                        try {
+                            const locs = await officerService.getUserPrivilegeLocations(Number(o.SYSTEM_USER_ID));
+                            const locationNames = new Set<string>();
+                            (locs || []).forEach((g) => {
+                                (g.privileges || []).forEach((p) => {
+                                    (p.locations || []).forEach((l) => locationNames.add(l.locationName));
+                                });
+                            });
+                            if (locationNames.size > 0) privLocs = Array.from(locationNames);
+                        } catch (e) {
+                            console.error(`Failed to load privilege locations for user ${o.SYSTEM_USER_ID}`, e);
+                        }
+
+                        return {
+                            id: o.SYSTEM_USER_ID,
+                            fullName: o.USER_FULL_NAME,
+                            regNo: o.USER_REGI_NO || '',
+                            designation: designationMap.get(o.USER_DESIGNATION_ID || '') || '-',
+                            mobileNumber: o.PHONE_MOBILE || '',
+                            locationId: o.LOCATION_ID,
+                            locationName: locationIdToName.get(o.LOCATION_ID) || `Location #${o.LOCATION_ID}`,
+                            role: authRoles,
+                            privileges: privTypes,
+                            privilegeLocations: privLocs,
+                        };
+                    })
+                );
                 setUsers(rows);
             } catch (err) {
                 if (signal?.cancelled) return;
@@ -127,7 +175,7 @@ export default function UserManagementPage() {
                 if (!signal?.cancelled) setLoading(false);
             }
         },
-        [locationIdToName, appliedLocations, appliedDesignations],
+        [locationIdToName, designationMap, appliedLocations, appliedDesignations]
     );
 
     useEffect(() => {
@@ -153,7 +201,11 @@ export default function UserManagementPage() {
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(
-                (u) => u.fullName.toLowerCase().includes(q) || u.mobileNumber.includes(q),
+                (u) =>
+                    u.fullName.toLowerCase().includes(q) ||
+                    u.mobileNumber.includes(q) ||
+                    (u.regNo || '').toLowerCase().includes(q) ||
+                    (u.designation || '').toLowerCase().includes(q)
             );
         }
 
@@ -247,11 +299,11 @@ export default function UserManagementPage() {
 
     const confirmSubmitPrivileges = () => {
         setUsers((prev) =>
-            prev.map((u) => (pendingChanges[u.id] ? { ...u, ...pendingChanges[u.id] } : u)),
+            prev.map((u) => (pendingChanges[u.id] ? { ...u, ...pendingChanges[u.id] } : u))
         );
         showSuccessAlert(
             'Success',
-            `Privilege changes have been submitted for ${pendingChangeCount} user${pendingChangeCount === 1 ? '' : 's'}.`,
+            `Privilege changes have been submitted for ${pendingChangeCount} user${pendingChangeCount === 1 ? '' : 's'}.`
         );
         setPendingChanges({});
         setIsSubmitConfirmOpen(false);
@@ -284,8 +336,8 @@ export default function UserManagementPage() {
                               locationId: userLocation,
                               locationName: selectedLocationLabel,
                           }
-                        : u,
-                ),
+                        : u
+                )
             );
             showSuccessAlert('Success', 'User has been updated successfully.');
         } else {
@@ -295,7 +347,7 @@ export default function UserManagementPage() {
                 fullName: fullName.trim(),
                 locationId: userLocation,
                 locationName: selectedLocationLabel,
-                role: 'Officer',
+                role: ['Officer'],
                 privileges: ['VIEW_ACCESS'],
             };
             setUsers((prev) => [newUser, ...prev]);
@@ -304,6 +356,100 @@ export default function UserManagementPage() {
 
         setIsModalOpen(false);
         resetForm();
+    };
+
+    const handleExportExcel = () => {
+        if (filteredUsers.length === 0) return;
+
+        const headers = ['Full Name', 'Reg. No', 'Designation', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations'];
+        const data = filteredUsers.map((u) => {
+            const roleStr = Array.isArray(u.role) ? u.role.join('\n') : (u.role || '-');
+            const privStr = Array.isArray(u.privileges) ? u.privileges.join('\n') : (u.privileges || '-');
+            const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join('\n') : '-';
+            return {
+                'Full Name': u.fullName || '-',
+                'Reg. No': u.regNo || '-',
+                'Designation': u.designation || '-',
+                'Mobile No.': u.mobileNumber || '-',
+                'SOCO Lab': u.locationName || '-',
+                'Privilege Type': privStr,
+                'Authorization Role': roleStr,
+                'Privilege Locations': privLocStr,
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+
+        // Auto-size columns based on header length and content
+        const colWidths = headers.map(header => {
+            const maxContentLength = Math.max(
+                header.length,
+                ...data.map(row => (row[header as keyof typeof row] || '').toString().length)
+            );
+            return { wch: Math.min(maxContentLength + 2, 50) }; // cap width at 50
+        });
+        worksheet['!cols'] = colWidths;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'User Summary');
+
+        XLSX.writeFile(workbook, `SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    const handleExportPDF = () => {
+        if (filteredUsers.length === 0) return;
+
+        const doc = new jsPDF();
+
+        doc.setProperties({
+            title: 'SOCO User Management Report',
+            subject: 'User Summary',
+            author: 'Sri Lanka Police',
+            creator: 'SOCO SL Police Web Application'
+        });
+
+        // Header Title
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(30, 58, 138);
+        doc.text('SRI LANKA POLICE - SOCO USERS REPORT', 14, 20);
+
+        // Header Subtitle
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(107, 114, 128);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+
+        // Underline header
+        doc.setDrawColor(59, 130, 246);
+        doc.setLineWidth(0.8);
+        doc.line(14, 29, 196, 29);
+
+        autoTable(doc, {
+            startY: 35,
+            head: [['Full Name', 'Reg. No', 'Designation', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations']],
+            body: filteredUsers.map((u) => {
+                const roleStr = Array.isArray(u.role) ? u.role.join('\n') : (u.role || '-');
+                const privStr = Array.isArray(u.privileges) ? u.privileges.join('\n') : (u.privileges || '-');
+                const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join('\n') : '-';
+                return [
+                    u.fullName || '-',
+                    u.regNo || '-',
+                    u.designation || '-',
+                    u.mobileNumber || '-',
+                    u.locationName || '-',
+                    privStr,
+                    roleStr,
+                    privLocStr
+                ];
+            }),
+            theme: 'grid',
+            headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+            styles: { fontSize: 8, cellPadding: 3 },
+            alternateRowStyles: { fillColor: [243, 244, 246] },
+        });
+
+        doc.save(`SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
     return (
@@ -388,19 +534,42 @@ export default function UserManagementPage() {
                         </div>
                     </div>
 
-                    {/* Search input — only enabled after a search */}
+                    {/* Search input and Export — only enabled after a search */}
                     {hasSearched && (
-                        <div className="mt-3 max-w-md">
-                            <SearchInput
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    setPage(1);
-                                }}
-                                placeholder="Search name, mobile..."
-                                wrapperClassName="w-full"
-                                icon={<MagnifyingGlass size={15} />}
-                            />
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+                            <div className="w-full max-w-md">
+                                <SearchInput
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    placeholder="Search name, mobile..."
+                                    wrapperClassName="w-full"
+                                    icon={<MagnifyingGlass size={15} />}
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={handleExportExcel}
+                                    className="!min-h-[38px] !py-2 !text-sm px-3 flex items-center gap-2"
+                                >
+                                    <FileXls size={18} className="text-green-600" />
+                                    Export Excel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={handleExportPDF}
+                                    className="!min-h-[38px] !py-2 !text-sm px-3 flex items-center gap-2"
+                                >
+                                    <FilePdf size={18} className="text-red-500" />
+                                    Export PDF
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -582,7 +751,6 @@ export default function UserManagementPage() {
                     </div>
                 </div>
             )}
-
         </>
     );
 }
