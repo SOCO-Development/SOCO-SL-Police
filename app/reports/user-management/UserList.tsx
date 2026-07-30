@@ -56,30 +56,53 @@ export default function UserList({
     const columns: AppTableColumn<ManagedUser>[] = useMemo(
         () => {
             const cols: AppTableColumn<ManagedUser>[] = [
-                { key: 'fullName', label: 'Full Name', sortable: true, className: 'font-semibold text-gray-800 !align-top' },
+                {
+                    key: 'fullName',
+                    label: 'Full Name',
+                    sortable: true,
+                    className: 'font-semibold text-gray-800 !align-top min-w-[160px]',
+                },
                 {
                     key: 'regNo',
                     label: 'Reg. No',
                     sortable: true,
-                    className: '!align-top',
-                    render: (_, row) => <span className="font-mono text-xs text-blue-700 font-semibold">{row.regNo || '-'}</span>,
+                    className: '!align-top min-w-[90px]',
+                    render: (_, row) => (
+                        <span className="font-mono text-xs text-blue-700 font-semibold">{row.regNo || '-'}</span>
+                    ),
                 },
                 {
                     key: 'designation',
                     label: 'Designation',
                     sortable: true,
-                    className: '!align-top',
-                    render: (_, row) => <span className="text-gray-700">{row.designation || '-'}</span>,
+                    className: '!align-top min-w-[120px]',
+                    render: (_, row) => <span className="text-gray-700 text-sm">{row.designation || '-'}</span>,
                 },
-                { key: 'mobileNumber', label: 'Mobile No.', sortable: true, className: 'font-mono text-xs text-gray-600 !align-top' },
-                { key: 'locationName', label: 'SOCO Lab', sortable: true, className: '!align-top' },
+                {
+                    key: 'mobileNumber',
+                    label: 'Mobile No.',
+                    sortable: true,
+                    className: 'font-mono text-xs text-gray-600 !align-top min-w-[110px]',
+                    render: (_, row) => <span>{row.mobileNumber || '-'}</span>,
+                },
+                {
+                    key: 'locationName',
+                    label: 'SOCO Lab',
+                    sortable: true,
+                    className: '!align-top min-w-[130px]',
+                    render: (_, row) => (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                            {row.locationName || '-'}
+                        </span>
+                    ),
+                },
                 {
                     key: 'privileges',
                     label: 'Privilege Type',
                     sortable: true,
-                    className: '!align-top',
+                    className: '!align-top min-w-[180px]',
                     render: (_, row) => {
-                        const privs = Array.isArray(row.privileges) ? row.privileges : (row.privileges ? [row.privileges] : []);
+                        const privs = Array.isArray(row.privileges) ? row.privileges : row.privileges ? [row.privileges] : [];
                         if (onPrivilegesChange && typeof row.privileges !== 'object') {
                             return (
                                 <div className="min-w-[220px]">
@@ -93,13 +116,18 @@ export default function UserList({
                             );
                         }
                         return (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-wrap gap-1 max-w-[260px]">
                                 {privs.length > 0 ? (
                                     privs.map((p, i) => (
-                                        <span key={i} className="text-gray-700 whitespace-nowrap">{p}</span>
+                                        <span
+                                            key={i}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/70"
+                                        >
+                                            {p}
+                                        </span>
                                     ))
                                 ) : (
-                                    <span className="text-gray-700">-</span>
+                                    <span className="text-gray-400 text-xs">-</span>
                                 )}
                             </div>
                         );
@@ -109,9 +137,9 @@ export default function UserList({
                     key: 'role',
                     label: 'Authorization Role',
                     sortable: true,
-                    className: '!align-top',
+                    className: '!align-top min-w-[180px]',
                     render: (_, row) => {
-                        const roles = Array.isArray(row.role) ? row.role : (row.role ? [row.role] : []);
+                        const roles = Array.isArray(row.role) ? row.role : row.role ? [row.role] : [];
                         if (onRoleChange && typeof row.role === 'string') {
                             return (
                                 <div className="min-w-[120px]">
@@ -127,13 +155,18 @@ export default function UserList({
                             );
                         }
                         return (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-wrap gap-1 max-w-[260px]">
                                 {roles.length > 0 ? (
                                     roles.map((r, i) => (
-                                        <span key={i} className="text-gray-700 whitespace-nowrap">{r}</span>
+                                        <span
+                                            key={i}
+                                            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/70"
+                                        >
+                                            {r}
+                                        </span>
                                     ))
                                 ) : (
-                                    <span className="text-gray-700">-</span>
+                                    <span className="text-gray-400 text-xs">-</span>
                                 )}
                             </div>
                         );
@@ -143,15 +176,20 @@ export default function UserList({
                     key: 'privilegeLocations',
                     label: 'Privilege Locations',
                     sortable: true,
-                    className: '!align-top',
+                    className: '!align-top min-w-[200px]',
                     render: (_, row) => (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap gap-1 max-w-[280px]">
                             {row.privilegeLocations && row.privilegeLocations.length > 0 ? (
                                 row.privilegeLocations.map((l, i) => (
-                                    <span key={i} className="text-gray-700 whitespace-nowrap">{l}</span>
+                                    <span
+                                        key={i}
+                                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/70"
+                                    >
+                                        {l}
+                                    </span>
                                 ))
                             ) : (
-                                <span className="text-gray-700">-</span>
+                                <span className="text-gray-400 text-xs">-</span>
                             )}
                         </div>
                     ),
@@ -163,7 +201,7 @@ export default function UserList({
                     key: 'id',
                     label: 'Actions',
                     align: 'right' as const,
-                    className: '!align-top',
+                    className: '!align-top min-w-[90px]',
                     render: (_, row) => (
                         <div className="flex items-center justify-end gap-1">
                             {onEdit && (
