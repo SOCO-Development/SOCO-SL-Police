@@ -2,10 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState, useCallback } from 'react';
 import { X } from 'lucide-react';
-import { MagnifyingGlass, FileXls, FilePdf } from 'phosphor-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import ExcelJS from 'exceljs';
+import { MagnifyingGlass } from 'phosphor-react';
 import FormInput from '@/components/forms/FormInput';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
@@ -358,169 +355,7 @@ export default function UserManagementPage() {
         resetForm();
     };
 
-    const handleExportExcel = async () => {
-        if (filteredUsers.length === 0) return;
 
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('User Summary');
-
-        // Show gridlines explicitly
-        worksheet.views = [{ showGridLines: true }];
-
-        // Define Columns with custom widths
-        worksheet.columns = [
-            { header: 'Full Name', key: 'fullName', width: 28 },
-            { header: 'Reg. No', key: 'regNo', width: 14 },
-            { header: 'Designation', key: 'designation', width: 20 },
-            { header: 'Mobile No.', key: 'mobileNumber', width: 16 },
-            { header: 'SOCO Lab', key: 'locationName', width: 22 },
-            { header: 'Privilege Type', key: 'privileges', width: 36 },
-            { header: 'Authorization Role', key: 'role', width: 36 },
-            { header: 'Privilege Locations', key: 'privilegeLocations', width: 36 },
-        ];
-
-        // Header Row Styling (Police Navy Blue background, white bold text)
-        const headerRow = worksheet.getRow(1);
-        headerRow.height = 28;
-        headerRow.eachCell((cell) => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '1E3A8A' },
-            };
-            cell.font = {
-                name: 'Segoe UI',
-                size: 11,
-                bold: true,
-                color: { argb: 'FFFFFF' },
-            };
-            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-            cell.border = {
-                top: { style: 'thin', color: { argb: '1E3A8A' } },
-                left: { style: 'thin', color: { argb: '3B82F6' } },
-                bottom: { style: 'medium', color: { argb: '1E40AF' } },
-                right: { style: 'thin', color: { argb: '3B82F6' } },
-            };
-        });
-
-        // Data Rows Styling
-        filteredUsers.forEach((u, index) => {
-            const roleStr = Array.isArray(u.role) ? u.role.join(', ') : u.role || '-';
-            const privStr = Array.isArray(u.privileges) ? u.privileges.join(', ') : u.privileges || '-';
-            const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join(', ') : '-';
-
-            const row = worksheet.addRow({
-                fullName: u.fullName || '-',
-                regNo: u.regNo || '-',
-                designation: u.designation || '-',
-                mobileNumber: u.mobileNumber || '-',
-                locationName: u.locationName || '-',
-                privileges: privStr,
-                role: roleStr,
-                privilegeLocations: privLocStr,
-            });
-
-            row.height = 26;
-            const isEven = index % 2 === 1;
-            const rowBg = isEven ? 'F8FAFC' : 'FFFFFF';
-
-            row.eachCell((cell, colNumber) => {
-                cell.fill = {
-                    type: 'pattern',
-                    pattern: 'solid',
-                    fgColor: { argb: rowBg },
-                };
-                cell.font = {
-                    name: 'Segoe UI',
-                    size: 10,
-                    color: { argb: '1E293B' },
-                };
-                cell.alignment = { vertical: 'middle', wrapText: true };
-                cell.border = {
-                    top: { style: 'thin', color: { argb: 'E2E8F0' } },
-                    left: { style: 'thin', color: { argb: 'E2E8F0' } },
-                    bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
-                    right: { style: 'thin', color: { argb: 'E2E8F0' } },
-                };
-
-                // Reg. No column styling
-                if (colNumber === 2) {
-                    cell.font = { name: 'Consolas', size: 10, bold: true, color: { argb: '1D4ED8' } };
-                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                }
-                // Mobile No. column styling
-                if (colNumber === 4) {
-                    cell.font = { name: 'Consolas', size: 10, color: { argb: '475569' } };
-                }
-            });
-        });
-
-        // Trigger browser download
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = window.URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        anchor.click();
-        window.URL.revokeObjectURL(url);
-    };
-
-    const handleExportPDF = () => {
-        if (filteredUsers.length === 0) return;
-
-        const doc = new jsPDF({ orientation: 'landscape' });
-
-        doc.setProperties({
-            title: 'SOCO User Management Report',
-            subject: 'User Summary',
-            author: 'Sri Lanka Police',
-            creator: 'SOCO SL Police Web Application'
-        });
-
-        // Header Title
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.setTextColor(30, 58, 138);
-        doc.text('SRI LANKA POLICE - SOCO USERS REPORT', 14, 18);
-
-        // Header Subtitle
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(107, 114, 128);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 24);
-
-        // Underline header
-        doc.setDrawColor(59, 130, 246);
-        doc.setLineWidth(0.8);
-        doc.line(14, 27, 283, 27);
-
-        autoTable(doc, {
-            startY: 32,
-            head: [['Full Name', 'Reg. No', 'Designation', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations']],
-            body: filteredUsers.map((u) => {
-                const roleStr = Array.isArray(u.role) ? u.role.join(', ') : (u.role || '-');
-                const privStr = Array.isArray(u.privileges) ? u.privileges.join(', ') : (u.privileges || '-');
-                const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join(', ') : '-';
-                return [
-                    u.fullName || '-',
-                    u.regNo || '-',
-                    u.designation || '-',
-                    u.mobileNumber || '-',
-                    u.locationName || '-',
-                    privStr,
-                    roleStr,
-                    privLocStr
-                ];
-            }),
-            theme: 'grid',
-            headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-            styles: { fontSize: 8, cellPadding: 3, valign: 'top' },
-            alternateRowStyles: { fillColor: [243, 244, 246] },
-        });
-
-        doc.save(`SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.pdf`);
-    };
 
     return (
         <>
@@ -593,9 +428,9 @@ export default function UserManagementPage() {
                         </div>
                     </div>
 
-                    {/* Search input and Export — only enabled after a search */}
+                    {/* Search input — only enabled after a search */}
                     {hasSearched && (
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+                        <div className="mt-3 flex flex-wrap items-center gap-4">
                             <div className="w-full max-w-md">
                                 <SearchInput
                                     value={search}
@@ -607,27 +442,6 @@ export default function UserManagementPage() {
                                     wrapperClassName="w-full"
                                     icon={<MagnifyingGlass size={15} />}
                                 />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={handleExportExcel}
-                                    className="!min-h-[38px] !py-2 !text-sm px-3 flex items-center gap-2"
-                                >
-                                    <FileXls size={18} className="text-green-600" />
-                                    Export Excel
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={handleExportPDF}
-                                    className="!min-h-[38px] !py-2 !text-sm px-3 flex items-center gap-2"
-                                >
-                                    <FilePdf size={18} className="text-red-500" />
-                                    Export PDF
-                                </Button>
                             </div>
                         </div>
                     )}

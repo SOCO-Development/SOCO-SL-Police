@@ -110,7 +110,7 @@ export default function UserList({
                             );
                         }
                         return (
-                            <div className="flex flex-wrap gap-1 max-w-[260px]">
+                            <div className="flex flex-col items-start gap-1 max-w-[260px]">
                                 {privs.length > 0 ? (
                                     privs.map((p, i) => (
                                         <span
@@ -149,7 +149,7 @@ export default function UserList({
                             );
                         }
                         return (
-                            <div className="flex flex-wrap gap-1 max-w-[260px]">
+                            <div className="flex flex-col items-start gap-1 max-w-[260px]">
                                 {roles.length > 0 ? (
                                     roles.map((r, i) => (
                                         <span
@@ -172,7 +172,7 @@ export default function UserList({
                     sortable: true,
                     className: '!align-top min-w-[200px]',
                     render: (_, row) => (
-                        <div className="flex flex-wrap gap-1 max-w-[280px]">
+                        <div className="flex flex-col items-start gap-1 max-w-[280px]">
                             {row.privilegeLocations && row.privilegeLocations.length > 0 ? (
                                 row.privilegeLocations.map((l, i) => (
                                     <span
