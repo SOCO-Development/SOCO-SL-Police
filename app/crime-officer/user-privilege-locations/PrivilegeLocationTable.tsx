@@ -40,6 +40,10 @@ export default function PrivilegeLocationTable({
         setUpdatingId(row.privilegeId);
         try {
             await onUpdate(row, getLocations(row));
+            setDraftLocations((prev) => {
+                const { [row.privilegeId]: _removed, ...rest } = prev;
+                return rest;
+            });
         } finally {
             setUpdatingId(null);
         }

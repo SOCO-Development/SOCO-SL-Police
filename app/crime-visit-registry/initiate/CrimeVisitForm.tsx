@@ -18,6 +18,7 @@ import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
 import { locationService, userService, crimeService, officerService } from "@/lib/api";
+import { FileText, Clock, Car } from "lucide-react";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -172,12 +173,14 @@ interface FieldGroupProps {
   label: string;
   children: React.ReactNode;
   className?: string;
+  required?: boolean;
 }
-function FieldGroup({ label, children, className = "" }: FieldGroupProps) {
+function FieldGroup({ label, children, className = "", required = false }: FieldGroupProps) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
         {label}
+        {required && <span className="text-red-600 text-base leading-none align-middle ml-1">*</span>}
       </label>
       {children}
     </div>
@@ -198,6 +201,52 @@ function TextInput({ isReadOnly, className = "", ...props }: TextInputProps) {
           : "bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400"
       } transition-colors ${className}`}
     />
+  );
+}
+
+interface SectionAccent {
+  border: string;
+  dot: string;
+}
+interface SectionCardProps {
+  title: string;
+  accent: SectionAccent;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  children: React.ReactNode;
+}
+function SectionCard({ title, accent, icon: Icon, children }: SectionCardProps) {
+  return (
+    <section
+      className={`bg-[var(--card)] rounded-xl border border-[var(--border-subtle)] border-l-4 ${accent.border} shadow-sm`}
+    >
+      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-[var(--border-subtle)] flex items-center gap-2.5">
+        <Icon size={15} className={accent.dot} />
+        <h4 className="text-sm font-bold text-[var(--card-foreground)] uppercase tracking-wide">{title}</h4>
+      </div>
+      <div className="px-4 sm:px-5 py-5 space-y-4">{children}</div>
+    </section>
+  );
+}
+
+interface SegmentedOptionProps {
+  name: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}
+/** Toggle-button style radio — used where selection needs to be unmistakable at a glance (e.g. Offence Type). */
+function SegmentedOption({ name, label, checked, onChange }: SegmentedOptionProps) {
+  return (
+    <label
+      className={`inline-flex items-center justify-center gap-1.5 min-w-0 px-3 py-1.5 rounded-lg border text-sm font-semibold cursor-pointer select-none transition-colors ${
+        checked
+          ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm"
+          : "border-gray-300 bg-white text-gray-700 hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/5"
+      }`}
+    >
+      <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
+      <span className="truncate">{label}</span>
+    </label>
   );
 }
 
@@ -263,6 +312,8 @@ interface DateTimeRowProps {
   onChange: (val: DateTimeEntry) => void;
   /** 'row' = label | date | time in one row; 'stack' = label on top, date/time below (for multi-column cards) */
   layout?: "row" | "stack";
+  /** Marks the Date/Time fields (not Page/Para) as required. */
+  required?: boolean;
 }
 function DateTimeRow({
   label,
@@ -270,10 +321,11 @@ function DateTimeRow({
   isReadOnly = false,
   onChange,
   layout = "row",
+  required = false,
 }: DateTimeRowProps) {
   const fields = (
     <>
-      <FieldGroup label="Date (DD-MM-YYYY)">
+      <FieldGroup label="Date (DD-MM-YYYY)" required={required}>
         {isReadOnly ? (
           <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
             {value.date || "—"}
@@ -285,7 +337,7 @@ function DateTimeRow({
           />
         )}
       </FieldGroup>
-      <FieldGroup label="Time">
+      <FieldGroup label="Time" required={required}>
         {isReadOnly ? (
           <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
             {value.time || "—"}
@@ -532,6 +584,7 @@ export default function CrimeVisitForm({
   const [vehicleMap, setVehicleMap] = useState<Map<string, string>>(new Map());
   const [driverOptions, setDriverOptions] = useState<{ value: string; label: string }[]>([]);
   const [driverMapping, setDriverMapping] = useState<Map<string, { name: string; regNo: string; rank: string; userId: string }>>(new Map());
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -718,6 +771,33 @@ export default function CrimeVisitForm({
     onSaveDraft?.(formData);
   }
 
+  function validate(): string {
+    const a = formData.sectionA ?? {};
+    const c = formData.sectionC ?? {};
+    if (!a.requestDivision) return "Please select a SOCO Lab.";
+    if (!a.requestFromStation) return "Please select a police station.";
+    const offences = Array.isArray(a.offence) ? a.offence : a.offence ? [a.offence] : [];
+    if (offences.length === 0) return "Please select at least one offence.";
+    if (!a.offenceType) return "Please select an offence type.";
+    if (a.offenceType === "Other" && !(a.offenceTypeOther ?? offenceTypeOther)?.trim()) {
+      return "Please specify the offence type.";
+    }
+    if (!a.out?.date || !a.out?.time) return "Please provide the OUT date and time.";
+    if (!c.vehicleNo) return "Please select a vehicle.";
+    if (!c.driver?.regNo) return "Please select a driver.";
+    return "";
+  }
+
+  function handleSubmitClick() {
+    const validation = validate();
+    if (validation) {
+      setError(validation);
+      return;
+    }
+    setError("");
+    onSubmit?.(formData);
+  }
+
   const ro = readOnlyAll;
   const locked = lockedMode || readOnlyAll;
 
@@ -729,7 +809,7 @@ export default function CrimeVisitForm({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div
-      className="bg-white rounded-xl border border-gray-200 flex flex-col"
+      className="bg-[var(--card)] rounded-xl border border-[var(--border-subtle)] flex flex-col"
       style={{ minHeight: "520px" }}
     >
       <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -738,13 +818,9 @@ export default function CrimeVisitForm({
             Initiate Visit
           </h3>
 
-          <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/65">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-violet-500 inline-block flex-shrink-0" />
-              Request Details
-            </h4>
+          <SectionCard title="Request Details" accent={{ border: "border-l-violet-500", dot: "text-violet-600" }} icon={FileText}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <FieldGroup label="SOCO Lab">
+              <FieldGroup label="SOCO Lab" required>
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sA.requestDivision || "—"}
@@ -764,7 +840,7 @@ export default function CrimeVisitForm({
                 )}
               </FieldGroup>
 
-              <FieldGroup label="Police station">
+              <FieldGroup label="Police station" required>
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sA.requestFromStation || "—"}
@@ -788,7 +864,7 @@ export default function CrimeVisitForm({
                 )}
               </FieldGroup>
 
-              <FieldGroup label="Offences">
+              <FieldGroup label="Offences" required>
                 {locked ? (
                   <div className="flex flex-wrap gap-1.5 p-2 rounded-lg border bg-gray-50 border-gray-200 min-h-10">
                     {Array.isArray(sA.offence) && sA.offence.length > 0 ? (
@@ -830,7 +906,7 @@ export default function CrimeVisitForm({
 
               {Array.isArray(sA.offence) && sA.offence.length > 0 && (
                 <div className="md:col-span-2 lg:col-span-3 mt-1 animate-in fade-in slide-in-from-top-1">
-                  <div className="p-3 rounded-xl border border-violet-200 bg-violet-50/65">
+                  <div className="bg-[var(--muted)]/50 rounded-xl p-4">
                     <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-2 px-1">
                       Selected Offences
                     </p>
@@ -838,7 +914,7 @@ export default function CrimeVisitForm({
                       {sA.offence.map((off, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-white border border-violet-200 rounded-lg shadow-sm"
+                          className="flex items-center gap-2 px-3 py-1.5 bg-[var(--card)] border border-violet-200 rounded-lg shadow-sm"
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
                           <span className="text-xs font-medium text-violet-900 leading-snug">
@@ -854,7 +930,7 @@ export default function CrimeVisitForm({
                 </div>
               )}
 
-              <FieldGroup label="Offence Type">
+              <FieldGroup label="Offence Type" required>
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sA.offenceType === "Other"
@@ -862,33 +938,27 @@ export default function CrimeVisitForm({
                       : sA.offenceType || "—"}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
+                  <div className="flex flex-wrap items-center gap-2 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
                     {OFFENCE_TYPES.map((option) => (
-                      <label
+                      <SegmentedOption
                         key={option.value}
-                        className="inline-flex items-center gap-2 text-sm text-gray-700"
-                      >
-                        <input
-                          type="radio"
-                          name="offenceType"
-                          checked={(sA.offenceType ?? "") === option.value}
-                          onChange={() =>
-                            setFormData((f) => ({
-                              ...f,
-                              sectionA: {
-                                ...f.sectionA,
-                                offenceType: option.value,
-                                offenceTypeOther:
-                                  option.value === "Other"
-                                    ? f.sectionA.offenceTypeOther
-                                    : "",
-                              },
-                            }))
-                          }
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        {option.label}
-                      </label>
+                        name="offenceType"
+                        label={option.label}
+                        checked={(sA.offenceType ?? "") === option.value}
+                        onChange={() =>
+                          setFormData((f) => ({
+                            ...f,
+                            sectionA: {
+                              ...f.sectionA,
+                              offenceType: option.value,
+                              offenceTypeOther:
+                                option.value === "Other"
+                                  ? f.sectionA.offenceTypeOther
+                                  : "",
+                            },
+                          }))
+                        }
+                      />
                     ))}
                   </div>
                 )}
@@ -945,31 +1015,23 @@ export default function CrimeVisitForm({
                 />
               </FieldGroup> */}
             </div>
-          </div>
+          </SectionCard>
 
           {/* OUT & IN Section */}
-          <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65 space-y-4">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-indigo-500 inline-block flex-shrink-0" />
-              OUT Details
-            </h4>
-
+          <SectionCard title="OUT Details" accent={{ border: "border-l-indigo-500", dot: "text-indigo-600" }} icon={Clock}>
             <DateTimeRow
               label="OUT"
               value={sA.out ?? emptyDatetime()}
               isReadOnly={locked}
               onChange={(v) => updateA("out", v)}
               layout="stack"
+              required
             />
-          </div>
+          </SectionCard>
 
-          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/80 space-y-4">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide pb-2 border-b border-gray-200 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-slate-500 inline-block flex-shrink-0" />
-              Vehicle & Driver Details
-            </h4>
+          <SectionCard title="Vehicle & Driver Details" accent={{ border: "border-l-emerald-500", dot: "text-emerald-600" }} icon={Car}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-              <FieldGroup label="Vehicle Number">
+              <FieldGroup label="Vehicle Number" required>
                 {ro ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sC.vehicleNo || "—"}
@@ -986,7 +1048,7 @@ export default function CrimeVisitForm({
                   />
                 )}
               </FieldGroup>
-              <FieldGroup label="Select Driver">
+              <FieldGroup label="Select Driver" required>
                 {ro ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sC.driver?.name ? `${sC.driver.name} (${sC.driver.regNo})` : "—"}
@@ -1020,7 +1082,7 @@ export default function CrimeVisitForm({
                 />
               </FieldGroup>
             </div>
-          </div>
+          </SectionCard>
 
           {/* Initiate Visit: Support Officers section — uncomment with state + SupportOfficersEditor above
           <div className="p-4 sm:p-5 rounded-xl border border-rose-200 bg-rose-50/65">
@@ -1049,11 +1111,18 @@ export default function CrimeVisitForm({
             />
           </div>
           */}
+
+          {/* ── Error ── */}
+          {error && (
+            <div className="p-4 rounded-xl border border-red-200 bg-red-50">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Bottom action bar ────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50/70 px-5 py-3 rounded-b-xl flex items-center justify-between gap-3">
+      <div className="flex-shrink-0 border-t border-[var(--border-subtle)] bg-[var(--card)]/95 backdrop-blur px-5 py-3 rounded-b-xl flex items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <div />
 
         {/* Centre actions */}
@@ -1068,7 +1137,7 @@ export default function CrimeVisitForm({
               Cancel
             </Button>
             {onSubmit && (
-              <Button variant="success" type="button" onClick={() => onSubmit(formData)}>
+              <Button variant="success" type="button" onClick={handleSubmitClick}>
                 Submit Visit
               </Button>
             )}

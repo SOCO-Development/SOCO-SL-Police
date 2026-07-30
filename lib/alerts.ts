@@ -8,8 +8,10 @@ export interface AlertPayload {
 }
 
 type AlertListener = (alert: AlertPayload) => void;
+type ClearListener = () => void;
 
 const listeners = new Set<AlertListener>();
+const clearListeners = new Set<ClearListener>();
 
 function emit(type: AlertType, title: string, message?: string): void {
   const payload: AlertPayload = {
@@ -31,10 +33,21 @@ export function showErrorAlert(title: string, message?: string): void {
   emit('error', title, message);
 }
 
+/** Dismiss whatever global alert is currently showing, if any. */
+export function clearAlerts(): void {
+  clearListeners.forEach((listener) => listener());
+}
+
 /** Subscribe to global alerts — used by GlobalAlertHost. */
 export function subscribeToAlerts(listener: AlertListener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+/** Subscribe to alert-clear requests — used by GlobalAlertHost. */
+export function subscribeToClearAlerts(listener: ClearListener): () => void {
+  clearListeners.add(listener);
+  return () => clearListeners.delete(listener);
 }
 
 /** Extract a user-friendly message from unknown errors (e.g. ApiError). */

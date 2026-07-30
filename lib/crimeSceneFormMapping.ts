@@ -22,6 +22,13 @@ export function validateIncidentTimingSection(form: CrimeSceneFormData): string 
   const incFrom = form.incidentFrom ?? { date: '', time: '' };
   const incTo = form.incidentTo ?? { date: '', time: '' };
 
+  const hasAnyLegacyData =
+    Boolean(known.date?.trim() || known.time?.trim() || incFrom.date?.trim() || incFrom.time?.trim() || incTo.date?.trim() || incTo.time?.trim());
+
+  if (mode !== true && mode !== false && !hasAnyLegacyData) {
+    return 'Please select whether the incident date is exactly known (Yes/No).';
+  }
+
   if (mode === false) {
     if (!incFrom.date?.trim() || !incFrom.time?.trim()) {
       return 'Please enter duration start: date and time (from).';

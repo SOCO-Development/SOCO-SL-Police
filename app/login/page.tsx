@@ -8,15 +8,13 @@ import { Button } from "@/components/ui";
 import { Lock, Shield, User, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { authService, userService } from "@/lib/api";
 import { clearAuthSession, isAuthenticated as hasValidSession, saveUserDisplayInfo } from "@/lib/api/authStorage";
-import { getErrorMessage } from "@/lib/alerts";
-import ResultPopup, { useResultPopup } from "@/components/modals/ResultPopup";
+import { getErrorMessage, showErrorAlert, clearAlerts } from "@/lib/alerts";
 
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [popup, showPopup, closePopup] = useResultPopup();
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -30,6 +28,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearAlerts();
     setIsLoading(true);
 
     try {
@@ -39,10 +38,10 @@ export default function LoginPage() {
         saveUserDisplayInfo(info.callingName, info.designationName);
       } catch {}
       setLoginSuccess(true);
-      router.replace("/crime-visit-registry");
+      setTimeout(() => router.replace("/crime-visit-registry"), 750);
     } catch (err) {
       const message = getErrorMessage(err, "Invalid username or password. Please try again.");
-      showPopup('error', 'Login Failed', message);
+      showErrorAlert('Login Failed', message);
       setIsLoading(false);
     }
   };
@@ -313,7 +312,6 @@ export default function LoginPage() {
           {new Date().getFullYear()} Sri Lanka Police
         </p>
       </div>
-      <ResultPopup {...popup} onClose={closePopup} />
     </div>
   );
 }

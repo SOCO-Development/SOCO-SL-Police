@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useCallback, useId, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -19,7 +19,7 @@ import {
     validateRequired,
     validateDateRange,
 } from '@/lib/validation';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 import {
     ANNEX_01_SOCO_LABS,
     ANNEX_06_CIVIL_STATUS,
@@ -549,9 +549,7 @@ export default function AddOfficerPage() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
-    const redirectPathRef = useRef<string | null>(null);
-    const [popup, showPopup, closePopup] = useResultPopup();
-    const [loading, setLoading] = useState(false);
+        const [loading, setLoading] = useState(false);
     const [personalFamilyEditing, setPersonalFamilyEditing] = useState(!isEditing);
     const [sectionSaving, setSectionSaving] = useState<string | null>(null);
     const civilStatusRadioName = useId();
@@ -817,7 +815,7 @@ export default function AddOfficerPage() {
                 }
             } catch (err) {
                 const apiError = err instanceof ApiError ? err : new ApiError('Failed to load officer data');
-                showPopup('error', 'Error', apiError.message || 'An error occurred while loading officer data.');
+                showErrorAlert('Error', apiError.message || 'An error occurred while loading officer data.');
                 console.error('Load officer data error:', err);
             }
         };
@@ -1102,7 +1100,7 @@ export default function AddOfficerPage() {
 
         const firstErr = regNoErr || nameErr || dobErr || mobileErr || officeErr || residenceErr;
         if (firstErr) {
-            showPopup('error', 'Error', firstErr);
+            showErrorAlert('Error', firstErr);
             return;
         }
         setSectionSaving('personal-family');
@@ -1111,7 +1109,7 @@ export default function AddOfficerPage() {
             if (!isEditing) {
                 const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
 if (regiNoCheck.isAvailable) {
-                    showPopup('error', 'Error', `Registration number ${form.regNo} is already in use. Please use a different one.`);
+                    showErrorAlert('Error', `Registration number ${form.regNo} is already in use. Please use a different one.`);
                     return;
                 }
 
@@ -1121,7 +1119,7 @@ if (regiNoCheck.isAvailable) {
                     try {
                         imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
                     } catch (uploadErr) {
-                        showPopup('error', 'Error', 'Failed to upload profile image. Please try again.');
+                        showErrorAlert('Error', 'Failed to upload profile image. Please try again.');
                         return;
                     }
                 }
@@ -1130,15 +1128,15 @@ if (regiNoCheck.isAvailable) {
                 if (imageUrl) payload.userImageUrl = imageUrl;
                 console.log('InsertNewOfficer payload:', JSON.stringify(payload, null, 2));
                 const result = await officerService.insertNewOfficer(payload);
-                redirectPathRef.current = `/crime-officer/add?edit=${result.systemUserId}`;
-                showPopup('success', 'Officer Added', `Officer ${result.message} (ID: ${result.systemUserId})`);
+                showSuccessAlert('Officer Added', `Officer ${result.message} (ID: ${result.systemUserId})`);
+                router.push(`/crime-officer/add?edit=${result.systemUserId}`);
             } else {
                 let imageUrl = form.photoUrl || '';
                 if (photoFile) {
                     try {
                         imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
                     } catch (uploadErr) {
-                        showPopup('error', 'Error', 'Failed to upload profile image. Please try again.');
+                        showErrorAlert('Error', 'Failed to upload profile image. Please try again.');
                         return;
                     }
                 }
@@ -1174,7 +1172,7 @@ if (regiNoCheck.isAvailable) {
             setPersonalFamilyEditing(false);
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save personal and family details');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving.');
             console.error('Save personal/family error:', err);
         } finally {
             setSectionSaving(null);
@@ -1202,7 +1200,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save promotions');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving promotions.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving promotions.');
             console.error('Save promotions error:', err);
         } finally {
             setSectionSaving(null);
@@ -1216,11 +1214,11 @@ if (regiNoCheck.isAvailable) {
             if (isEditing && editId) {
                 for (const d of form.degrees.filter((d) => d.degree.trim() || d.university.trim())) {
                     const fromErr = validateYear(d.yearFrom, 'From year', 1950, new Date().getFullYear() + 10);
-                    if (fromErr) { showPopup('error', 'Error', `${d.degree || 'Degree'}: ${fromErr}`); setSectionSaving(null); return; }
+                    if (fromErr) { showErrorAlert('Error', `${d.degree || 'Degree'}: ${fromErr}`); setSectionSaving(null); return; }
                     const toErr = validateYear(d.yearTo, 'To year', 1950, new Date().getFullYear() + 10);
-                    if (toErr) { showPopup('error', 'Error', `${d.degree || 'Degree'}: ${toErr}`); setSectionSaving(null); return; }
+                    if (toErr) { showErrorAlert('Error', `${d.degree || 'Degree'}: ${toErr}`); setSectionSaving(null); return; }
                     if (d.yearFrom && d.yearTo && parseInt(d.yearFrom) > parseInt(d.yearTo)) {
-                        showPopup('error', 'Error', `${d.degree || 'Degree'}: From year cannot be after To year`);
+                        showErrorAlert('Error', `${d.degree || 'Degree'}: From year cannot be after To year`);
                         setSectionSaving(null); return;
                     }
                 }
@@ -1277,7 +1275,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save education');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving education.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving education.');
             console.error('Save education error:', err);
         } finally {
             setSectionSaving(null);
@@ -1379,7 +1377,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError(`Failed to save ${sectionLabel}`);
-            showPopup('error', 'Error', apiError.message || `An error occurred while saving ${sectionLabel}.`);
+            showErrorAlert('Error', apiError.message || `An error occurred while saving ${sectionLabel}.`);
             console.error(`Save ${sectionLabel} error:`, err);
         } finally {
             setSectionSaving(null);
@@ -1392,11 +1390,11 @@ if (regiNoCheck.isAvailable) {
         try {
             if (isEditing && editId) {
                 if (form.vehicleCategories.length > 0 && !form.drivingLicenseNo.trim()) {
-                    showPopup('error', 'Error', 'Driving license number is required when selecting vehicle categories');
+                    showErrorAlert('Error', 'Driving license number is required when selecting vehicle categories');
                     setSectionSaving(null); return;
                 }
                 if (form.drivingLicenseNo.trim() && form.drivingLicenseNo.trim().length < 5) {
-                    showPopup('error', 'Error', 'Driving license number is too short');
+                    showErrorAlert('Error', 'Driving license number is too short');
                     setSectionSaving(null); return;
                 }
                 const categoryDetails = form.vehicleCategories
@@ -1420,7 +1418,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save driving license');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving driving license.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving driving license.');
             console.error('Save driving license error:', err);
         } finally {
             setSectionSaving(null);
@@ -1435,7 +1433,7 @@ if (regiNoCheck.isAvailable) {
                 const validTransfers = form.transferHistory.filter((t) => t.socoLab && t.from && t.to);
                 for (const t of validTransfers) {
                     const rangeErr = validateDateRange(t.from, t.to, 'Transfer');
-                    if (rangeErr) { showPopup('error', 'Error', rangeErr); setSectionSaving(null); return; }
+                    if (rangeErr) { showErrorAlert('Error', rangeErr); setSectionSaving(null); return; }
                 }
                 const transfers = validTransfers
                     .map((t) => {
@@ -1458,7 +1456,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save transfers');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving transfers.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving transfers.');
             console.error('Save transfers error:', err);
         } finally {
             setSectionSaving(null);
@@ -1473,7 +1471,7 @@ if (regiNoCheck.isAvailable) {
                 const validDuties = form.specialDutyHistory.filter((d) => d.socoLab && d.from && d.to);
                 for (const d of validDuties) {
                     const rangeErr = validateDateRange(d.from, d.to, 'Special duty');
-                    if (rangeErr) { showPopup('error', 'Error', rangeErr); setSectionSaving(null); return; }
+                    if (rangeErr) { showErrorAlert('Error', rangeErr); setSectionSaving(null); return; }
                 }
                 const specialDuties = validDuties
                     .map((d) => {
@@ -1496,7 +1494,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special duty');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving special duty.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving special duty.');
             console.error('Save special duty error:', err);
         } finally {
             setSectionSaving(null);
@@ -1525,7 +1523,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save disciplinary inquiries');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving disciplinary inquiries.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving disciplinary inquiries.');
             console.error('Save disciplinary inquiries error:', err);
         } finally {
             setSectionSaving(null);
@@ -1550,7 +1548,7 @@ if (regiNoCheck.isAvailable) {
 
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save special illnesses & notes');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving special illnesses & notes.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving special illnesses & notes.');
             console.error('Save special illnesses & notes error:', err);
         } finally {
             setSectionSaving(null);
@@ -1565,14 +1563,14 @@ if (regiNoCheck.isAvailable) {
         const dobErr = validateDateNotFuture(form.dob, 'Date of birth');
         const mobileErr = form.telMobile.trim() ? validatePhone(form.telMobile) : null;
         const firstErr = regNoErr || nameErr || dobErr || mobileErr;
-        if (firstErr) { showPopup('error', 'Error', firstErr); return; }
+        if (firstErr) { showErrorAlert('Error', firstErr); return; }
         setLoading(true);
 
         try {
             // Check if regNo is already in use
             const regiNoCheck = await officerService.checkRegiNoAvailable(form.regNo);
             if (regiNoCheck.isAvailable) {
-                showPopup('error', 'Error', `Registration number ${form.regNo} is already in use. Please use a different one.`);
+                showErrorAlert('Error', `Registration number ${form.regNo} is already in use. Please use a different one.`);
                 setLoading(false);
                 return;
             }
@@ -1583,7 +1581,7 @@ if (regiNoCheck.isAvailable) {
                 try {
                     imageUrl = await officerService.uploadProfileImage(form.regNo, photoFile);
                 } catch (uploadErr) {
-                    showPopup('error', 'Error', 'Failed to upload profile image. Please try again.');
+                    showErrorAlert('Error', 'Failed to upload profile image. Please try again.');
                     setLoading(false);
                     return;
                 }
@@ -1630,11 +1628,11 @@ if (regiNoCheck.isAvailable) {
             // Submit to API
             const result = await officerService.insertNewOfficer(payload);
 
-            redirectPathRef.current = '/crime-officer';
-            showPopup('success', 'Officer Added', `Officer ${result.message} (ID: ${result.systemUserId})`);
+            showSuccessAlert('Officer Added', `Officer ${result.message} (ID: ${result.systemUserId})`);
+            router.push('/crime-officer');
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save officer');
-            showPopup('error', 'Error', apiError.message || 'An error occurred while saving the officer.');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving the officer.');
             console.error('Submit error:', err);
         } finally {
             setLoading(false);
@@ -3089,12 +3087,6 @@ if (regiNoCheck.isAvailable) {
                             </div> }
 
                         </form>
-        <ResultPopup {...popup} onClose={() => {
-            const path = redirectPathRef.current;
-            redirectPathRef.current = null;
-            closePopup();
-            if (path) router.push(path);
-        }} />
         </PageLayout>
     );
 }

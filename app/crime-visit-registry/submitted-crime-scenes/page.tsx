@@ -115,10 +115,10 @@ function sceneSearchHaystack(scene: CrimeScene): string {
 function visitTypePill(scene: CrimeScene) {
   const pill =
     scene.visitType === 'REVISIT'
-      ? 'bg-amber-100 text-amber-800 border-amber-300'
+      ? 'bg-orange-100 text-orange-700 border-orange-200'
       : scene.visitType === 'COURT_VISIT'
-        ? 'bg-orange-100 text-orange-900 border-orange-300'
-        : 'bg-blue-100 text-blue-800 border-blue-300';
+        ? 'bg-violet-100 text-violet-700 border-violet-200'
+        : 'bg-blue-100 text-blue-700 border-blue-200';
   const label =
     scene.visitType === 'REVISIT'
       ? 'Revisit'
@@ -126,7 +126,7 @@ function visitTypePill(scene: CrimeScene) {
         ? 'Court Visit'
         : 'New Visit';
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${pill}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${pill}`}>
       {label}
     </span>
   );
@@ -181,23 +181,20 @@ function approvalStatusBadge(status?: string) {
   const norm = (status || 'In Progress').trim().toLowerCase();
   if (norm === 'approved') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
-        <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-100 text-emerald-700 border-emerald-200">
         Approved
       </span>
     );
   }
   if (norm === 'rejected') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border bg-red-50 text-red-700 border-red-200">
-        <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-red-500" />
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-red-100 text-red-700 border-red-200">
         Rejected
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
-      <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-blue-500 animate-pulse" />
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-amber-100 text-amber-700 border-amber-200">
       In Progress
     </span>
   );
@@ -913,7 +910,7 @@ export default function SubmittedCrimeScenesPage() {
               <button
                 type="button"
                 onClick={() => exportToCSV(relatedScenesForDetail)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors shadow-sm min-h-[34px]"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Table className="w-3.5 h-3.5 text-emerald-600" />
                 Export Excel (CSV)
@@ -921,21 +918,22 @@ export default function SubmittedCrimeScenesPage() {
               <button
                 type="button"
                 onClick={() => exportToPDF(relatedScenesForDetail)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors shadow-sm min-h-[34px]"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                <FileText className="w-3.5 h-3.5 text-red-600" />
+                <FileText className="w-3.5 h-3.5 text-red-500" />
                 Export PDF
               </button>
             </div>
           }
         />
         <div className="flex flex-wrap items-center gap-2 mb-6 -mt-4">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-            <CheckCircle className="w-3 h-3" /> Submitted
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-blue-100 text-blue-700 border-blue-200">
+            Submitted
           </span>
+          <ChevronRight size={14} className="text-gray-300" />
           {approvalStatusBadge(relatedScenesForDetail[0]?.approval_status)}
           {relatedScenesForDetail.length > 1 ? (
-            <span className="text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-full px-2.5 py-0.5">
+            <span className="text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-full px-2.5 py-0.5 ml-1">
               {relatedScenesForDetail.length} visits
             </span>
           ) : null}
@@ -945,8 +943,8 @@ export default function SubmittedCrimeScenesPage() {
 
         {/* Full CVR Details (Cvr/GetFullCvrDetailsByInitiateCvrId) */}
         <div className="mt-12 space-y-4">
-          <h3 className="text-base font-semibold text-gray-800 uppercase tracking-widest pb-2 border-b border-gray-200 flex items-center gap-2">
-            <span className="w-1.5 h-4 rounded-full bg-purple-600 inline-block flex-shrink-0" />
+          <h3 className="text-base font-bold text-gray-800 flex items-center gap-2.5">
+            <span className="w-1 h-4 rounded-full bg-blue-600 inline-block flex-shrink-0" />
             Full CVR Details (Backend)
           </h3>
           {fullCvrDetailsLoading ? (
@@ -980,7 +978,7 @@ export default function SubmittedCrimeScenesPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {fullCvrDetails.visits.map((v) => (
                       <tr key={v.cvrId} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-xs font-mono font-bold text-purple-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-xs font-mono font-bold text-blue-700">
                           {v.cvrId}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-xs">
@@ -1024,8 +1022,8 @@ export default function SubmittedCrimeScenesPage() {
 
         {/* Database Visit History Section */}
         <div className="mt-12 space-y-4">
-          <h3 className="text-base font-semibold text-gray-800 uppercase tracking-widest pb-2 border-b border-gray-200 flex items-center gap-2">
-            <span className="w-1.5 h-4 rounded-full bg-blue-600 inline-block flex-shrink-0" />
+          <h3 className="text-base font-bold text-gray-800 flex items-center gap-2.5">
+            <span className="w-1 h-4 rounded-full bg-blue-600 inline-block flex-shrink-0" />
             Backend Database Visit History Log
           </h3>
           {historyLoading ? (
@@ -1125,11 +1123,9 @@ export default function SubmittedCrimeScenesPage() {
 
       {/* SOCO Lab Selector Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">Select SOCO Location</p>
         <div className="flex gap-3 flex-wrap items-end">
           <div className="min-w-[240px] flex-1 max-w-xs">
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
-              Select SOCO Location
-            </label>
             <MultiSelect
               value={selectedLabIds}
               onChange={setSelectedLabIds}
@@ -1276,7 +1272,7 @@ export default function SubmittedCrimeScenesPage() {
                       <td className={`${appTableClasses.td} text-right`} onClick={(e) => e.stopPropagation()}>
                         <Link
                           href={viewHrefForGroup(group)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all"
                         >
                           <ExternalLink className="w-3 h-3" />
                           View

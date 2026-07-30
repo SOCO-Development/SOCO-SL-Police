@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState, Suspense } from 'react';
+import { useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import CreateCrimeSceneForm from '../create-scene/CreateCrimeSceneForm';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { sceneMayEditAmended, sceneHasRevisionPending } from '@/lib/cvrWorkflow';
 import { PageHeader, PageLayout } from '@/components/ui';
-import { CheckCircle } from 'lucide-react';
+import { showSuccessAlert } from '@/lib/alerts';
 
 function EditCrimeSceneContent() {
   const router = useRouter();
@@ -16,14 +16,7 @@ function EditCrimeSceneContent() {
   const focus = searchParams.get('focus') as 'investigation' | 'court' | null;
   const validFocus = focus === 'investigation' || focus === 'court' ? focus : undefined;
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   const scene = useMemo(() => (sceneId ? crimeSceneService.getById(sceneId) : undefined), [sceneId]);
-
-  function showToast(message: string, type: 'success' | 'error' = 'success') {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   const gateMessage = useMemo(() => {
     if (!sceneId) return 'Missing crime scene id.';
@@ -90,20 +83,10 @@ function EditCrimeSceneContent() {
         focusSection={validFocus}
         onCancel={() => router.push('/crime-visit-registry/cvr-update-request')}
         onSaved={({ cvrNo }) => {
-          showToast(`Submitted for approval — ${cvrNo}`);
+          showSuccessAlert('Submitted for Approval', `CVR ${cvrNo} submitted for approval.`);
           setTimeout(() => router.push('/crime-visit-registry/pending-cvr-approvals'), 1600);
         }}
       />
-      {toast && (
-        <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl text-white text-sm font-medium shadow-lg ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}
-        >
-          <CheckCircle className="w-4 h-4 shrink-0" />
-          {toast.message}
-        </div>
-      )}
     </>
   );
 }

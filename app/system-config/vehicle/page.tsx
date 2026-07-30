@@ -239,6 +239,7 @@ export default function VehicleConfigPage() {
 
         if (!assignedLocation) {
             setError('Assigned location is required.');
+            showErrorAlert('Error', 'Assigned location is required.');
             return;
         }
 
@@ -250,6 +251,7 @@ export default function VehicleConfigPage() {
 
         if (hasDuplicateVehicleNo) {
             setError('This vehicle number already exists. Please use a unique vehicle number.');
+            showErrorAlert('Error', 'This vehicle number already exists. Please use a unique vehicle number.');
             return;
         }
 

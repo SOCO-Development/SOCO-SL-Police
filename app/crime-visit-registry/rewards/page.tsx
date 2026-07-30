@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { PageHeader, PageLayout } from '@/components/ui';
 
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,7 @@ import {
   emptyCourtRewardsUpdate,
   normalizeCourtRewardsUpdate,
 } from '@/types/crimeScene';
-import ResultPopup, { useResultPopup } from '@/components/modals/ResultPopup';
+import { showSuccessAlert, showErrorAlert } from '@/lib/alerts';
 
 function visitTypeLabel(scene: CrimeScene) {
   return scene.visitType === 'REVISIT'
@@ -46,8 +46,7 @@ export default function RewardsPage() {
   const [rewardsDraft, setRewardsDraft] = useState<CourtRewardsUpdateDetails>(() => emptyCourtRewardsUpdate());
   const [error, setError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
-  const [popup, showPopup, closePopup] = useResultPopup();
-
+  
   useEffect(() => {
     setScenes(crimeSceneService.getAll());
   }, []);
@@ -116,11 +115,11 @@ export default function RewardsPage() {
 
   function handleSaveRewards() {
     if (!selectedSceneId) {
-      showPopup('error', 'No Scene Selected', 'Select a crime scene first.');
+      showErrorAlert('No Scene Selected', 'Select a crime scene first.');
       return;
     }
     if (rewardsDraft.rewardsEnabled !== 'Yes' && rewardsDraft.rewardsEnabled !== 'No') {
-      showPopup('error', 'Validation Error', 'Select Yes or No for rewards.');
+      showErrorAlert('Validation Error', 'Select Yes or No for rewards.');
       return;
     }
     const updated = crimeSceneService.updateCourtRewardsDetails(selectedSceneId, rewardsDraft);
@@ -128,14 +127,14 @@ export default function RewardsPage() {
       const msg = 'Could not save. The visit record may have been removed.';
       setError(msg);
       setSavedOk(false);
-      showPopup('error', 'Save Failed', msg);
+      showErrorAlert('Save Failed', msg);
       return;
     }
     setScenes(crimeSceneService.getAll());
     setRewardsDraft(mergeCourtRewards(updated.courtRewardsUpdate));
     setError('');
     setSavedOk(true);
-    showPopup('success', 'Rewards Saved', 'Court rewards have been saved successfully.');
+    showSuccessAlert('Rewards Saved', 'Court rewards have been saved successfully.');
     setTimeout(() => router.push('/crime-visit-registry'), 2500);
   }
 
@@ -245,7 +244,6 @@ export default function RewardsPage() {
         )}
       </PageLayout>
 
-      <ResultPopup {...popup} onClose={closePopup} />
-    </>
+          </>
   );
 }
