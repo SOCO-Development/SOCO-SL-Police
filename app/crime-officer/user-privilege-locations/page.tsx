@@ -97,6 +97,28 @@ export default function UserPrivilegeLocationsPage() {
 
     const selectedUserOption = userOptions.find((u) => u.value === selectedUser);
 
+    const buildPrivilegeRows = (
+        groups: Awaited<ReturnType<typeof officerService.getUserPrivilegeLocations>>,
+    ): PrivilegeLocationRow[] =>
+        (groups ?? []).flatMap((group) =>
+            (group.privileges ?? []).map((privilege) => {
+                const uniqueLocations = Array.from(
+                    new Map((privilege.locations ?? []).map((loc) => [loc.locationId, loc])).values()
+                );
+                return {
+                    privilegeId: privilege.privilegeId,
+                    privilegeTypeId: group.privilegeTypeId,
+                    privilegeType: group.privilegeType,
+                    privilegeRole: privilege.privilegeRole,
+                    locationOptions: uniqueLocations.map((loc) => ({
+                        value: String(loc.locationId),
+                        label: loc.locationName,
+                    })),
+                    locationIds: [],
+                };
+            })
+        );
+
     const handleViewPrivileges = async () => {
         if (!selectedUserOption) return;
 
@@ -104,25 +126,7 @@ export default function UserPrivilegeLocationsPage() {
         setIsLoadingPrivileges(true);
         try {
             const groups = await officerService.getUserPrivilegeLocations(selectedUserOption.systemUserId);
-            const rows: PrivilegeLocationRow[] = (groups ?? []).flatMap((group) =>
-                (group.privileges ?? []).map((privilege) => {
-                    const uniqueLocations = Array.from(
-                        new Map((privilege.locations ?? []).map((loc) => [loc.locationId, loc])).values()
-                    );
-                    return {
-                        privilegeId: privilege.privilegeId,
-                        privilegeTypeId: group.privilegeTypeId,
-                        privilegeType: group.privilegeType,
-                        privilegeRole: privilege.privilegeRole,
-                        locationOptions: uniqueLocations.map((loc) => ({
-                            value: String(loc.locationId),
-                            label: loc.locationName,
-                        })),
-                        locationIds: [],
-                    };
-                })
-            );
-            setPrivilegeRows(rows);
+            setPrivilegeRows(buildPrivilegeRows(groups));
         } catch (err) {
             console.error('Failed to load privileges:', err);
             showErrorAlert('Error', getErrorMessage(err, 'Failed to load privileges for this user.'));
@@ -144,6 +148,26 @@ export default function UserPrivilegeLocationsPage() {
                 prev.map((r) => (r.privilegeId === row.privilegeId ? { ...r, locationIds } : r))
             );
             showSuccessAlert('Success', 'Privilege locations updated successfully.');
+
+            // Silently refetch in the background so the row reflects the server's
+            // actual post-update state, without showing any loading indicator.
+            officerService
+                .getUserPrivilegeLocations(selectedUserOption.systemUserId)
+                .then((groups) => {
+                    const freshRows = buildPrivilegeRows(groups);
+                    const freshRow = freshRows.find((r) => r.privilegeId === row.privilegeId);
+                    if (!freshRow) return;
+                    setPrivilegeRows((prev) =>
+                        prev.map((r) =>
+                            r.privilegeId === row.privilegeId
+                                ? { ...freshRow, locationIds }
+                                : r
+                        )
+                    );
+                })
+                .catch((err) => {
+                    console.error('Failed to silently refresh privilege locations:', err);
+                });
         } catch (err) {
             console.error('Failed to update privilege locations:', err);
             showErrorAlert('Error', getErrorMessage(err, 'Failed to update privilege locations.'));
