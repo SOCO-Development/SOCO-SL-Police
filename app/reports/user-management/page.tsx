@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { MagnifyingGlass, FileXls, FilePdf } from 'phosphor-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import FormInput from '@/components/forms/FormInput';
 import CustomSelect from '@/components/forms/CustomSelect';
 import MultiSelect from '@/components/forms/MultiSelect';
@@ -358,48 +358,118 @@ export default function UserManagementPage() {
         resetForm();
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         if (filteredUsers.length === 0) return;
 
-        const headers = ['Full Name', 'Reg. No', 'Designation', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations'];
-        const data = filteredUsers.map((u) => {
-            const roleStr = Array.isArray(u.role) ? u.role.join('\n') : (u.role || '-');
-            const privStr = Array.isArray(u.privileges) ? u.privileges.join('\n') : (u.privileges || '-');
-            const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join('\n') : '-';
-            return {
-                'Full Name': u.fullName || '-',
-                'Reg. No': u.regNo || '-',
-                'Designation': u.designation || '-',
-                'Mobile No.': u.mobileNumber || '-',
-                'SOCO Lab': u.locationName || '-',
-                'Privilege Type': privStr,
-                'Authorization Role': roleStr,
-                'Privilege Locations': privLocStr,
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('User Summary');
+
+        // Show gridlines explicitly
+        worksheet.views = [{ showGridLines: true }];
+
+        // Define Columns with custom widths
+        worksheet.columns = [
+            { header: 'Full Name', key: 'fullName', width: 28 },
+            { header: 'Reg. No', key: 'regNo', width: 14 },
+            { header: 'Designation', key: 'designation', width: 20 },
+            { header: 'Mobile No.', key: 'mobileNumber', width: 16 },
+            { header: 'SOCO Lab', key: 'locationName', width: 22 },
+            { header: 'Privilege Type', key: 'privileges', width: 36 },
+            { header: 'Authorization Role', key: 'role', width: 36 },
+            { header: 'Privilege Locations', key: 'privilegeLocations', width: 36 },
+        ];
+
+        // Header Row Styling (Police Navy Blue background, white bold text)
+        const headerRow = worksheet.getRow(1);
+        headerRow.height = 28;
+        headerRow.eachCell((cell) => {
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: '1E3A8A' },
+            };
+            cell.font = {
+                name: 'Segoe UI',
+                size: 11,
+                bold: true,
+                color: { argb: 'FFFFFF' },
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.border = {
+                top: { style: 'thin', color: { argb: '1E3A8A' } },
+                left: { style: 'thin', color: { argb: '3B82F6' } },
+                bottom: { style: 'medium', color: { argb: '1E40AF' } },
+                right: { style: 'thin', color: { argb: '3B82F6' } },
             };
         });
 
-        const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+        // Data Rows Styling
+        filteredUsers.forEach((u, index) => {
+            const roleStr = Array.isArray(u.role) ? u.role.join(', ') : u.role || '-';
+            const privStr = Array.isArray(u.privileges) ? u.privileges.join(', ') : u.privileges || '-';
+            const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join(', ') : '-';
 
-        // Auto-size columns based on header length and content
-        const colWidths = headers.map(header => {
-            const maxContentLength = Math.max(
-                header.length,
-                ...data.map(row => (row[header as keyof typeof row] || '').toString().length)
-            );
-            return { wch: Math.min(maxContentLength + 2, 50) }; // cap width at 50
+            const row = worksheet.addRow({
+                fullName: u.fullName || '-',
+                regNo: u.regNo || '-',
+                designation: u.designation || '-',
+                mobileNumber: u.mobileNumber || '-',
+                locationName: u.locationName || '-',
+                privileges: privStr,
+                role: roleStr,
+                privilegeLocations: privLocStr,
+            });
+
+            row.height = 26;
+            const isEven = index % 2 === 1;
+            const rowBg = isEven ? 'F8FAFC' : 'FFFFFF';
+
+            row.eachCell((cell, colNumber) => {
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: rowBg },
+                };
+                cell.font = {
+                    name: 'Segoe UI',
+                    size: 10,
+                    color: { argb: '1E293B' },
+                };
+                cell.alignment = { vertical: 'middle', wrapText: true };
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'E2E8F0' } },
+                    left: { style: 'thin', color: { argb: 'E2E8F0' } },
+                    bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
+                    right: { style: 'thin', color: { argb: 'E2E8F0' } },
+                };
+
+                // Reg. No column styling
+                if (colNumber === 2) {
+                    cell.font = { name: 'Consolas', size: 10, bold: true, color: { argb: '1D4ED8' } };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                }
+                // Mobile No. column styling
+                if (colNumber === 4) {
+                    cell.font = { name: 'Consolas', size: 10, color: { argb: '475569' } };
+                }
+            });
         });
-        worksheet['!cols'] = colWidths;
 
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'User Summary');
-
-        XLSX.writeFile(workbook, `SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        // Trigger browser download
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `SOCO_Users_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
     };
 
     const handleExportPDF = () => {
         if (filteredUsers.length === 0) return;
 
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'landscape' });
 
         doc.setProperties({
             title: 'SOCO User Management Report',
@@ -412,26 +482,26 @@ export default function UserManagementPage() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
         doc.setTextColor(30, 58, 138);
-        doc.text('SRI LANKA POLICE - SOCO USERS REPORT', 14, 20);
+        doc.text('SRI LANKA POLICE - SOCO USERS REPORT', 14, 18);
 
         // Header Subtitle
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(107, 114, 128);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 24);
 
         // Underline header
         doc.setDrawColor(59, 130, 246);
         doc.setLineWidth(0.8);
-        doc.line(14, 29, 196, 29);
+        doc.line(14, 27, 283, 27);
 
         autoTable(doc, {
-            startY: 35,
+            startY: 32,
             head: [['Full Name', 'Reg. No', 'Designation', 'Mobile No.', 'SOCO Lab', 'Privilege Type', 'Authorization Role', 'Privilege Locations']],
             body: filteredUsers.map((u) => {
-                const roleStr = Array.isArray(u.role) ? u.role.join('\n') : (u.role || '-');
-                const privStr = Array.isArray(u.privileges) ? u.privileges.join('\n') : (u.privileges || '-');
-                const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join('\n') : '-';
+                const roleStr = Array.isArray(u.role) ? u.role.join(', ') : (u.role || '-');
+                const privStr = Array.isArray(u.privileges) ? u.privileges.join(', ') : (u.privileges || '-');
+                const privLocStr = u.privilegeLocations?.length ? u.privilegeLocations.join(', ') : '-';
                 return [
                     u.fullName || '-',
                     u.regNo || '-',
@@ -445,7 +515,7 @@ export default function UserManagementPage() {
             }),
             theme: 'grid',
             headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-            styles: { fontSize: 8, cellPadding: 3 },
+            styles: { fontSize: 8, cellPadding: 3, valign: 'top' },
             alternateRowStyles: { fillColor: [243, 244, 246] },
         });
 
