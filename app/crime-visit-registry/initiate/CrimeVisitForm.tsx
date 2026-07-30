@@ -18,6 +18,7 @@ import { CrimeSceneFormData } from "@/types/crimeScene";
 import MultiSelect from "@/components/forms/MultiSelect";
 import { IconButton } from "@/components/ui";
 import { locationService, userService, crimeService, officerService } from "@/lib/api";
+import { getUsername } from "@/lib/api/authStorage";
 import { FileText, Clock, Car } from "lucide-react";
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -576,6 +577,7 @@ export default function CrimeVisitForm({
     initialData ?? defaultFormData(),
   );
   const [socoLabs, setSocoLabs] = useState<{ value: string; label: string }[]>(FALLBACK_SOCO_LABS);
+  const [locationMap, setLocationMap] = useState<Map<string, string>>(new Map());
   const [stations, setStations] = useState<{ value: string; label: string }[]>(FALLBACK_STATIONS);
   const [offenceOptions, setOffenceOptions] = useState<{ value: string; label: string }[]>([]);
   const [stationsLoading, setStationsLoading] = useState(false);
@@ -589,7 +591,7 @@ export default function CrimeVisitForm({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // 1. Get current user info
+      // 1. Get current user info & username
       let userInfo: any = null;
       try {
         userInfo = await userService.getCurrentUserInfo();
@@ -597,12 +599,66 @@ export default function CrimeVisitForm({
         console.error("Failed to load user info", err);
       }
 
-      // 2. Get locations
-      let locations: any[] = [];
+      const activeUsername = getUsername() ?? "";
+
+      // 2. Resolve current logged-in user's SYSTEM_USER_ID from officers list
+      let currentSystemUserId = 0;
       try {
-        locations = await locationService.getPrivilegedOrAllLocations();
+        const allOfficers = await officerService.getAllOfficers();
+        if (Array.isArray(allOfficers) && allOfficers.length > 0) {
+          const match = allOfficers.find((o) => {
+            const regiNoMatch = activeUsername && String(o.USER_REGI_NO ?? '').trim().toLowerCase() === activeUsername.trim().toLowerCase();
+            const callingNameMatch = userInfo?.callingName && String(o.USER_CALLING_NAME ?? '').trim().toLowerCase() === userInfo.callingName.trim().toLowerCase();
+            const fullNameMatch = userInfo?.callingName && String(o.USER_FULL_NAME ?? '').trim().toLowerCase() === userInfo.callingName.trim().toLowerCase();
+            return regiNoMatch || callingNameMatch || fullNameMatch;
+          });
+          if (match && match.SYSTEM_USER_ID) {
+            currentSystemUserId = Number(match.SYSTEM_USER_ID);
+          }
+        }
       } catch (err) {
-        console.error("Failed to load locations", err);
+        console.error("Failed to resolve SYSTEM_USER_ID for current user", err);
+      }
+
+      // 3. Get locations specifically assigned to user's "Lodge visits" / "Lodge CVR" privilege
+      let locations: any[] = [];
+      if (currentSystemUserId > 0) {
+        try {
+          const privGroups = await officerService.getUserPrivilegeLocations(currentSystemUserId);
+          if (Array.isArray(privGroups) && privGroups.length > 0) {
+            const lodgeLocationsMap = new Map<string, { LOCATION_ID: string; LOCATION_NAME: string }>();
+
+            privGroups.forEach((g) => {
+              (g.privileges || []).forEach((p) => {
+                const roleLower = (p.privilegeRole || '').toLowerCase().trim();
+                const isLodgeRole = roleLower === 'lodge visits' || roleLower === 'lodge cvr' || roleLower.includes('lodge visit') || roleLower.includes('lodge cvr');
+                if (isLodgeRole) {
+                  (p.locations || []).forEach((loc) => {
+                    lodgeLocationsMap.set(String(loc.locationId), {
+                      LOCATION_ID: String(loc.locationId),
+                      LOCATION_NAME: loc.locationName,
+                    });
+                  });
+                }
+              });
+            });
+
+            if (lodgeLocationsMap.size > 0) {
+              locations = Array.from(lodgeLocationsMap.values());
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load privilege locations for lodge visits", err);
+        }
+      }
+
+      // Fallback to getPrivilegedOrAllLocations if no specific lodge privilege locations found
+      if (locations.length === 0) {
+        try {
+          locations = await locationService.getPrivilegedOrAllLocations();
+        } catch (err) {
+          console.error("Failed to load locations", err);
+        }
       }
 
       // 3. Get offences
@@ -681,30 +737,43 @@ export default function CrimeVisitForm({
           ));
         }
 
-        if (!cancelled && Array.isArray(locations)) {
-          const matchingLab = locations.find(l => String(l.LOCATION_ID) === String(userLocId));
-          if (matchingLab) {
-            setSocoLabs([{ value: matchingLab.LOCATION_NAME, label: matchingLab.LOCATION_NAME }]);
-            setFormData((f) => ({
-              ...f,
-              sectionA: {
-                ...f.sectionA,
-                requestDivision: matchingLab.LOCATION_NAME,
-                locationId: matchingLab.LOCATION_ID,
-              },
-            }));
-            setStationsLoading(true);
-            try {
-              const ps = await locationService.getPoliceStationsBySocoLab(userLocId);
-              if (!cancelled && Array.isArray(ps)) {
-                setStations(ps.map(s => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
-                setStationMap(new Map(ps.map(s => [s.POLICE_STATION_NAME, s.POLICE_STATION_ID])));
-              }
-            } catch (err) {
-              console.error("Failed to load police stations", err);
-            } finally {
-              if (!cancelled) setStationsLoading(false);
+        if (!cancelled && Array.isArray(locations) && locations.length > 0) {
+          // Populate socoLabs options with ALL allowed/privileged locations for the user
+          const labOptions = locations.map((l) => ({
+            value: String(l.LOCATION_NAME),
+            label: String(l.LOCATION_NAME),
+          }));
+          setSocoLabs(labOptions);
+
+          const locMap = new Map<string, string>(
+            locations.map((l) => [String(l.LOCATION_NAME), String(l.LOCATION_ID)]),
+          );
+          setLocationMap(locMap);
+
+          // Select matching user location or first allowed location
+          const matchingLab = locations.find((l) => String(l.LOCATION_ID) === String(userLocId)) || locations[0];
+          const activeLocId = String(matchingLab.LOCATION_ID);
+
+          setFormData((f) => ({
+            ...f,
+            sectionA: {
+              ...f.sectionA,
+              requestDivision: f.sectionA?.requestDivision || matchingLab.LOCATION_NAME,
+              locationId: f.sectionA?.locationId || activeLocId,
+            },
+          }));
+
+          setStationsLoading(true);
+          try {
+            const ps = await locationService.getPoliceStationsBySocoLab(activeLocId);
+            if (!cancelled && Array.isArray(ps)) {
+              setStations(ps.map((s) => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
+              setStationMap(new Map(ps.map((s) => [s.POLICE_STATION_NAME, s.POLICE_STATION_ID])));
             }
+          } catch (err) {
+            console.error("Failed to load police stations", err);
+          } finally {
+            if (!cancelled) setStationsLoading(false);
           }
         }
       }
@@ -828,12 +897,33 @@ export default function CrimeVisitForm({
                 ) : (
                   <CustomSelect
                     value={sA.requestDivision ?? ""}
-                    onChange={(val) =>
+                    onChange={async (val) => {
+                      const selectedLocId = locationMap.get(val) ?? "";
                       setFormData((f) => ({
                         ...f,
-                        sectionA: { ...f.sectionA, requestDivision: val },
-                      }))
-                    }
+                        sectionA: {
+                          ...f.sectionA,
+                          requestDivision: val,
+                          locationId: selectedLocId,
+                          requestFromStation: "",
+                          policeStationId: "",
+                        },
+                      }));
+                      if (selectedLocId) {
+                        setStationsLoading(true);
+                        try {
+                          const ps = await locationService.getPoliceStationsBySocoLab(selectedLocId);
+                          if (Array.isArray(ps)) {
+                            setStations(ps.map((s) => ({ value: s.POLICE_STATION_NAME, label: s.POLICE_STATION_NAME })));
+                            setStationMap(new Map(ps.map((s) => [s.POLICE_STATION_NAME, s.POLICE_STATION_ID])));
+                          }
+                        } catch (err) {
+                          console.error("Failed to load police stations for selected location", err);
+                        } finally {
+                          setStationsLoading(false);
+                        }
+                      }
+                    }}
                     options={socoLabs}
                     placeholder="Select SOCO lab"
                   />

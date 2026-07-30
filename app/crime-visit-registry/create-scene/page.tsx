@@ -10,7 +10,7 @@ export default function CreateCrimeScenePage() {
 
   function handleSaved(payload: { cvrNo: string }) {
     showSuccessAlert('Crime Scene Saved', `Crime scene saved successfully — CVR: ${payload.cvrNo}`);
-    setTimeout(() => router.push('/crime-visit-registry'), 2500);
+    setTimeout(() => router.push('/crime-visit-registry/submitted-crime-scenes'), 2000);
   }
 
   function handleCancel() {
