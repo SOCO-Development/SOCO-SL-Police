@@ -63,6 +63,7 @@ function hasAnalysisReportData(r: AnalysisReportReceived | undefined): boolean {
 interface SectionAccent {
   border: string;
   dot: string;
+  bg: string;
 }
 interface DetailSectionProps {
   title: string;
@@ -75,9 +76,9 @@ interface DetailSectionProps {
 function DetailSection({ title, accent, icon: Icon, className = '', children }: DetailSectionProps) {
   return (
     <section
-      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${accent.border} shadow-sm ${className}`}
+      className={`rounded-xl border border-gray-200 border-l-4 ${accent.border} ${accent.bg} shadow-sm ${className}`}
     >
-      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-gray-200 flex items-center gap-2.5">
+      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-black/5 flex items-center gap-2.5">
         <Icon size={15} className={accent.dot} />
         <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{title}</h4>
       </div>
@@ -117,7 +118,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
 
   return (
     <div className="space-y-5">
-      <DetailSection title="Scene Basics" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600' }} icon={FileText}>
+      <DetailSection title="Scene Basics" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600', bg: 'bg-violet-50' }} icon={FileText}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <DisplayField
             label="Visit Type"
@@ -154,7 +155,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
 
       <LinkedCrimeVisitPanel visitId={scene.visitId} />
 
-      <DetailSection title="Location" accent={{ border: 'border-l-emerald-500', dot: 'text-emerald-600' }} icon={MapPin}>
+      <DetailSection title="Location" accent={{ border: 'border-l-emerald-500', dot: 'text-emerald-600', bg: 'bg-emerald-50' }} icon={MapPin}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <DisplayField label="Police Station" value={readValue(scene.policeStation)} />
           <DisplayField label="Division" value={readValue(scene.division)} />
@@ -162,13 +163,13 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       </DetailSection>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        <DetailSection title="Reported to Police" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600' }} icon={AlertCircle}>
+        <DetailSection title="Reported to Police" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600', bg: 'bg-amber-50' }} icon={AlertCircle}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <DisplayField label="Date" value={readValue(scene.reportedToPoliceStation?.date)} />
             <DisplayField label="Time" value={readValue(scene.reportedToPoliceStation?.time)} />
           </div>
         </DetailSection>
-        <DetailSection title="Reported to SOCO Lab" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600' }} icon={AlertCircle}>
+        <DetailSection title="Reported to SOCO Lab" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600', bg: 'bg-amber-50' }} icon={AlertCircle}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <DisplayField label="Date" value={readValue(scene.reportedToSocoLab?.date)} />
             <DisplayField label="Time" value={readValue(scene.reportedToSocoLab?.time)} />
@@ -176,7 +177,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         </DetailSection>
       </div>
 
-      <DetailSection title="Scene Times & Details" accent={{ border: 'border-l-red-500', dot: 'text-red-600' }} icon={Search}>
+      <DetailSection title="Scene Times & Details" accent={{ border: 'border-l-red-500', dot: 'text-red-600', bg: 'bg-red-50' }} icon={Search}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <DisplayField label="Scene In Time" value={readValue(scene.sceneInTime)} />
           <DisplayField label="Scene Out Time" value={readValue(scene.sceneOutTime)} />
@@ -291,7 +292,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         </div>
       </DetailSection>
 
-      <DetailSection title="Team Leader" accent={{ border: 'border-l-sky-500', dot: 'text-sky-600' }} icon={Users}>
+      <DetailSection title="Team Leader" accent={{ border: 'border-l-sky-500', dot: 'text-sky-600', bg: 'bg-sky-50' }} icon={Users}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <DisplayField label="Team Leader Name" value={readValue(scene.inChargeOfficer?.name)} />
           <DisplayField label="Team Leader Reg. Number" value={readValue(scene.inChargeOfficer?.regNo)} />
@@ -299,7 +300,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         </div>
       </DetailSection>
 
-      <DetailSection title="Investigation Officer" accent={{ border: 'border-l-fuchsia-500', dot: 'text-fuchsia-600' }} icon={UserSearch}>
+      <DetailSection title="Investigation Officer" accent={{ border: 'border-l-fuchsia-500', dot: 'text-fuchsia-600', bg: 'bg-fuchsia-50' }} icon={UserSearch}>
         <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Investigation Officers
@@ -324,7 +325,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       </DetailSection>
 
       {hasAnalysisReportData(scene.analysisReportReceived) ? (
-        <DetailSection title="Analysis reports received" accent={{ border: 'border-l-cyan-500', dot: 'text-cyan-600' }} icon={FlaskConical}>
+        <DetailSection title="Analysis reports received" accent={{ border: 'border-l-cyan-500', dot: 'text-cyan-600', bg: 'bg-cyan-50' }} icon={FlaskConical}>
           <p className="text-xs text-gray-500 mb-3">
             Updated via <span className="font-medium text-gray-700">Production Analysis</span>.
           </p>
@@ -371,7 +372,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       ) : null}
 
       {courtVisitUpdateHasDisplayableData(scene.courtVisitUpdate) ? (
-        <DetailSection title="Court visit (SOC officers)" accent={{ border: 'border-l-violet-600', dot: 'text-violet-700' }} icon={Gavel}>
+        <DetailSection title="Court visit (SOC officers)" accent={{ border: 'border-l-violet-600', dot: 'text-violet-700', bg: 'bg-violet-50' }} icon={Gavel}>
           <p className="text-xs text-gray-500">
             Updated via <span className="font-medium text-gray-700">Update court details</span> → Court visit.
           </p>
@@ -431,7 +432,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       ) : null}
 
       {courtRewardsUpdateHasDisplayableData(scene.courtRewardsUpdate) ? (
-        <DetailSection title="Court rewards" accent={{ border: 'border-l-teal-600', dot: 'text-teal-700' }} icon={Award}>
+        <DetailSection title="Court rewards" accent={{ border: 'border-l-teal-600', dot: 'text-teal-700', bg: 'bg-teal-50' }} icon={Award}>
           <p className="text-xs text-gray-500">
             Updated via <span className="font-medium text-gray-700">Update court details</span> → Rewards.
           </p>
@@ -472,7 +473,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
       ) : null}
 
       {hasCourtDetails ? (
-        <DetailSection title="Court details" accent={{ border: 'border-l-orange-500', dot: 'text-orange-600' }} icon={Scale}>
+        <DetailSection title="Court details" accent={{ border: 'border-l-orange-500', dot: 'text-orange-600', bg: 'bg-orange-50' }} icon={Scale}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <DisplayField label="Court name" value={readValue(scene.courtDetails?.courtName)} />
             <DisplayField label="Court case number" value={readValue(scene.courtDetails?.courtCaseNo)} />
@@ -481,7 +482,7 @@ export default function CrimeSceneDetailView({ scene }: CrimeSceneDetailViewProp
         </DetailSection>
       ) : null}
 
-      <DetailSection title="Production details" accent={{ border: 'border-l-yellow-500', dot: 'text-yellow-600' }} icon={Package}>
+      <DetailSection title="Production details" accent={{ border: 'border-l-yellow-500', dot: 'text-yellow-600', bg: 'bg-yellow-50' }} icon={Package}>
         <div className="mb-3">
           <DisplayField label="Production Availability" value={readValue(scene.courtDetails?.productionPR)} />
         </div>
