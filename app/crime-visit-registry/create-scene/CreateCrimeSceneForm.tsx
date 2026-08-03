@@ -51,7 +51,7 @@ import {
 import { formatDateTimeDDMMYYYY, formatIncidentDuration } from '@/lib/dateUtils';
 
 interface CreateCrimeSceneFormProps {
-  onSaved?: (payload: { cvrNo: string }) => void;
+  onSaved?: (payload: { cvrNo: string; locationId?: string }) => void;
   onCancel?: () => void;
   /** Edit an existing submitted scene (requires amendment flow). */
   editSceneId?: string;
@@ -858,7 +858,7 @@ export default function CreateCrimeSceneForm({
         );
         return;
       }
-      onSaved?.({ cvrNo: updated.cvrNo });
+      onSaved?.({ cvrNo: updated.cvrNo, locationId: userLocationId });
       setError('');
       return;
     }
@@ -980,7 +980,7 @@ export default function CreateCrimeSceneForm({
       const payload = buildCrimeScenePayloadFromForm(form);
       crimeSceneService.create({ ...form, ...payload, cvrId } as CrimeSceneFormData);
 
-      onSaved?.({ cvrNo: apiPayload.cvrNo });
+      onSaved?.({ cvrNo: apiPayload.cvrNo, locationId: userLocationId });
       setError('');
       setForm(defaultForm());
     } catch (err) {

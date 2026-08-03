@@ -8,9 +8,15 @@ import { PageHeader, PageLayout } from '@/components/ui';
 export default function CreateCrimeScenePage() {
   const router = useRouter();
 
-  function handleSaved(payload: { cvrNo: string }) {
+  function handleSaved(payload: { cvrNo: string; locationId?: string }) {
     showSuccessAlert('Crime Scene Saved', `Crime scene saved successfully — CVR: ${payload.cvrNo}`);
-    setTimeout(() => router.push('/crime-visit-registry/submitted-crime-scenes'), 2000);
+    const params = new URLSearchParams();
+    if (payload.locationId) params.set('locationId', payload.locationId);
+    const query = params.toString();
+    setTimeout(
+      () => router.push(`/crime-visit-registry/submitted-crime-scenes${query ? `?${query}` : ''}`),
+      2000,
+    );
   }
 
   function handleCancel() {

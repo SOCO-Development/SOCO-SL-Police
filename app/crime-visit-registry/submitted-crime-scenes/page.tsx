@@ -6,7 +6,7 @@ import Link from 'next/link';
 import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
 import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService, userService, locationService, officerService } from '@/lib/api';
+import { crimeService, locationService, officerService } from '@/lib/api';
 import { getUsername } from '@/lib/api/authStorage';
 import { showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 import { formatDateTimeDDMMYYYY, parseDateTimeParts } from '@/lib/dateUtils';
@@ -564,7 +564,7 @@ export default function SubmittedCrimeScenesPage() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loadingLabsData, setLoadingLabsData] = useState(false);
 
-  const targetCvr = (searchParams.get('cvrNo') ?? '').trim();
+  const newlySavedLocationId = (searchParams.get('locationId') ?? '').trim();
   const sceneId = (searchParams.get('id') ?? '').trim();
   const detailCvrParam = (searchParams.get('cvrNo') ?? '').trim();
   const isDetailMode = Boolean(detailCvrParam || sceneId);
@@ -582,15 +582,12 @@ export default function SubmittedCrimeScenesPage() {
         console.error('Failed to load SOCO labs', err);
       });
 
-    // 2. Do not select a default location on page load
-    userService.getCurrentUserInfo()
-      .then((userInfo) => {
-        // Location auto-selection removed as per requirements
-      })
-      .catch((err) => {
-        console.error('Failed to load user info', err);
-      });
-  }, []);
+    // 2. Pre-select the location of a just-created crime scene so it shows immediately;
+    // otherwise no default location is selected, per requirements.
+    if (newlySavedLocationId) {
+      setSelectedLabIds([newlySavedLocationId]);
+    }
+  }, [newlySavedLocationId]);
 
   const handleFetchForSelectedLabs = useCallback(async () => {
     if (selectedLabIds.length === 0) return;
@@ -690,6 +687,15 @@ export default function SubmittedCrimeScenesPage() {
     // Require the user to click View again to load the new data
     setScenes([]);
   }, [selectedLabIds]);
+
+  useEffect(() => {
+    // Auto-load when arriving here right after creating a crime scene,
+    // so the newly saved CVR shows up without an extra manual "View" click.
+    if (newlySavedLocationId && selectedLabIds.length === 1 && selectedLabIds[0] === newlySavedLocationId) {
+      handleFetchForSelectedLabs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newlySavedLocationId, selectedLabIds]);
 
   const allGroups = useMemo(() => groupScenesByCvr(scenes), [scenes]);
 
@@ -973,12 +979,6 @@ export default function SubmittedCrimeScenesPage() {
           </span>
         }
       />
-
-      {targetCvr && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
-          Recently saved CVR: <span className="font-semibold">{targetCvr}</span>
-        </div>
-      )}
 
       {/* SOCO Lab Selector Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
