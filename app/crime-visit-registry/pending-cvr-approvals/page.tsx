@@ -80,27 +80,66 @@ export default function PendingCvrApprovalsPage() {
     setLoadingRequests(true);
     try {
       const officerId = await resolveCurrentOfficerId();
-      if (!officerId) {
-        console.error('Could not resolve current officer id for pending CVR approvals');
-        setRequests([]);
-        return;
+      let items: any[] = [];
+      if (officerId) {
+        try {
+          items = await crimeService.getPendingApprovalsByUserId(officerId);
+        } catch (e) {
+          console.warn('Backend pending approvals fetch warning', e);
+        }
       }
-      const items = await crimeService.getPendingApprovalsByUserId(officerId);
-      const mapped: CrimeScene[] = items.map((item) => {
+      const mapped: CrimeScene[] = (items || []).map((item) => {
         const id = String(item.CVR_ID ?? item.INITIATE_CVR_ID ?? '');
         return {
           id,
           cvrNo: String(item.CVR_NO ?? id),
           cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
           visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
+          approval_status: 'In Progress',
           createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
           updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
         } as CrimeScene;
       });
-      setRequests(mapped);
+
+      let localAll: CrimeScene[] = [];
+      try {
+        localAll = crimeSceneService.getAll() || [];
+      } catch (err) {
+        console.error('Failed to get local scenes', err);
+      }
+
+      const localPending = localAll.filter(
+        (s) =>
+          Boolean(s) &&
+          (s.approval_status !== 'Approved' ||
+            Boolean(s.cvrAmendment?.revisionPending) ||
+            s.cvrAmendment?.requestStatus === 'pending')
+      );
+
+      const combined = [...mapped];
+      for (const loc of localPending) {
+        if (!loc) continue;
+        const exists = combined.some(
+          (c) =>
+            c.id === loc.id ||
+            (c.cvrNo && loc.cvrNo && c.cvrNo === loc.cvrNo) ||
+            (c.cvrId && loc.cvrId && String(c.cvrId) === String(loc.cvrId))
+        );
+        if (!exists) {
+          combined.push(loc);
+        }
+      }
+
+      setRequests(combined);
     } catch (err) {
       console.error('Failed to load pending CVR approvals', err);
-      setRequests([]);
+      try {
+        const localAll = crimeSceneService.getAll() || [];
+        const localPending = localAll.filter((s) => Boolean(s) && s.approval_status !== 'Approved');
+        setRequests(localPending);
+      } catch {
+        setRequests([]);
+      }
     } finally {
       setLoadingRequests(false);
     }
@@ -110,27 +149,62 @@ export default function PendingCvrApprovalsPage() {
     setLoadingRevisions(true);
     try {
       const officerId = await resolveCurrentOfficerId();
-      if (!officerId) {
-        console.error('Could not resolve current officer id for approved CVRs');
-        setRevisions([]);
-        return;
+      let items: any[] = [];
+      if (officerId) {
+        try {
+          items = await crimeService.getApprovedCrimeScenesByUserId(officerId);
+        } catch (e) {
+          console.warn('Backend approved CVRs fetch warning', e);
+        }
       }
-      const items = await crimeService.getApprovedCrimeScenesByUserId(officerId);
-      const mapped: CrimeScene[] = items.map((item) => {
+      const mapped: CrimeScene[] = (items || []).map((item) => {
         const id = String(item.CVR_ID ?? item.INITIATE_CVR_ID ?? '');
         return {
           id,
           cvrNo: String(item.CVR_NO ?? id),
           cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
           visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
+          approval_status: 'Approved',
           createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
           updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
         } as CrimeScene;
       });
-      setRevisions(mapped);
+
+      let localAll: CrimeScene[] = [];
+      try {
+        localAll = crimeSceneService.getAll() || [];
+      } catch (err) {
+        console.error('Failed to get local scenes', err);
+      }
+
+      const localApproved = localAll.filter(
+        (s) => Boolean(s) && s.approval_status === 'Approved' && !s.cvrAmendment?.revisionPending
+      );
+
+      const combined = [...mapped];
+      for (const loc of localApproved) {
+        if (!loc) continue;
+        const exists = combined.some(
+          (c) =>
+            c.id === loc.id ||
+            (c.cvrNo && loc.cvrNo && c.cvrNo === loc.cvrNo) ||
+            (c.cvrId && loc.cvrId && String(c.cvrId) === String(loc.cvrId))
+        );
+        if (!exists) {
+          combined.push(loc);
+        }
+      }
+
+      setRevisions(combined);
     } catch (err) {
       console.error('Failed to load approved CVRs', err);
-      setRevisions([]);
+      try {
+        const localAll = crimeSceneService.getAll() || [];
+        const localApproved = localAll.filter((s) => Boolean(s) && s.approval_status === 'Approved');
+        setRevisions(localApproved);
+      } catch {
+        setRevisions([]);
+      }
     } finally {
       setLoadingRevisions(false);
     }
@@ -175,17 +249,20 @@ export default function PendingCvrApprovalsPage() {
   }
 
   function reload() {
+    setHasLoaded(true);
     loadPendingRequestsFromBackend();
     loadApprovedCrimeScenesFromBackend();
   }
 
   useEffect(() => {
+    reload();
     locationService
       .getPrivilegedOrAllLocations()
       .then((data) => {
-        if (data) {
+        if (data && data.length > 0) {
           const sorted = [...data].sort((a, b) => a.LOCATION_NAME.localeCompare(b.LOCATION_NAME));
           setLabs(sorted);
+          setSelectedLabIds(sorted.map((l) => String(l.LOCATION_ID)));
         }
       })
       .catch((err) => {
@@ -350,11 +427,13 @@ export default function PendingCvrApprovalsPage() {
         <ApproveRejectActions
           onApprove={() => {
             handleApproveBackend(row, () => {
+              crimeSceneService.updateApprovalStatus(row.id, 'Approved');
               crimeSceneService.approveAmendmentRequest(row.id);
               reload();
             });
           }}
           onReject={() => {
+            crimeSceneService.updateApprovalStatus(row.id, 'Rejected');
             crimeSceneService.rejectAmendmentRequest(row.id);
             reload();
           }}
