@@ -118,20 +118,13 @@ function sceneSearchHaystack(scene: CrimeScene): string {
 }
 
 function visitTypePill(scene: CrimeScene, showRevisit = false) {
-  if (scene.visitType === 'COURT_VISIT') return null;
+  if ((scene.visitType as string) === 'COURT_VISIT') return null;
   if (scene.visitType === 'REVISIT' && !showRevisit) return null;
-  const pill =
-    scene.visitType === 'REVISIT'
-      ? 'bg-blue-100 text-blue-700 border-blue-200'
-      : scene.visitType === 'COURT_VISIT'
-        ? 'bg-violet-100 text-violet-700 border-violet-200'
-        : 'bg-blue-100 text-blue-700 border-blue-200';
-  const label =
-    scene.visitType === 'REVISIT'
-      ? 'Revisit'
-      : scene.visitType === 'COURT_VISIT'
-        ? 'Court Visit'
-        : 'New Visit';
+  const isRevisit = scene.visitType === 'REVISIT';
+  const pill = isRevisit
+    ? 'bg-blue-100 text-blue-700 border-blue-200'
+    : 'bg-blue-100 text-blue-700 border-blue-200';
+  const label = isRevisit ? 'Revisit' : 'New Visit';
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${pill}`}>
       {label}
