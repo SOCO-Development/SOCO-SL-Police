@@ -613,7 +613,7 @@ export default function SubmittedCrimeScenesPage() {
             (s.cvrId && String(s.cvrId) === String(item.CVR_ID)) ||
             (s.cvrNo && s.cvrNo === item.CVR_NO)
         );
-        const visitKey = item.VISIT_ID || item.CVR_ID || item.INITIATE_CVR_ID || index;
+        const visitKey = item.CVR_ID || item.VISIT_ID || item.INITIATE_CVR_ID || index;
         const reportedDt = parseDateTimeParts({ date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME });
         const createdTimestamp =
           item.CREATED_DTM ||
