@@ -30,7 +30,7 @@ export default function PrivilegeLocationTable({
     const [updatingId, setUpdatingId] = useState<number | null>(null);
 
     const getLocations = (row: PrivilegeLocationRow) =>
-        draftLocations[row.privilegeId] ?? row.locationIds;
+        draftLocations[row.privilegeId] ?? [];
 
     const handleLocationsChange = (row: PrivilegeLocationRow, vals: string[]) => {
         setDraftLocations((prev) => ({ ...prev, [row.privilegeId]: vals }));
@@ -72,9 +72,7 @@ export default function PrivilegeLocationTable({
                     <tbody>
                         {rows.map((row) => {
                             const locations = getLocations(row);
-                            const isDirty =
-                                locations.length !== row.locationIds.length ||
-                                locations.some((id) => !row.locationIds.includes(id));
+                            const isDirty = draftLocations[row.privilegeId] !== undefined;
                             return (
                                 <tr key={row.privilegeId} className="border-b border-gray-100 last:border-0">
                                     <td className="px-4 py-3 text-gray-700">{row.privilegeType}</td>
