@@ -582,9 +582,6 @@ export default function SubmittedCrimeScenesPage() {
   const isDetailMode = Boolean(detailCvrParam || sceneId);
 
   useEffect(() => {
-    // Populate local scenes immediately on mount
-    setScenes(crimeSceneService.getAll());
-
     // 1. Load SOCO labs list
     locationService.getPrivilegedOrAllLocations()
       .then((data) => {
@@ -597,12 +594,10 @@ export default function SubmittedCrimeScenesPage() {
         console.error('Failed to load SOCO labs', err);
       });
 
-    // 2. Default selected lab to user's location
+    // 2. Do not select a default location on page load
     userService.getCurrentUserInfo()
       .then((userInfo) => {
-        if (userInfo && userInfo.locationId) {
-          setSelectedLabIds([String(userInfo.locationId)]);
-        }
+        // Location auto-selection removed as per requirements
       })
       .catch((err) => {
         console.error('Failed to load user info', err);
@@ -703,10 +698,10 @@ export default function SubmittedCrimeScenesPage() {
   }, [selectedLabIds]);
 
   useEffect(() => {
-    if (selectedLabIds.length > 0) {
-      handleFetchForSelectedLabs();
-    }
-  }, [selectedLabIds, handleFetchForSelectedLabs]);
+    // Clear existing results when the selected location changes
+    // Require the user to click View again to load the new data
+    setScenes([]);
+  }, [selectedLabIds]);
 
   const allGroups = useMemo(() => groupScenesByCvr(scenes), [scenes]);
 
