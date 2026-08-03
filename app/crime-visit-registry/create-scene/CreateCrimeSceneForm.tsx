@@ -102,6 +102,7 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
 interface SectionAccent {
   border: string;
   dot: string;
+  bg: string;
 }
 
 interface SectionCardProps {
@@ -115,9 +116,9 @@ function SectionCard({ id, title, accent, icon: Icon, children }: SectionCardPro
   return (
     <section
       id={id}
-      className={`bg-[var(--card)] rounded-xl border border-[var(--border-subtle)] border-l-4 ${accent.border} shadow-sm scroll-mt-2`}
+      className={`${accent.bg} rounded-xl border border-[var(--border-subtle)] border-l-4 ${accent.border} shadow-sm scroll-mt-2`}
     >
-      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-[var(--border-subtle)] flex items-center gap-2.5">
+      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-black/5 flex items-center gap-2.5">
         <Icon size={15} className={accent.dot} />
         <h4 className="text-sm font-bold text-[var(--card-foreground)] uppercase tracking-wide">{title}</h4>
       </div>
@@ -1012,7 +1013,7 @@ export default function CreateCrimeSceneForm({
 
           {/* ── Visit Times Panel ── */}
           {!isEditMode && (
-            <SectionCard id="visit-times" title="Visit Times" accent={{ border: 'border-l-blue-500', dot: 'text-blue-600' }} icon={Clock}>
+            <SectionCard id="visit-times" title="Visit Times" accent={{ border: 'border-l-blue-500', dot: 'text-blue-600', bg: 'bg-blue-50' }} icon={Clock}>
               {/* Visit ID with Date selector */}
               <div className="mb-5">
                 <FieldGroup label="Visit ID with Date" required={crimeSceneUsesNewVisitFields(form.visitType)}>
@@ -1145,7 +1146,7 @@ export default function CreateCrimeSceneForm({
 
           {/* ── Scene Basics ── */}
           {isEditMode ? (
-            <SectionCard id="scene-basics" title="Visit reference (locked)" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600' }} icon={FileText}>
+            <SectionCard id="scene-basics" title="Visit reference (locked)" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600', bg: 'bg-violet-50' }} icon={FileText}>
               <p className="text-sm text-gray-800">
                 <span className="font-semibold text-gray-900">CVR: </span>
                 <span className="font-mono">{(form.cvrNo || form.revisitCvrNo || '—').trim()}</span>
@@ -1159,7 +1160,7 @@ export default function CreateCrimeSceneForm({
               </p>
             </SectionCard>
           ) : (
-            <SectionCard id="scene-basics" title="Scene Basics" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600' }} icon={FileText}>
+            <SectionCard id="scene-basics" title="Scene Basics" accent={{ border: 'border-l-violet-500', dot: 'text-violet-600', bg: 'bg-violet-50' }} icon={FileText}>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FieldGroup label="Visit Type">
                   <div className="flex flex-wrap items-center gap-5 min-h-10 rounded-lg border border-gray-200 bg-gray-50/70 p-2">
@@ -1207,7 +1208,7 @@ export default function CreateCrimeSceneForm({
           )}
 
           {/* ── Location ── */}
-          <SectionCard id="location" title="Location" accent={{ border: 'border-l-emerald-500', dot: 'text-emerald-600' }} icon={MapPin}>
+          <SectionCard id="location" title="Location" accent={{ border: 'border-l-emerald-500', dot: 'text-emerald-600', bg: 'bg-emerald-50' }} icon={MapPin}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <FieldGroup label="SOCO Lab" required>
                 <CustomSelect
@@ -1247,7 +1248,7 @@ export default function CreateCrimeSceneForm({
           </SectionCard>
 
           {/* ── Reporting Times ── */}
-          <SectionCard id="reporting" title="Reporting" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600' }} icon={AlertCircle}>
+          <SectionCard id="reporting" title="Reporting" accent={{ border: 'border-l-amber-500', dot: 'text-amber-600', bg: 'bg-amber-50' }} icon={AlertCircle}>
             <div className="bg-[var(--muted)]/50 rounded-xl p-4 space-y-3">
               <SubHead label="Reported to Police" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1294,7 +1295,7 @@ export default function CreateCrimeSceneForm({
           </SectionCard>
 
           {/* ── Scene Times & Details ── */}
-          <SectionCard id="scene-details" title="Scene Details" accent={{ border: 'border-l-red-500', dot: 'text-red-600' }} icon={Search}>
+          <SectionCard id="scene-details" title="Scene Details" accent={{ border: 'border-l-red-500', dot: 'text-red-600', bg: 'bg-red-50' }} icon={Search}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Scene In Time" required>
                 <TimePicker
@@ -1550,7 +1551,7 @@ export default function CreateCrimeSceneForm({
           </SectionCard>
 
           {/* ── Team ── */}
-          <SectionCard id="team" title="Team" accent={{ border: 'border-l-indigo-500', dot: 'text-indigo-600' }} icon={Users}>
+          <SectionCard id="team" title="Team" accent={{ border: 'border-l-indigo-500', dot: 'text-indigo-600', bg: 'bg-indigo-50' }} icon={Users}>
             <div className="bg-[var(--muted)]/40 border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
               <SubHead label="Team Leader" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1896,7 +1897,7 @@ export default function CreateCrimeSceneForm({
           </SectionCard>
 
           {/* ── Court Details ── */}
-          <SectionCard id="court" title="Court" accent={{ border: 'border-l-yellow-600', dot: 'text-yellow-700' }} icon={Scale}>
+          <SectionCard id="court" title="Court" accent={{ border: 'border-l-yellow-600', dot: 'text-yellow-700', bg: 'bg-yellow-50' }} icon={Scale}>
             <div id="cvr-section-court" className="scroll-mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
               <FieldGroup label="Court name">
                 <CustomSelect
@@ -1963,7 +1964,7 @@ export default function CreateCrimeSceneForm({
           </SectionCard>
 
           {/* ── Production details ── */}
-          <SectionCard id="productions" title="Productions" accent={{ border: 'border-l-teal-500', dot: 'text-teal-600' }} icon={Package}>
+          <SectionCard id="productions" title="Productions" accent={{ border: 'border-l-teal-500', dot: 'text-teal-600', bg: 'bg-teal-50' }} icon={Package}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
                 <FieldGroup label="Production Availability" required>
@@ -2482,7 +2483,7 @@ export default function CreateCrimeSceneForm({
           </SectionCard>
 
           {/* ── Attachments ── */}
-          <SectionCard id="attachments" title="Attachments" accent={{ border: 'border-l-rose-500', dot: 'text-rose-600' }} icon={Paperclip}>
+          <SectionCard id="attachments" title="Attachments" accent={{ border: 'border-l-rose-500', dot: 'text-rose-600', bg: 'bg-rose-50' }} icon={Paperclip}>
             <div className="divide-y divide-[var(--border-subtle)]">
               {(['photoZipName', 'sketchFileName', 'reportFileName'] as const).map((field, i) => (
                 <div key={field} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">

@@ -208,6 +208,7 @@ function TextInput({ isReadOnly, className = "", ...props }: TextInputProps) {
 interface SectionAccent {
   border: string;
   dot: string;
+  bg: string;
 }
 interface SectionCardProps {
   title: string;
@@ -218,9 +219,9 @@ interface SectionCardProps {
 function SectionCard({ title, accent, icon: Icon, children }: SectionCardProps) {
   return (
     <section
-      className={`bg-[var(--card)] rounded-xl border border-[var(--border-subtle)] border-l-4 ${accent.border} shadow-sm`}
+      className={`${accent.bg} rounded-xl border border-[var(--border-subtle)] border-l-4 ${accent.border} shadow-sm`}
     >
-      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-[var(--border-subtle)] flex items-center gap-2.5">
+      <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-black/5 flex items-center gap-2.5">
         <Icon size={15} className={accent.dot} />
         <h4 className="text-sm font-bold text-[var(--card-foreground)] uppercase tracking-wide">{title}</h4>
       </div>
@@ -887,7 +888,7 @@ export default function CrimeVisitForm({
             Initiate Visit
           </h3>
 
-          <SectionCard title="Request Details" accent={{ border: "border-l-violet-500", dot: "text-violet-600" }} icon={FileText}>
+          <SectionCard title="Request Details" accent={{ border: "border-l-violet-500", dot: "text-violet-600", bg: "bg-violet-50" }} icon={FileText}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FieldGroup label="SOCO Lab" required>
                 {locked ? (
@@ -1108,7 +1109,7 @@ export default function CrimeVisitForm({
           </SectionCard>
 
           {/* OUT & IN Section */}
-          <SectionCard title="OUT Details" accent={{ border: "border-l-indigo-500", dot: "text-indigo-600" }} icon={Clock}>
+          <SectionCard title="OUT Details" accent={{ border: "border-l-indigo-500", dot: "text-indigo-600", bg: "bg-indigo-50" }} icon={Clock}>
             <DateTimeRow
               label="OUT"
               value={sA.out ?? emptyDatetime()}
@@ -1119,7 +1120,7 @@ export default function CrimeVisitForm({
             />
           </SectionCard>
 
-          <SectionCard title="Vehicle & Driver Details" accent={{ border: "border-l-emerald-500", dot: "text-emerald-600" }} icon={Car}>
+          <SectionCard title="Vehicle & Driver Details" accent={{ border: "border-l-emerald-500", dot: "text-emerald-600", bg: "bg-emerald-50" }} icon={Car}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
               <FieldGroup label="Vehicle Number" required>
                 {ro ? (
