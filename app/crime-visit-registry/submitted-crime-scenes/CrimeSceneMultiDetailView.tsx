@@ -1,7 +1,11 @@
 import type { CrimeScene } from '@/types/crimeScene';
 import CrimeSceneDetailView from './CrimeSceneDetailView';
-import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
+import { formatDateTimeDDMMYYYY, parseDateTimeParts } from '@/lib/dateUtils';
 import { registryWorkflowDisplayEntries } from '@/lib/registryWorkflowDisplay';
+
+function getVisitDisplayTimestamp(scene: CrimeScene): string {
+  return formatDateTimeDDMMYYYY(scene.createdAt || scene.updatedAt);
+}
 
 function visitPresentation(scene: CrimeScene) {
   switch (scene.visitType) {
@@ -11,7 +15,7 @@ function visitPresentation(scene: CrimeScene) {
         section: 'border-gray-200 bg-white shadow-sm',
         header: 'bg-gray-50/80 border-b border-gray-200',
         badge: 'bg-blue-600 text-white',
-        pill: 'bg-orange-100 text-orange-700 border-orange-200',
+        pill: 'bg-blue-100 text-blue-700 border-blue-200',
       };
     case 'COURT_VISIT':
       return {
@@ -59,11 +63,13 @@ export default function CrimeSceneMultiDetailView({ scenes }: { scenes: CrimeSce
                   <h3 className="text-sm font-semibold text-gray-900 truncate">
                     Visit {idx + 1}
                   </h3>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border shrink-0 ${p.pill}`}
-                  >
-                    {p.typeLabel}
-                  </span>
+                  {p.typeLabel ? (
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border shrink-0 ${p.pill}`}
+                    >
+                      {p.typeLabel}
+                    </span>
+                  ) : null}
                   {workflowEntries.map((entry) => (
                     <span
                       key={`${entry.kind}-${entry.at}`}
@@ -75,7 +81,7 @@ export default function CrimeSceneMultiDetailView({ scenes }: { scenes: CrimeSce
                   ))}
                 </div>
                 <span className="text-xs text-gray-500 font-mono tabular-nums shrink-0">
-                  Submitted: {formatDateTimeDDMMYYYY(scene.updatedAt)}
+                  Submitted: {getVisitDisplayTimestamp(scene)}
                 </span>
               </div>
             </div>

@@ -9,7 +9,7 @@ import { crimeSceneService } from '@/lib/crimeSceneService';
 import { crimeService, userService, locationService, officerService } from '@/lib/api';
 import { getUsername } from '@/lib/api/authStorage';
 import { showErrorAlert, showSuccessAlert } from '@/lib/alerts';
-import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
+import { formatDateTimeDDMMYYYY, parseDateTimeParts } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
 import { normalizeCourtVisitUpdate } from '@/types/crimeScene';
 import { PageHeader, PageLayout, TabBar, SearchInput, TableSortButton } from '@/components/ui';
@@ -64,6 +64,11 @@ function isReportedToPoliceToday(scene: CrimeScene): boolean {
   return isSameLocalCalendarDay(d, new Date());
 }
 
+/** Helper to get exact creation/submission timestamp for display */
+function getVisitDisplayTimestamp(scene: CrimeScene): string {
+  return formatDateTimeDDMMYYYY(scene.createdAt || scene.updatedAt);
+}
+
 /** Visit record saved/updated today (e.g. new revisit submitted today). */
 function isVisitSubmittedToday(scene: CrimeScene): boolean {
   const d = new Date(scene.updatedAt);
@@ -112,10 +117,12 @@ function sceneSearchHaystack(scene: CrimeScene): string {
     .toLowerCase();
 }
 
-function visitTypePill(scene: CrimeScene) {
+function visitTypePill(scene: CrimeScene, showRevisit = false) {
+  if (scene.visitType === 'COURT_VISIT') return null;
+  if (scene.visitType === 'REVISIT' && !showRevisit) return null;
   const pill =
     scene.visitType === 'REVISIT'
-      ? 'bg-orange-100 text-orange-700 border-orange-200'
+      ? 'bg-blue-100 text-blue-700 border-blue-200'
       : scene.visitType === 'COURT_VISIT'
         ? 'bg-violet-100 text-violet-700 border-violet-200'
         : 'bg-blue-100 text-blue-700 border-blue-200';
@@ -156,7 +163,7 @@ function visitTypeListRowClasses(scene: CrimeScene) {
   if (workflowClasses) return workflowClasses;
   
   if (scene.visitType === 'REVISIT') {
-    return 'border-amber-200 bg-amber-50/80 ring-1 ring-amber-200/70 border-l-[5px] border-l-amber-500';
+    return 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500';
   }
   if (scene.visitType === 'COURT_VISIT') {
     return 'border-orange-200 bg-orange-50/80 ring-1 ring-orange-200/70 border-l-[5px] border-l-orange-500';
@@ -169,7 +176,7 @@ function visitTypeVisitBadgeClasses(scene: CrimeScene) {
   if (workflowClasses) return workflowClasses;
   
   if (scene.visitType === 'REVISIT') {
-    return 'bg-amber-200 text-amber-950 border-amber-400';
+    return 'bg-blue-200 text-blue-950 border-blue-400';
   }
   if (scene.visitType === 'COURT_VISIT') {
     return 'bg-orange-200 text-orange-950 border-orange-400';
@@ -619,6 +626,14 @@ export default function SubmittedCrimeScenesPage() {
             (s.cvrNo && s.cvrNo === item.CVR_NO)
         );
         const visitKey = item.VISIT_ID || item.CVR_ID || item.INITIATE_CVR_ID || index;
+        const reportedDt = parseDateTimeParts({ date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME });
+        const createdTimestamp =
+          item.CREATED_DTM ||
+          localMatch?.createdAt ||
+          (reportedDt ? reportedDt.toISOString() : null) ||
+          localMatch?.updatedAt ||
+          new Date().toISOString();
+
         return {
           id: `backend_visit_${visitKey}_${item.CVR_NO || index}`,
           cvrNo: item.CVR_NO,
@@ -634,8 +649,8 @@ export default function SubmittedCrimeScenesPage() {
           offence: localMatch?.offence || [],
           offenceType: item.OFFENCE_TYPE,
           placeOfCrimeScene: item.PLACE_DETAIL,
-          createdAt: item.CREATED_DTM || new Date().toISOString(),
-          updatedAt: item.CREATED_DTM || new Date().toISOString(),
+          createdAt: createdTimestamp,
+          updatedAt: localMatch?.updatedAt || createdTimestamp,
           inChargeOfficer: localMatch?.inChargeOfficer || { name: '' },
           socoOfficers: localMatch?.socoOfficers || [],
           specialistTeams: localMatch?.specialistTeams || [],
@@ -643,7 +658,7 @@ export default function SubmittedCrimeScenesPage() {
           courtVisitUpdate: localMatch?.courtVisitUpdate,
           registryWorkflowUpdates: localMatch?.registryWorkflowUpdates,
           registryWorkflowUpdate: localMatch?.registryWorkflowUpdate,
-          approval_status: (item as any).approval_status || (item as any).APPROVAL_STATUS || localMatch?.approval_status || (Number(item.CVR_ID) % 2 === 0 ? 'Approved' : 'In Progress'),
+          approval_status: (item as any).approval_status || (item as any).APPROVAL_STATUS || localMatch?.approval_status || 'In Progress',
         };
       });
 
@@ -966,21 +981,6 @@ export default function SubmittedCrimeScenesPage() {
           description="All visits for this CVR are listed below."
           actions={
             <div className="flex items-center gap-2">
-              {relatedScenesForDetail[0]?.approval_status?.toLowerCase() !== 'approved' && (
-                <button
-                  type="button"
-                  disabled={isApproving}
-                  onClick={handleApproveCvr}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 border border-emerald-700 disabled:border-gray-300 rounded-lg transition-colors shadow-sm min-h-[34px] cursor-pointer"
-                >
-                  {isApproving ? (
-                    <div className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
-                  ) : (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                  Approve CVR
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() => exportToCSV(relatedScenesForDetail)}
@@ -1060,11 +1060,7 @@ export default function SubmittedCrimeScenesPage() {
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">
                               New Visit
                             </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                              Revisit
-                            </span>
-                          )}
+                          ) : null}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-900 font-medium">
                           {v.offenceType || '—'}
@@ -1130,11 +1126,7 @@ export default function SubmittedCrimeScenesPage() {
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">
                               New Visit
                             </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                              Revisit
-                            </span>
-                          )}
+                          ) : null}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-900 font-medium">
                           {hist.OFFENCE_TYPE || '—'}
@@ -1275,16 +1267,15 @@ export default function SubmittedCrimeScenesPage() {
             <tbody>
               {sortedGroups.map((group) => {
                 const { primary, children, groupKey } = group;
-                const hasChildren = children.length > 0;
+                const nonCourtChildren = children.filter((s) => s.visitType !== 'COURT_VISIT');
+                const hasChildren = nonCourtChildren.length > 0;
                 const open = expandedKeys.has(groupKey);
-                const chron = hasChildren ? flattenGroupChronological(group) : [];
+                const chron = flattenGroupChronological(group).filter((s) => s.visitType !== 'COURT_VISIT');
                 const primaryVisitNo = chron.length
                   ? chron.findIndex((c) => c.id === primary.id) + 1
                   : 1;
-                const courtVisitEntries = courtVisitEntriesForGroup(group);
-                const backendCourtCount = courtVisitsByCvr[groupKey]?.length ?? 0;
-                const totalExtra = children.length + (backendCourtCount || courtVisitEntries.length);
-                const hasExpanded = hasChildren || courtVisitEntries.length > 0 || Boolean(primary.cvrId);
+                const totalExtra = nonCourtChildren.length;
+                const hasExpanded = chron.length > 0;
                 return (
                   <Fragment key={groupKey}>
                     <tr
@@ -1309,17 +1300,15 @@ export default function SubmittedCrimeScenesPage() {
                       </td>
                       <td className={appTableClasses.td}>
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {hasChildren ? (
-                            <span
-                              className={`inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md border text-[10px] font-bold tabular-nums ${visitTypeVisitBadgeClasses(primary)}`}
-                              title="Visit order (by created date) for this CVR"
-                            >
-                              {primaryVisitNo}
-                            </span>
-                          ) : null}
+                          <span
+                            className={`inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md border text-[10px] font-bold tabular-nums ${visitTypeVisitBadgeClasses(primary)}`}
+                            title="Visit order (by created date) for this CVR"
+                          >
+                            {primaryVisitNo}
+                          </span>
                           {visitTypePill(primary)}
                           {registryWorkflowPill(primary)}
-                          {hasExpanded ? (
+                          {totalExtra > 0 ? (
                             <span className="text-[10px] font-medium text-gray-500">
                               +{totalExtra} more
                             </span>
@@ -1337,7 +1326,7 @@ export default function SubmittedCrimeScenesPage() {
                       </td>
                       <td className={appTableClasses.td}>
                         <span className="text-gray-700 text-xs">
-                          {formatDateTimeDDMMYYYY(primary.updatedAt)}
+                          {getVisitDisplayTimestamp(primary)}
                         </span>
                       </td>
                       <td className={appTableClasses.td}>
@@ -1358,14 +1347,14 @@ export default function SubmittedCrimeScenesPage() {
                         <td colSpan={9} className="px-4 py-4">
                           <div className="space-y-3">
                             <ul className="space-y-2.5">
-                              {chron.slice(1).map((child) => {
+                              {chron.map((child) => {
                                 const visitNo = chron.findIndex((c) => c.id === child.id) + 1;
                                 const isRevisit = child.visitType === 'REVISIT';
                                 const rowClass = isRevisit
-                                  ? 'border-amber-200 bg-amber-50/80 ring-1 ring-amber-200/70 border-l-[5px] border-l-amber-500'
+                                  ? 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500'
                                   : 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500';
                                 const badgeClass = isRevisit
-                                  ? 'bg-amber-200 text-amber-950 border-amber-400'
+                                  ? 'bg-blue-200 text-blue-950 border-blue-400'
                                   : 'bg-blue-200 text-blue-950 border-blue-400';
                                 return (
                                   <li
@@ -1379,17 +1368,17 @@ export default function SubmittedCrimeScenesPage() {
                                       >
                                         {visitNo}
                                       </span>
-                                      {visitTypePill(child)}
+                                      {visitTypePill(child, true)}
                                       {registryWorkflowPill(child)}
                                       <span className="text-xs text-gray-700 font-medium">
-                                        Submitted {formatDateTimeDDMMYYYY(child.updatedAt)}
+                                        Submitted {getVisitDisplayTimestamp(child)}
                                       </span>
                                     </div>
                                     <Link
                                       href={viewHrefForGroup(group)}
                                       className={`text-xs font-semibold hover:underline shrink-0 ${
                                         isRevisit
-                                          ? 'text-amber-700 hover:text-amber-900'
+                                          ? 'text-blue-700 hover:text-blue-900'
                                           : 'text-blue-700 hover:text-blue-900'
                                       }`}
                                     >
@@ -1399,88 +1388,7 @@ export default function SubmittedCrimeScenesPage() {
                                 );
                               })}
 
-                              {/* Loading spinner for dynamically fetched backend court visits */}
-                              {loadingCourtVisits[groupKey] && (
-                                <li className="flex items-center justify-center p-4">
-                                  <div className="animate-spin w-5 h-5 border-2 border-orange-600 border-t-transparent rounded-full" />
-                                </li>
-                              )}
-
-                              {/* Backend Court visits */}
-                              {courtVisitsByCvr[groupKey]?.map((cv, idx) => {
-                                const visitNo = chron.length + idx + 1;
-                                return (
-                                  <li
-                                    key={`backend-court-visit-${cv.COURT_VISIT_DETAILS_ID || idx}`}
-                                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm shadow-sm border-orange-200 bg-orange-50/80 ring-1 ring-orange-200/70 border-l-[5px] border-l-orange-500"
-                                  >
-                                    <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                      <span
-                                        className="inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border text-[11px] font-bold tabular-nums shrink-0 bg-orange-200 text-orange-950 border-orange-400"
-                                        title="Court visit order"
-                                      >
-                                        {visitNo}
-                                      </span>
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-orange-100 text-orange-900 border-orange-300">
-                                        Court Visit
-                                      </span>
-                                      <span className="text-xs text-gray-700 font-medium">
-                                        Submitted {cv.CREATED_DTM}
-                                      </span>
-                                    </div>
-                                    <Link
-                                      href={viewHrefForGroup(group)}
-                                      className="text-xs font-semibold text-orange-700 hover:text-orange-900 hover:underline shrink-0"
-                                    >
-                                      Open with all visits
-                                    </Link>
-                                  </li>
-                                );
-                              })}
-
-                              {/* Court visit synthetic rows (fallback if backend court visits not loaded/empty) */}
-                              {(!courtVisitsByCvr[groupKey] || courtVisitsByCvr[groupKey].length === 0) &&
-                                courtVisitEntries.map((entry, idx) => {
-                                  const visitNo = chron.length + idx + 1;
-                                  return (
-                                    <li
-                                      key={`court-visit-${entry.scene.id}-${idx}`}
-                                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm shadow-sm border-orange-200 bg-orange-50/80 ring-1 ring-orange-200/70 border-l-[5px] border-l-orange-500"
-                                    >
-                                      <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                        <span
-                                          className="inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border text-[11px] font-bold tabular-nums shrink-0 bg-orange-200 text-orange-950 border-orange-400"
-                                          title="Court visit order"
-                                        >
-                                          {visitNo}
-                                        </span>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-orange-100 text-orange-900 border-orange-300">
-                                          Court Visit
-                                        </span>
-                                        <span className="text-xs text-gray-700 font-medium">
-                                          Submitted {formatDateTimeDDMMYYYY(entry.savedAt)}
-                                        </span>
-                                      </div>
-                                      <Link
-                                        href={viewHrefForGroup(group)}
-                                        className="text-xs font-semibold text-orange-700 hover:text-orange-900 hover:underline shrink-0"
-                                      >
-                                        Open with all visits
-                                      </Link>
-                                    </li>
-                                  );
-                                })}
-
-                              {/* Empty fallback state if expanded but absolutely no extra items found */}
-                              {!loadingCourtVisits[groupKey] &&
-                                chron.slice(1).length === 0 &&
-                                (!courtVisitsByCvr[groupKey] || courtVisitsByCvr[groupKey].length === 0) &&
-                                courtVisitEntries.length === 0 && (
-                                  <li className="text-center py-4 text-xs text-gray-500 border border-dashed border-gray-200 rounded-xl bg-white">
-                                    No other visits or court visits recorded.
-                                  </li>
-                                )}
-                            </ul>
+                             </ul>
                           </div>
                         </td>
                       </tr>

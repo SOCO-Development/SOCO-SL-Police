@@ -509,6 +509,7 @@ export const crimeSceneService = {
 
     const created: CrimeScene = {
       ...data,
+      approval_status: data.approval_status || 'In Progress',
       investigationOfficers: inv.length ? inv : undefined,
       id,
       cvrNo,
@@ -526,7 +527,9 @@ export const crimeSceneService = {
 
   updateApprovalStatus(sceneId: string, status: string): CrimeScene | null {
     const all = loadAll();
-    const idx = all.findIndex((s) => s.id === sceneId);
+    const idx = all.findIndex(
+      (s) => s.id === sceneId || (s.cvrNo && s.cvrNo === sceneId) || (s.cvrId && String(s.cvrId) === String(sceneId))
+    );
     if (idx === -1) return null;
     const scene = all[idx];
     const next: CrimeScene = {
