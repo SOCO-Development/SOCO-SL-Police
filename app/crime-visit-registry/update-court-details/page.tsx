@@ -8,8 +8,8 @@ import CustomSelect from '@/components/forms/CustomSelect';
 import Button from '@/components/buttons/Button';
 import CourtProductionDetailsEditor from '@/app/crime-visit-registry/components/CourtProductionDetailsEditor';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { crimeService, fileService } from '@/lib/api';
-import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
+import { crimeService, fileService, locationService } from '@/lib/api';
+import { formatDateTimeDDMMYYYY, parseDateTimeParts } from '@/lib/dateUtils';
 import { validateProductionSentToCourtSection } from '@/lib/courtDetailsValidation';
 import type { CrimeScene, CrimeSceneCourtDetails } from '@/types/crimeScene';
 import { emptyCrimeSceneCourtDetails } from '@/types/crimeScene';
@@ -46,9 +46,104 @@ export default function UpdateCourtDetailsPage() {
   const [isEditingProductionSentToCourt, setIsEditingProductionSentToCourt] = useState(false);
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [scenesLoading, setScenesLoading] = useState(true);
 
   useEffect(() => {
-    setScenes(crimeSceneService.getAll());
+    let cancelled = false;
+
+    async function loadScenes() {
+      const localScenes = crimeSceneService.getAll();
+      setScenes(localScenes);
+
+      try {
+        const locations = await locationService.getPrivilegedOrAllLocations();
+        const results = await Promise.all(
+          locations.map((loc) => crimeService.getVisitsByCvrLocationId(Number(loc.LOCATION_ID)).catch(() => [])),
+        );
+        const allBackendVisits = results.flat();
+
+        const latestLocal = crimeSceneService.getAll();
+        const mapped: CrimeScene[] = allBackendVisits.map((item: any, index) => {
+          const localMatch = latestLocal.find(
+            (s) =>
+              (s.cvrId && String(s.cvrId) === String(item.CVR_ID)) ||
+              (s.cvrNo && s.cvrNo === item.CVR_NO),
+          );
+          const visitKey = item.CVR_ID || item.VISIT_ID || item.INITIATE_CVR_ID || index;
+          const reportedDt = parseDateTimeParts({ date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME });
+          const createdTimestamp =
+            item.CREATED_DTM ||
+            localMatch?.createdAt ||
+            (reportedDt ? reportedDt.toISOString() : null) ||
+            localMatch?.updatedAt ||
+            new Date().toISOString();
+
+          return {
+            id: `backend_visit_${visitKey}_${item.CVR_NO || index}`,
+            cvrNo: item.CVR_NO,
+            cvrId: Number(item.CVR_ID),
+            visitId: item.VISIT_ID,
+            visitType: item.VISIT_TYPE_ID === '1' ? ('NEW_VISIT' as const) : ('REVISIT' as const),
+            policeStation: localMatch?.policeStation || '',
+            reportedToPoliceStation: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
+            reportedToSocoLab: { date: item.REPORTED_SOCO_DATE, time: item.REPORTED_SOCO_TIME },
+            sceneInTime: item.SCENE_IN,
+            sceneOutTime: item.SCENE_OUT,
+            division: localMatch?.division || '',
+            offence: localMatch?.offence || [],
+            offenceType: item.OFFENCE_TYPE,
+            placeOfCrimeScene: item.PLACE_DETAIL,
+            createdAt: createdTimestamp,
+            updatedAt: localMatch?.updatedAt || createdTimestamp,
+            inChargeOfficer: localMatch?.inChargeOfficer || { name: '' },
+            socoOfficers: localMatch?.socoOfficers || [],
+            specialistTeams: localMatch?.specialistTeams || [],
+            courtDetails: localMatch?.courtDetails || { sentToAnalysisRows: [], productionSentToCourtRows: [] },
+            courtVisitUpdate: localMatch?.courtVisitUpdate,
+            registryWorkflowUpdates: localMatch?.registryWorkflowUpdates,
+            registryWorkflowUpdate: localMatch?.registryWorkflowUpdate,
+            approval_status:
+              item.approval_status || item.APPROVAL_STATUS || localMatch?.approval_status || 'In Progress',
+          } as CrimeScene;
+        });
+
+        const backendIds = new Set(
+          mapped
+            .map((s) => String(s.cvrId ?? ''))
+            .filter((id) => id !== '' && id !== 'undefined' && id !== '0' && id !== 'NaN'),
+        );
+        const backendCvrNos = new Set(mapped.map((s) => (s.cvrNo ?? '').trim().toLowerCase()).filter(Boolean));
+
+        const uniqueLocal = latestLocal.filter((s) => {
+          const localCvrId = String(s.cvrId ?? '').trim();
+          const localCvrNo = (s.cvrNo ?? '').trim().toLowerCase();
+          if (localCvrId && localCvrId !== '0' && localCvrId !== 'undefined' && backendIds.has(localCvrId)) {
+            return false;
+          }
+          if (localCvrNo && backendCvrNos.has(localCvrNo)) return false;
+          return true;
+        });
+
+        const seenSceneIds = new Set<string>();
+        const combinedScenes: CrimeScene[] = [];
+        for (const sc of [...mapped, ...uniqueLocal]) {
+          if (seenSceneIds.has(sc.id)) continue;
+          seenSceneIds.add(sc.id);
+          combinedScenes.push(sc);
+        }
+
+        if (!cancelled) setScenes(combinedScenes);
+      } catch (err) {
+        console.error('Failed to load crime scenes from backend', err);
+      } finally {
+        if (!cancelled) setScenesLoading(false);
+      }
+    }
+
+    loadScenes();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const sortedScenes = useMemo(() => {
@@ -262,7 +357,11 @@ export default function UpdateCourtDetailsPage() {
           title="Update Court Details"
         />
 
-        {scenes.length === 0 ? (
+        {scenesLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+          </div>
+        ) : scenes.length === 0 ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
             No crime scenes yet. Create one from{' '}
             <Link href="/crime-visit-registry/create-scene" className="font-semibold underline">
