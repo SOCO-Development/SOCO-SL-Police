@@ -96,6 +96,8 @@ export default function PendingCvrApprovalsPage() {
           cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
           visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
           approval_status: 'In Progress',
+          // Store LOCATION_ID in `division` so client-side filtering can compare against selectedLabIds
+          division: item.LOCATION_ID != null ? String(item.LOCATION_ID) : '',
           createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
           updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
         } as CrimeScene;
@@ -165,6 +167,8 @@ export default function PendingCvrApprovalsPage() {
           cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
           visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
           approval_status: 'Approved',
+          // Store LOCATION_ID in `division` so client-side filtering can compare against selectedLabIds
+          division: item.LOCATION_ID != null ? String(item.LOCATION_ID) : '',
           createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
           updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
         } as CrimeScene;
@@ -255,20 +259,25 @@ export default function PendingCvrApprovalsPage() {
   }
 
   useEffect(() => {
-    reload();
     locationService
       .getPrivilegedOrAllLocations()
       .then((data) => {
         if (data && data.length > 0) {
           const sorted = [...data].sort((a, b) => a.LOCATION_NAME.localeCompare(b.LOCATION_NAME));
           setLabs(sorted);
-          setSelectedLabIds(sorted.map((l) => String(l.LOCATION_ID)));
         }
       })
       .catch((err) => {
         console.error('Failed to load SOCO labs', err);
       });
   }, []);
+
+  // Reset table when the location selection changes so stale data is never shown
+  useEffect(() => {
+    setRequests([]);
+    setRevisions([]);
+    setHasLoaded(false);
+  }, [selectedLabIds]);
 
   const handleView = useCallback(async () => {
     if (selectedLabIds.length === 0) return;
@@ -314,6 +323,10 @@ export default function PendingCvrApprovalsPage() {
   const filteredRequests = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return requests.filter((row) => {
+      // Location filter: only show rows whose LOCATION_ID (stored in division) is selected
+      if (selectedLabIds.length > 0 && row.division) {
+        if (!selectedLabIds.includes(row.division)) return false;
+      }
       if (!inDateRange(row)) return false;
       if (!q) return true;
       const haystack = [row.cvrNo, row.id, row.visitType, formatDateTimeDDMMYYYY(row.updatedAt)]
@@ -322,11 +335,15 @@ export default function PendingCvrApprovalsPage() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [requests, searchTerm, inDateRange]);
+  }, [requests, searchTerm, inDateRange, selectedLabIds]);
 
   const filteredRevisions = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return revisions.filter((row) => {
+      // Location filter: only show rows whose LOCATION_ID (stored in division) is selected
+      if (selectedLabIds.length > 0 && row.division) {
+        if (!selectedLabIds.includes(row.division)) return false;
+      }
       if (!inDateRange(row)) return false;
       if (!q) return true;
       const haystack = [row.cvrNo, row.id, row.visitType, formatDateTimeDDMMYYYY(row.updatedAt)]
@@ -335,7 +352,7 @@ export default function PendingCvrApprovalsPage() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [revisions, searchTerm, inDateRange]);
+  }, [revisions, searchTerm, inDateRange, selectedLabIds]);
 
   const sortedRequests = useMemo(() => {
     const data = [...filteredRequests];
@@ -497,7 +514,7 @@ export default function PendingCvrApprovalsPage() {
       <PageHeader
         backHref="/crime-visit-registry"
         title="Pending CVR Approvals"
-        //description="Approve or reject permission requests first, then review amended records with field-level diffs."
+      //description="Approve or reject permission requests first, then review amended records with field-level diffs."
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-6">
@@ -537,108 +554,108 @@ export default function PendingCvrApprovalsPage() {
         </div>
       </div>
 
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
-                {tabs.map((tab) => {
-                  const active = filter === tab.value;
-                  return (
-                    <button
-                      key={tab.value}
-                      type="button"
-                      onClick={() => setFilter(tab.value)}
-                      className={cn(
-                        'group inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
-                        active
-                          ? 'bg-white text-blue-700 shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      )}
-                    >
-                      {tab.label}
-                      <span
-                        className={cn(
-                          'rounded-full px-1.5 py-0.5 text-xs font-semibold',
-                          active ? 'bg-blue-50 text-blue-700' : 'bg-gray-200 text-gray-600 group-hover:bg-gray-300'
-                        )}
-                      >
-                        {countFor(tab.value)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <SearchInput
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by CVR no, visit type, or updated date..."
-                wrapperClassName="w-full md:w-96 mb-2"
-                className="min-h-10"
-              />
-            </div>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+          {tabs.map((tab) => {
+            const active = filter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setFilter(tab.value)}
+                className={cn(
+                  'group inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
+                  active
+                    ? 'bg-white text-blue-700 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                )}
+              >
+                {tab.label}
+                <span
+                  className={cn(
+                    'rounded-full px-1.5 py-0.5 text-xs font-semibold',
+                    active ? 'bg-blue-50 text-blue-700' : 'bg-gray-200 text-gray-600 group-hover:bg-gray-300'
+                  )}
+                >
+                  {countFor(tab.value)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <SearchInput
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search by CVR no, visit type, or updated date..."
+          wrapperClassName="w-full md:w-96 mb-2"
+          className="min-h-10"
+        />
+      </div>
 
-            {!hasLoaded ? (
-              <div className="text-center py-16 text-gray-400 text-sm">
-                Please select SOCO Location(s) and click the "View" button to load pending approvals.
-              </div>
-            ) : filter === 'REQUESTS' ? (
-              <AppTable<CrimeScene>
-                columns={requestColumns}
-                data={sortedRequests}
-                keyField="id"
-                sortKey={requestSortKey}
-                sortAsc={requestSortAsc}
-                onSort={handleRequestSort}
-                emptyMessage="No pending CVRs"
-                variant="card"
-              />
-            ) : null}
+      {!hasLoaded ? (
+        <div className="text-center py-16 text-gray-400 text-sm">
+          Please select SOCO Location(s) and click the &quot;View&quot; button to load pending approvals.
+        </div>
+      ) : filter === 'REQUESTS' ? (
+        <AppTable<CrimeScene>
+          columns={requestColumns}
+          data={sortedRequests}
+          keyField="id"
+          sortKey={requestSortKey}
+          sortAsc={requestSortAsc}
+          onSort={handleRequestSort}
+          emptyMessage="No pending CVRs"
+          variant="card"
+        />
+      ) : null}
 
-            {hasLoaded && filter === 'REVISIONS' ? (
-              <div className="space-y-6">
-                <AppTable<CrimeScene>
-                  columns={revisionColumns}
-                  data={sortedRevisions}
-                  keyField="id"
-                  sortKey={revisionSortKey}
-                  sortAsc={revisionSortAsc}
-                  onSort={handleRevisionSort}
-                  emptyMessage="No approved CVRs"
-                  variant="card"
+      {hasLoaded && filter === 'REVISIONS' ? (
+        <div className="space-y-6">
+          <AppTable<CrimeScene>
+            columns={revisionColumns}
+            data={sortedRevisions}
+            keyField="id"
+            sortKey={revisionSortKey}
+            sortAsc={revisionSortAsc}
+            onSort={handleRevisionSort}
+            emptyMessage="No approved CVRs"
+            variant="card"
+          />
+
+          {selectedRevision ? (
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50">
+                <div>
+                  <p className="font-mono font-semibold text-gray-900">{selectedRevision.cvrNo}</p>
+                  <p className="text-xs text-gray-500">Compare previous vs proposed below</p>
+                </div>
+                <ApproveRejectActions
+                  approveLabel="Approve changes"
+                  rejectLabel="Reject & restore"
+                  showIcons={false}
+                  onApprove={() => {
+                    handleApproveBackend(selectedRevision, () => {
+                      crimeSceneService.approveRevision(selectedRevision.id);
+                      reload();
+                    });
+                  }}
+                  onReject={() => {
+                    crimeSceneService.rejectRevision(selectedRevision.id);
+                    reload();
+                  }}
                 />
-
-                {selectedRevision ? (
-                  <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50">
-                      <div>
-                        <p className="font-mono font-semibold text-gray-900">{selectedRevision.cvrNo}</p>
-                        <p className="text-xs text-gray-500">Compare previous vs proposed below</p>
-                      </div>
-                      <ApproveRejectActions
-                        approveLabel="Approve changes"
-                        rejectLabel="Reject & restore"
-                        showIcons={false}
-                        onApprove={() => {
-                          handleApproveBackend(selectedRevision, () => {
-                            crimeSceneService.approveRevision(selectedRevision.id);
-                            reload();
-                          });
-                        }}
-                        onReject={() => {
-                          crimeSceneService.rejectRevision(selectedRevision.id);
-                          reload();
-                        }}
-                      />
-                    </div>
-                    <div className="p-4">
-                      {baselineScene(selectedRevision) ? (
-                        <CrimeSceneRevisionDiff before={baselineScene(selectedRevision) as CrimeScene} after={selectedRevision} />
-                      ) : (
-                        <p className="text-sm text-amber-800">Baseline snapshot missing - cannot diff.</p>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
               </div>
-            ) : null}
+              <div className="p-4">
+                {baselineScene(selectedRevision) ? (
+                  <CrimeSceneRevisionDiff before={baselineScene(selectedRevision) as CrimeScene} after={selectedRevision} />
+                ) : (
+                  <p className="text-sm text-amber-800">Baseline snapshot missing - cannot diff.</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </PageLayout>
   );
 }
