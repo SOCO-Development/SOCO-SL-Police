@@ -242,11 +242,7 @@ export default function PendingCvrApprovalsPage() {
         approved_by: approvedBy
       });
 
-      if (response && response.isSuccess) {
-        showSuccessAlert('Success', response.dataBundle || 'Crime scene approved successfully.');
-      } else {
-        showSuccessAlert('Approved (Staging Mock)', 'Crime scene approved successfully.');
-      }
+      showSuccessAlert('Success', response?.message || 'Crime scene approved successfully.');
 
       onApproveLocal();
     } catch (err) {
