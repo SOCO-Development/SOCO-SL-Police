@@ -332,10 +332,16 @@ export async function approveCrimeScene(
  */
 export async function getPendingApprovalsByUserId(
   userId: number,
+  filters?: { locationIds?: number[]; fromDate?: string; toDate?: string },
 ): Promise<PendingCvrApprovalItemApi[]> {
   return apiRequest<PendingCvrApprovalItemApi[]>('Cvr/GetPendingApprovalsByUserId', {
-    method: 'GET',
-    params: { userId },
+    method: 'POST',
+    body: {
+      userId,
+      locationIds: filters?.locationIds ?? [],
+      fromDate: filters?.fromDate,
+      toDate: filters?.toDate,
+    },
   });
 }
 
@@ -344,9 +350,15 @@ export async function getPendingApprovalsByUserId(
  */
 export async function getApprovedCrimeScenesByUserId(
   userId: number,
+  filters?: { locationIds?: number[]; fromDate?: string; toDate?: string },
 ): Promise<ApprovedCrimeSceneItemApi[]> {
   return apiRequest<ApprovedCrimeSceneItemApi[]>('Cvr/GetApprovedCrimeScenesByUserId', {
-    method: 'GET',
-    params: { userId },
+    method: 'POST',
+    body: {
+      userId,
+      locationIds: filters?.locationIds ?? [],
+      fromDate: filters?.fromDate,
+      toDate: filters?.toDate,
+    },
   });
 }

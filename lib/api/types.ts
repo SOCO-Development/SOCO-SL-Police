@@ -161,6 +161,7 @@ export interface InsertPromotionsData {
 // ─── Current User Info Types ──────────────────────────────────────────
 
 export interface CurrentUserInfo {
+  systemUserId: string;
   callingName: string;
   designationName: string;
   userImageUrl: string;

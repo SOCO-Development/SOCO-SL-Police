@@ -6,8 +6,7 @@ import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import MultiSelect from '@/components/forms/MultiSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { locationService, crimeService, officerService } from '@/lib/api';
-import { getUsername } from '@/lib/api/authStorage';
+import { locationService, crimeService, userService } from '@/lib/api';
 import { showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
@@ -39,6 +38,15 @@ function parseDDMMYYYY(dateStr: string): Date | null {
   return new Date(year, month - 1, day);
 }
 
+function toApiDateString(dateStr: string): string | undefined {
+  const parsed = parseDDMMYYYY(dateStr);
+  if (!parsed) return undefined;
+  const yyyy = parsed.getFullYear();
+  const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+  const dd = String(parsed.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function PendingCvrApprovalsPage() {
   const [requests, setRequests] = useState<CrimeScene[]>([]);
   const [revisions, setRevisions] = useState<CrimeScene[]>([]);
@@ -62,18 +70,13 @@ export default function PendingCvrApprovalsPage() {
   const [loadingRevisions, setLoadingRevisions] = useState(false);
 
   async function resolveCurrentOfficerId(): Promise<number | null> {
-    const username = getUsername();
-    if (!username) return null;
     try {
-      const officers = await officerService.getAllOfficers();
-      const match = officers.find((o) => o.USER_REGI_NO === username || o.USERNAME === username);
-      if (match && match.SYSTEM_USER_ID) {
-        return Number(match.SYSTEM_USER_ID) || null;
-      }
+      const userInfo = await userService.getCurrentUserInfo();
+      return Number(userInfo?.systemUserId) || null;
     } catch (err) {
       console.error('Failed to resolve current officer id', err);
+      return null;
     }
-    return null;
   }
 
   async function loadPendingRequestsFromBackend() {
@@ -83,7 +86,11 @@ export default function PendingCvrApprovalsPage() {
       let items: any[] = [];
       if (officerId) {
         try {
-          items = await crimeService.getPendingApprovalsByUserId(officerId);
+          items = await crimeService.getPendingApprovalsByUserId(officerId, {
+            locationIds: selectedLabIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id)),
+            fromDate: toApiDateString(dateFrom),
+            toDate: toApiDateString(dateTo),
+          });
         } catch (e) {
           console.warn('Backend pending approvals fetch warning', e);
         }
@@ -154,7 +161,11 @@ export default function PendingCvrApprovalsPage() {
       let items: any[] = [];
       if (officerId) {
         try {
-          items = await crimeService.getApprovedCrimeScenesByUserId(officerId);
+          items = await crimeService.getApprovedCrimeScenesByUserId(officerId, {
+            locationIds: selectedLabIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id)),
+            fromDate: toApiDateString(dateFrom),
+            toDate: toApiDateString(dateTo),
+          });
         } catch (e) {
           console.warn('Backend approved CVRs fetch warning', e);
         }
