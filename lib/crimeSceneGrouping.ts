@@ -31,9 +31,7 @@ export function groupScenesByCvr(scenes: CrimeScene[]): CrimeSceneCvrGroup[] {
     const seenSignatures = new Set<string>();
 
     for (const item of list) {
-      const sig = item.visitId
-        ? `v_${item.visitId}_${item.visitType}`
-        : `${item.id}_${item.visitType}_${item.sceneInTime || ''}_${item.sceneOutTime || ''}`;
+      const sig = item.id;
       if (seenSignatures.has(sig)) continue;
       seenSignatures.add(sig);
       uniqueList.push(item);
