@@ -6,13 +6,11 @@ import AppTable, { type AppTableColumn } from '@/components/layout/AppTable';
 import MultiSelect from '@/components/forms/MultiSelect';
 import DatePicker from '@/components/forms/DatePicker';
 import { crimeSceneService } from '@/lib/crimeSceneService';
-import { locationService, crimeService, officerService } from '@/lib/api';
-import { getUsername } from '@/lib/api/authStorage';
+import { locationService, crimeService, userService } from '@/lib/api';
 import { showErrorAlert, showSuccessAlert } from '@/lib/alerts';
 import { formatDateTimeDDMMYYYY } from '@/lib/dateUtils';
 import type { CrimeScene } from '@/types/crimeScene';
-import CrimeSceneRevisionDiff from '@/components/cvr/CrimeSceneRevisionDiff';
-import { ActionChipButton, ApproveRejectActions, PageHeader, PageLayout, SearchInput } from '@/components/ui';
+import { ApproveRejectActions, PageHeader, PageLayout, SearchInput } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { Eye } from 'lucide-react';
 
@@ -39,12 +37,20 @@ function parseDDMMYYYY(dateStr: string): Date | null {
   return new Date(year, month - 1, day);
 }
 
+function toApiDateString(dateStr: string): string | undefined {
+  const parsed = parseDDMMYYYY(dateStr);
+  if (!parsed) return undefined;
+  const yyyy = parsed.getFullYear();
+  const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+  const dd = String(parsed.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function PendingCvrApprovalsPage() {
   const [requests, setRequests] = useState<CrimeScene[]>([]);
   const [revisions, setRevisions] = useState<CrimeScene[]>([]);
   const [filter, setFilter] = useState<FilterTab>('REQUESTS');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const [requestSortKey, setRequestSortKey] = useState<keyof CrimeScene | string | null>('updatedAt');
   const [requestSortAsc, setRequestSortAsc] = useState(false);
   const [revisionSortKey, setRevisionSortKey] = useState<keyof CrimeScene | string | null>('updatedAt');
@@ -62,18 +68,13 @@ export default function PendingCvrApprovalsPage() {
   const [loadingRevisions, setLoadingRevisions] = useState(false);
 
   async function resolveCurrentOfficerId(): Promise<number | null> {
-    const username = getUsername();
-    if (!username) return null;
     try {
-      const officers = await officerService.getAllOfficers();
-      const match = officers.find((o) => o.USER_REGI_NO === username || o.USERNAME === username);
-      if (match && match.SYSTEM_USER_ID) {
-        return Number(match.SYSTEM_USER_ID) || null;
-      }
+      const userInfo = await userService.getCurrentUserInfo();
+      return Number(userInfo?.systemUserId) || null;
     } catch (err) {
       console.error('Failed to resolve current officer id', err);
+      return null;
     }
-    return null;
   }
 
   async function loadPendingRequestsFromBackend() {
@@ -83,7 +84,11 @@ export default function PendingCvrApprovalsPage() {
       let items: any[] = [];
       if (officerId) {
         try {
-          items = await crimeService.getPendingApprovalsByUserId(officerId);
+          items = await crimeService.getPendingApprovalsByUserId(officerId, {
+            locationIds: selectedLabIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id)),
+            fromDate: toApiDateString(dateFrom),
+            toDate: toApiDateString(dateTo),
+          });
         } catch (e) {
           console.warn('Backend pending approvals fetch warning', e);
         }
@@ -96,6 +101,8 @@ export default function PendingCvrApprovalsPage() {
           cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
           visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
           approval_status: 'In Progress',
+          offenceType: item.OFFENCE_TYPE ?? '',
+          placeOfCrimeScene: item.PLACE_DETAIL ?? '',
           // Store LOCATION_ID in `division` so client-side filtering can compare against selectedLabIds
           division: item.LOCATION_ID != null ? String(item.LOCATION_ID) : '',
           createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
@@ -154,7 +161,11 @@ export default function PendingCvrApprovalsPage() {
       let items: any[] = [];
       if (officerId) {
         try {
-          items = await crimeService.getApprovedCrimeScenesByUserId(officerId);
+          items = await crimeService.getApprovedCrimeScenesByUserId(officerId, {
+            locationIds: selectedLabIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id)),
+            fromDate: toApiDateString(dateFrom),
+            toDate: toApiDateString(dateTo),
+          });
         } catch (e) {
           console.warn('Backend approved CVRs fetch warning', e);
         }
@@ -167,6 +178,8 @@ export default function PendingCvrApprovalsPage() {
           cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
           visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
           approval_status: 'Approved',
+          offenceType: item.OFFENCE_TYPE ?? '',
+          placeOfCrimeScene: item.PLACE_DETAIL ?? '',
           // Store LOCATION_ID in `division` so client-side filtering can compare against selectedLabIds
           division: item.LOCATION_ID != null ? String(item.LOCATION_ID) : '',
           createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
@@ -228,14 +241,10 @@ export default function PendingCvrApprovalsPage() {
 
       const response = await crimeService.approveCrimeScene({
         cvrId: initiateId,
-        approved_by: approvedBy
+        approvedBy: approvedBy
       });
 
-      if (response && response.isSuccess) {
-        showSuccessAlert('Success', response.dataBundle || 'Crime scene approved successfully.');
-      } else {
-        showSuccessAlert('Approved (Staging Mock)', 'Crime scene approved successfully.');
-      }
+      showSuccessAlert('Success', response?.message || 'Crime scene approved successfully.');
 
       onApproveLocal();
     } catch (err) {
@@ -289,16 +298,6 @@ export default function PendingCvrApprovalsPage() {
     setHasLoaded(true);
     setLoadingLabsData(false);
   }, [selectedLabIds]);
-
-  function baselineScene(row: CrimeScene): CrimeScene | null {
-    const raw = row.cvrAmendment?.baselineJson;
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as CrimeScene;
-    } catch {
-      return null;
-    }
-  }
 
   const inDateRange = useCallback(
     (row: CrimeScene) => {
@@ -392,9 +391,6 @@ export default function PendingCvrApprovalsPage() {
     return data;
   }, [filteredRevisions, revisionSortKey, revisionSortAsc]);
 
-  const selectedRevision =
-    sortedRevisions.find((row) => row.id === selectedRevisionId) ?? sortedRevisions[0] ?? null;
-
   const countFor = (tab: FilterTab) => (tab === 'REQUESTS' ? filteredRequests.length : filteredRevisions.length);
 
   function handleRequestSort(key: keyof CrimeScene | string) {
@@ -477,35 +473,22 @@ export default function PendingCvrApprovalsPage() {
       ),
     },
     {
+      key: 'offenceType',
+      label: 'Offence Type',
+      sortable: true,
+      render: (_, row) => <span className="text-gray-700">{row.offenceType || '-'}</span>,
+    },
+    {
+      key: 'placeOfCrimeScene',
+      label: 'Place',
+      sortable: true,
+      render: (_, row) => <span className="text-gray-700">{row.placeOfCrimeScene || '-'}</span>,
+    },
+    {
       key: 'updatedAt',
       label: 'Updated',
       sortable: true,
       render: (_, row) => <span className="text-gray-700 text-xs">{formatDateTimeDDMMYYYY(row.updatedAt)}</span>,
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      align: 'right',
-      render: (_, row) => (
-        <div className="flex items-center justify-end gap-2">
-          <ActionChipButton variant="blue" onClick={() => setSelectedRevisionId(row.id)}>
-            Review diff
-          </ActionChipButton>
-          <ApproveRejectActions
-            showIcons={false}
-            onApprove={() => {
-              handleApproveBackend(row, () => {
-                crimeSceneService.approveRevision(row.id);
-                reload();
-              });
-            }}
-            onReject={() => {
-              crimeSceneService.rejectRevision(row.id);
-              reload();
-            }}
-          />
-        </div>
-      ),
     },
   ];
 
@@ -610,51 +593,16 @@ export default function PendingCvrApprovalsPage() {
       ) : null}
 
       {hasLoaded && filter === 'REVISIONS' ? (
-        <div className="space-y-6">
-          <AppTable<CrimeScene>
-            columns={revisionColumns}
-            data={sortedRevisions}
-            keyField="id"
-            sortKey={revisionSortKey}
-            sortAsc={revisionSortAsc}
-            onSort={handleRevisionSort}
-            emptyMessage="No approved CVRs"
-            variant="card"
-          />
-
-          {selectedRevision ? (
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50">
-                <div>
-                  <p className="font-mono font-semibold text-gray-900">{selectedRevision.cvrNo}</p>
-                  <p className="text-xs text-gray-500">Compare previous vs proposed below</p>
-                </div>
-                <ApproveRejectActions
-                  approveLabel="Approve changes"
-                  rejectLabel="Reject & restore"
-                  showIcons={false}
-                  onApprove={() => {
-                    handleApproveBackend(selectedRevision, () => {
-                      crimeSceneService.approveRevision(selectedRevision.id);
-                      reload();
-                    });
-                  }}
-                  onReject={() => {
-                    crimeSceneService.rejectRevision(selectedRevision.id);
-                    reload();
-                  }}
-                />
-              </div>
-              <div className="p-4">
-                {baselineScene(selectedRevision) ? (
-                  <CrimeSceneRevisionDiff before={baselineScene(selectedRevision) as CrimeScene} after={selectedRevision} />
-                ) : (
-                  <p className="text-sm text-amber-800">Baseline snapshot missing - cannot diff.</p>
-                )}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <AppTable<CrimeScene>
+          columns={revisionColumns}
+          data={sortedRevisions}
+          keyField="id"
+          sortKey={revisionSortKey}
+          sortAsc={revisionSortAsc}
+          onSort={handleRevisionSort}
+          emptyMessage="No approved CVRs"
+          variant="card"
+        />
       ) : null}
     </PageLayout>
   );

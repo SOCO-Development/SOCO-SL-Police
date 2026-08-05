@@ -161,6 +161,7 @@ export interface InsertPromotionsData {
 // ─── Current User Info Types ──────────────────────────────────────────
 
 export interface CurrentUserInfo {
+  systemUserId: string;
   callingName: string;
   designationName: string;
   userImageUrl: string;
@@ -1162,7 +1163,7 @@ export type UploadCvrReportResponse = string;
 
 export interface ApproveCrimeSceneRequest {
   cvrId: number;
-  approved_by: number;
+  approvedBy: number;
 }
 
 export interface ApproveCrimeSceneResponse {
