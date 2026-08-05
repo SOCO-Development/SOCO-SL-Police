@@ -867,7 +867,7 @@ export default function SubmittedCrimeScenesPage() {
       // 2. Call backend Cvr/ApproveCrimeScene endpoint
       const response = await crimeService.approveCrimeScene({
         cvrId: initiateId,
-        approved_by: approvedBy
+        approvedBy: approvedBy
       });
 
       if (response && response.isSuccess) {

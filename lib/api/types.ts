@@ -1163,7 +1163,7 @@ export type UploadCvrReportResponse = string;
 
 export interface ApproveCrimeSceneRequest {
   cvrId: number;
-  approved_by: number;
+  approvedBy: number;
 }
 
 export interface ApproveCrimeSceneResponse {
