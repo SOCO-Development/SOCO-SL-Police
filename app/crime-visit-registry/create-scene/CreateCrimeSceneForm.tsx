@@ -1840,26 +1840,11 @@ export default function CreateCrimeSceneForm({
                 {(form.sceneGuards ?? []).map((guard, index) => (
                   <div key={`snc-guard-${index}`} className="flex items-start gap-3">
                     <FieldGroup label="Name" className="mb-0 flex-1">
-                      <CustomSelect
-                        value={guard.name}
-                        onChange={(value) => {
-                          const selected = teamLeaders.find(t => t.value === value);
-                          if (selected) {
-                            updateSceneGuard(index, {
-                              name: selected.value,
-                              regNo: selected.regNo,
-                              rank: selected.rank,
-                            });
-                          } else {
-                            updateSceneGuard(index, { name: value });
-                          }
-                        }}
-                        options={teamLeaders}
-                        placeholder="Select Scene Guard"
-                        searchable
-                        searchPlaceholder="Search Name"
+                      <TextInput
+                        value={guard.name ?? ''}
+                        onChange={(e) => updateSceneGuard(index, { name: e.target.value })}
+                        placeholder="Scene Guard Name"
                       />
-                      {guard.name && <ClearLink onClick={() => updateSceneGuard(index, { name: '', regNo: '', rank: '' })} />}
                     </FieldGroup>
                     <FieldGroup label="Reg. Number" className="mb-0 flex-1">
                       <TextInput
