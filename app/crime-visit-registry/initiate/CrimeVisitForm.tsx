@@ -676,27 +676,12 @@ export default function CrimeVisitForm({
         console.error("Failed to load offences", err);
       }
 
-      // 4. Get vehicles
-      let vehicles: any[] = [];
-      try {
-        const userLocId = userInfo?.locationId;
-        const locIds = userLocId 
-          ? [Number(userLocId)] 
-          : locations.map((l) => Number(l.LOCATION_ID)).filter(Boolean);
-
-        if (locIds.length > 0) {
-          vehicles = await crimeService.getAllVehicles({ locationIds: locIds });
-        }
-      } catch (err) {
-        console.error("Failed to load vehicles", err);
-      }
-
       if (cancelled) return;
 
-      // 5. Load dependent options if user info loaded successfully
+      // 4. Load dependent options if user info loaded successfully
       if (userInfo && userInfo.locationId) {
         const userLocId = userInfo.locationId;
-        
+
         try {
           const officers = await officerService.getAllOfficers({ locationIds: [Number(userLocId)] });
           if (!cancelled && Array.isArray(officers)) {
@@ -710,32 +695,6 @@ export default function CrimeVisitForm({
           }
         } catch (err) {
           console.error("Failed to load officers for driver select", err);
-        }
-
-        if (!cancelled && Array.isArray(vehicles)) {
-          console.log("[SOCO] All vehicles loaded:", vehicles);
-          console.log("[SOCO] Filtering vehicles with userLocId:", userLocId);
-          
-          const filteredVehicles = vehicles.filter(v => {
-            const locId = v.LOCATION_ID ?? v.locationId ?? v.location_id;
-            return String(locId) === String(userLocId);
-          });
-
-          console.log("[SOCO] Filtered vehicles list:", filteredVehicles);
-
-          setVehicleOptions(
-            filteredVehicles.map(v => {
-              const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
-              return { value: String(regNo), label: String(regNo) };
-            })
-          );
-          setVehicleMap(new Map(
-            filteredVehicles.map(v => {
-              const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
-              const vId = v.VEHICLE_ID ?? v.vehicleId ?? v.vehicle_id ?? '';
-              return [String(regNo), String(vId)];
-            })
-          ));
         }
 
         if (!cancelled && Array.isArray(locations) && locations.length > 0) {
@@ -763,6 +722,27 @@ export default function CrimeVisitForm({
               locationId: f.sectionA?.locationId || activeLocId,
             },
           }));
+
+          try {
+            const vehicles = await crimeService.getVehicleByLocationId(Number(activeLocId));
+            if (!cancelled && Array.isArray(vehicles)) {
+              setVehicleOptions(
+                vehicles.map(v => {
+                  const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
+                  return { value: String(regNo), label: String(regNo) };
+                })
+              );
+              setVehicleMap(new Map(
+                vehicles.map(v => {
+                  const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
+                  const vId = v.VEHICLE_ID ?? v.vehicleId ?? v.vehicle_id ?? '';
+                  return [String(regNo), String(vId)];
+                })
+              ));
+            }
+          } catch (err) {
+            console.error("Failed to load vehicles", err);
+          }
 
           setStationsLoading(true);
           try {
@@ -910,6 +890,9 @@ export default function CrimeVisitForm({
                           policeStationId: "",
                         },
                       }));
+                      setVehicleOptions([]);
+                      setVehicleMap(new Map());
+                      updateC({ vehicleNo: "", vehicleId: "" });
                       if (selectedLocId) {
                         setStationsLoading(true);
                         try {
@@ -922,6 +905,27 @@ export default function CrimeVisitForm({
                           console.error("Failed to load police stations for selected location", err);
                         } finally {
                           setStationsLoading(false);
+                        }
+
+                        try {
+                          const vehicles = await crimeService.getVehicleByLocationId(Number(selectedLocId));
+                          if (Array.isArray(vehicles)) {
+                            setVehicleOptions(
+                              vehicles.map(v => {
+                                const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
+                                return { value: String(regNo), label: String(regNo) };
+                              })
+                            );
+                            setVehicleMap(new Map(
+                              vehicles.map(v => {
+                                const regNo = v.VEHICLE_REGISTRATION_NO ?? v.vehicleRegistrationNo ?? v.vehicleNo ?? v.vehicle_registration_no ?? '';
+                                const vId = v.VEHICLE_ID ?? v.vehicleId ?? v.vehicle_id ?? '';
+                                return [String(regNo), String(vId)];
+                              })
+                            ));
+                          }
+                        } catch (err) {
+                          console.error("Failed to load vehicles for selected location", err);
                         }
                       }
                     }}

@@ -81,6 +81,17 @@ export async function getVehicleById(vehicleId: number): Promise<ApiVehicle[]> {
 }
 
 /**
+ * Get vehicle details by Location ID
+ */
+export async function getVehicleByLocationId(locationId: number): Promise<ApiVehicle[]> {
+  return apiRequest<ApiVehicle[]>('Crime/GetVehicleByLocationId', {
+    method: 'GET',
+    params: { locationId },
+  });
+}
+
+
+/**
  * Get visit details by ID
  */
 export async function getVisitById(visitId: number): Promise<GetVisitByIdResponse> {
