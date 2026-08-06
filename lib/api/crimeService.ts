@@ -35,6 +35,9 @@ import type {
   ApproveCrimeSceneResponse,
   PendingCvrApprovalItemApi,
   ApprovedCrimeSceneItemApi,
+  RejectCrimeSceneRequest,
+  RejectCrimeSceneResponse,
+  RejectedCrimeSceneItemApi,
 } from './types';
 
 /**
@@ -353,6 +356,36 @@ export async function getApprovedCrimeScenesByUserId(
   filters?: { locationIds?: number[]; fromDate?: string; toDate?: string },
 ): Promise<ApprovedCrimeSceneItemApi[]> {
   return apiRequest<ApprovedCrimeSceneItemApi[]>('Cvr/GetApprovedCrimeScenesByUserId', {
+    method: 'POST',
+    body: {
+      userId,
+      locationIds: filters?.locationIds ?? [],
+      fromDate: filters?.fromDate,
+      toDate: filters?.toDate,
+    },
+  });
+}
+
+/**
+ * Reject a crime scene
+ */
+export async function rejectCrimeScene(
+  payload: RejectCrimeSceneRequest,
+): Promise<RejectCrimeSceneResponse> {
+  return apiRequest<RejectCrimeSceneResponse>('Cvr/RejectCrimeScene', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/**
+ * Get rejected crime scenes for a given (approver) user id
+ */
+export async function getRejectedCrimeScenesByUserId(
+  userId: number,
+  filters?: { locationIds?: number[]; fromDate?: string; toDate?: string },
+): Promise<RejectedCrimeSceneItemApi[]> {
+  return apiRequest<RejectedCrimeSceneItemApi[]>('Cvr/GetRejectedCrimeScenesByUserId', {
     method: 'POST',
     body: {
       userId,

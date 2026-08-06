@@ -14,11 +14,12 @@ import { ApproveRejectActions, PageHeader, PageLayout, SearchInput } from '@/com
 import { cn } from '@/lib/utils';
 import { Eye } from 'lucide-react';
 
-type FilterTab = 'REQUESTS' | 'REVISIONS';
+type FilterTab = 'REQUESTS' | 'REVISIONS' | 'REJECTED';
 
 const tabs: { label: string; value: FilterTab }[] = [
   { label: 'Pending CVRs', value: 'REQUESTS' },
   { label: 'Approved CVRs', value: 'REVISIONS' },
+  { label: 'Rejected CVRs', value: 'REJECTED' },
 ];
 
 /** Accepts DD-MM-YYYY (DatePicker) or YYYY-MM-DD. */
@@ -49,12 +50,15 @@ function toApiDateString(dateStr: string): string | undefined {
 export default function PendingCvrApprovalsPage() {
   const [requests, setRequests] = useState<CrimeScene[]>([]);
   const [revisions, setRevisions] = useState<CrimeScene[]>([]);
+  const [rejections, setRejections] = useState<CrimeScene[]>([]);
   const [filter, setFilter] = useState<FilterTab>('REQUESTS');
   const [searchTerm, setSearchTerm] = useState('');
   const [requestSortKey, setRequestSortKey] = useState<keyof CrimeScene | string | null>('updatedAt');
   const [requestSortAsc, setRequestSortAsc] = useState(false);
   const [revisionSortKey, setRevisionSortKey] = useState<keyof CrimeScene | string | null>('updatedAt');
   const [revisionSortAsc, setRevisionSortAsc] = useState(false);
+  const [rejectedSortKey, setRejectedSortKey] = useState<keyof CrimeScene | string | null>('updatedAt');
+  const [rejectedSortAsc, setRejectedSortAsc] = useState(false);
 
   const [labs, setLabs] = useState<any[]>([]);
   const [selectedLabIds, setSelectedLabIds] = useState<string[]>([]);
@@ -64,8 +68,10 @@ export default function PendingCvrApprovalsPage() {
   const [dateTo, setDateTo] = useState('');
 
   const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [loadingRevisions, setLoadingRevisions] = useState(false);
+  const [loadingRejections, setLoadingRejections] = useState(false);
 
   async function resolveCurrentOfficerId(): Promise<number | null> {
     try {
@@ -227,6 +233,48 @@ export default function PendingCvrApprovalsPage() {
     }
   }
 
+  async function loadRejectedCrimeScenesFromBackend() {
+    setLoadingRejections(true);
+    try {
+      const officerId = await resolveCurrentOfficerId();
+      let items: any[] = [];
+      if (officerId) {
+        try {
+          items = await crimeService.getRejectedCrimeScenesByUserId(officerId, {
+            locationIds: selectedLabIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id)),
+            fromDate: toApiDateString(dateFrom),
+            toDate: toApiDateString(dateTo),
+          });
+        } catch (e) {
+          console.warn('Backend rejected CVRs fetch warning', e);
+        }
+      }
+      const mapped: CrimeScene[] = (items || []).map((item) => {
+        const id = String(item.CVR_ID ?? item.INITIATE_CVR_ID ?? '');
+        return {
+          id,
+          cvrNo: String(item.CVR_NO ?? id),
+          cvrId: item.CVR_ID !== undefined ? Number(item.CVR_ID) : undefined,
+          visitType: item.VISIT_TYPE_ID === '1' ? 'NEW_VISIT' : 'REVISIT',
+          approval_status: 'Rejected',
+          offenceType: item.OFFENCE_TYPE ?? '',
+          placeOfCrimeScene: item.PLACE_DETAIL ?? '',
+          // Store LOCATION_ID in `division` so client-side filtering can compare against selectedLabIds
+          division: item.LOCATION_ID != null ? String(item.LOCATION_ID) : '',
+          createdAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+          updatedAt: String(item.CREATED_DTM ?? new Date().toISOString()),
+        } as CrimeScene;
+      });
+
+      setRejections(mapped);
+    } catch (err) {
+      console.error('Failed to load rejected CVRs', err);
+      setRejections([]);
+    } finally {
+      setLoadingRejections(false);
+    }
+  }
+
   async function handleApproveBackend(scene: CrimeScene, onApproveLocal: () => void) {
     const initiateId = Number(scene.cvrId);
     if (!initiateId) {
@@ -261,10 +309,45 @@ export default function PendingCvrApprovalsPage() {
     }
   }
 
+  async function handleRejectBackend(scene: CrimeScene, onRejectLocal: () => void) {
+    const initiateId = Number(scene.cvrId);
+    if (!initiateId) {
+      onRejectLocal();
+      return;
+    }
+
+    setIsRejecting(true);
+    try {
+      const resolvedId = await resolveCurrentOfficerId();
+      const rejectedBy = resolvedId ?? 2;
+
+      const response = await crimeService.rejectCrimeScene({
+        cvrId: initiateId,
+        rejectedBy: rejectedBy
+      });
+
+      showSuccessAlert('Success', response?.message || 'Crime scene rejected successfully.');
+
+      onRejectLocal();
+    } catch (err) {
+      console.error('Failed to reject crime scene on backend:', err);
+      const msg = err instanceof Error ? err.message : 'API call failed.';
+      showErrorAlert(
+        'Staging Role Permission Check',
+        `Backend returned: "${msg}". Rejecting locally for testing purposes.`
+      );
+
+      onRejectLocal();
+    } finally {
+      setIsRejecting(false);
+    }
+  }
+
   function reload() {
     setHasLoaded(true);
     loadPendingRequestsFromBackend();
     loadApprovedCrimeScenesFromBackend();
+    loadRejectedCrimeScenesFromBackend();
   }
 
   useEffect(() => {
@@ -285,6 +368,7 @@ export default function PendingCvrApprovalsPage() {
   useEffect(() => {
     setRequests([]);
     setRevisions([]);
+    setRejections([]);
     setHasLoaded(false);
   }, [selectedLabIds]);
 
@@ -294,6 +378,7 @@ export default function PendingCvrApprovalsPage() {
     await Promise.all([
       loadPendingRequestsFromBackend(),
       loadApprovedCrimeScenesFromBackend(),
+      loadRejectedCrimeScenesFromBackend(),
     ]);
     setHasLoaded(true);
     setLoadingLabsData(false);
@@ -353,6 +438,23 @@ export default function PendingCvrApprovalsPage() {
     });
   }, [revisions, searchTerm, inDateRange, selectedLabIds]);
 
+  const filteredRejections = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return rejections.filter((row) => {
+      // Location filter: only show rows whose LOCATION_ID (stored in division) is selected
+      if (selectedLabIds.length > 0 && row.division) {
+        if (!selectedLabIds.includes(row.division)) return false;
+      }
+      if (!inDateRange(row)) return false;
+      if (!q) return true;
+      const haystack = [row.cvrNo, row.id, row.visitType, formatDateTimeDDMMYYYY(row.updatedAt)]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [rejections, searchTerm, inDateRange, selectedLabIds]);
+
   const sortedRequests = useMemo(() => {
     const data = [...filteredRequests];
     if (!requestSortKey) return data;
@@ -391,7 +493,27 @@ export default function PendingCvrApprovalsPage() {
     return data;
   }, [filteredRevisions, revisionSortKey, revisionSortAsc]);
 
-  const countFor = (tab: FilterTab) => (tab === 'REQUESTS' ? filteredRequests.length : filteredRevisions.length);
+  const sortedRejections = useMemo(() => {
+    const data = [...filteredRejections];
+    if (!rejectedSortKey) return data;
+    data.sort((a, b) => {
+      const av =
+        rejectedSortKey === 'updatedAt'
+          ? new Date(a.updatedAt).getTime()
+          : (((a as unknown) as Record<string, unknown>)[rejectedSortKey] ?? '').toString().toLowerCase();
+      const bv =
+        rejectedSortKey === 'updatedAt'
+          ? new Date(b.updatedAt).getTime()
+          : (((b as unknown) as Record<string, unknown>)[rejectedSortKey] ?? '').toString().toLowerCase();
+      if (av < bv) return rejectedSortAsc ? -1 : 1;
+      if (av > bv) return rejectedSortAsc ? 1 : -1;
+      return 0;
+    });
+    return data;
+  }, [filteredRejections, rejectedSortKey, rejectedSortAsc]);
+
+  const countFor = (tab: FilterTab) =>
+    tab === 'REQUESTS' ? filteredRequests.length : tab === 'REVISIONS' ? filteredRevisions.length : filteredRejections.length;
 
   function handleRequestSort(key: keyof CrimeScene | string) {
     if (requestSortKey === key) setRequestSortAsc((prev) => !prev);
@@ -406,6 +528,14 @@ export default function PendingCvrApprovalsPage() {
     else {
       setRevisionSortKey(key);
       setRevisionSortAsc(true);
+    }
+  }
+
+  function handleRejectedSort(key: keyof CrimeScene | string) {
+    if (rejectedSortKey === key) setRejectedSortAsc((prev) => !prev);
+    else {
+      setRejectedSortKey(key);
+      setRejectedSortAsc(true);
     }
   }
 
@@ -446,9 +576,11 @@ export default function PendingCvrApprovalsPage() {
             });
           }}
           onReject={() => {
-            crimeSceneService.updateApprovalStatus(row.id, 'Rejected');
-            crimeSceneService.rejectAmendmentRequest(row.id);
-            reload();
+            handleRejectBackend(row, () => {
+              crimeSceneService.updateApprovalStatus(row.id, 'Rejected');
+              crimeSceneService.rejectAmendmentRequest(row.id);
+              reload();
+            });
           }}
         />
       ),
@@ -456,6 +588,43 @@ export default function PendingCvrApprovalsPage() {
   ];
 
   const revisionColumns: AppTableColumn<CrimeScene>[] = [
+    {
+      key: 'cvrNo',
+      label: 'CVR No.',
+      sortable: true,
+      render: (_, row) => <span className="font-mono text-xs text-blue-700 font-semibold">{row.cvrNo ?? row.id}</span>,
+    },
+    {
+      key: 'visitType',
+      label: 'Visit Type',
+      sortable: true,
+      render: (_, row) => (
+        <span className="text-gray-700">
+          {row.visitType === 'REVISIT' ? 'Revisit' : row.visitType === 'COURT_VISIT' ? 'Court' : 'New'}
+        </span>
+      ),
+    },
+    {
+      key: 'offenceType',
+      label: 'Offence Type',
+      sortable: true,
+      render: (_, row) => <span className="text-gray-700">{row.offenceType || '-'}</span>,
+    },
+    {
+      key: 'placeOfCrimeScene',
+      label: 'Place',
+      sortable: true,
+      render: (_, row) => <span className="text-gray-700">{row.placeOfCrimeScene || '-'}</span>,
+    },
+    {
+      key: 'updatedAt',
+      label: 'Updated',
+      sortable: true,
+      render: (_, row) => <span className="text-gray-700 text-xs">{formatDateTimeDDMMYYYY(row.updatedAt)}</span>,
+    },
+  ];
+
+  const rejectedColumns: AppTableColumn<CrimeScene>[] = [
     {
       key: 'cvrNo',
       label: 'CVR No.',
@@ -601,6 +770,19 @@ export default function PendingCvrApprovalsPage() {
           sortAsc={revisionSortAsc}
           onSort={handleRevisionSort}
           emptyMessage="No approved CVRs"
+          variant="card"
+        />
+      ) : null}
+
+      {hasLoaded && filter === 'REJECTED' ? (
+        <AppTable<CrimeScene>
+          columns={rejectedColumns}
+          data={sortedRejections}
+          keyField="id"
+          sortKey={rejectedSortKey}
+          sortAsc={rejectedSortAsc}
+          onSort={handleRejectedSort}
+          emptyMessage="No rejected CVRs"
           variant="card"
         />
       ) : null}
