@@ -292,7 +292,9 @@ export default function PendingCvrApprovalsPage() {
         approvedBy: approvedBy
       });
 
-      showSuccessAlert('Success', response?.message || 'Crime scene approved successfully.');
+      // ApproveCrimeSceneResponse has no `message` field (see lib/api/types.ts) — kept for reference:
+      // showSuccessAlert('Success', response?.message || 'Crime scene approved successfully.');
+      showSuccessAlert('Success', 'Crime scene approved successfully.');
 
       onApproveLocal();
     } catch (err) {
