@@ -762,11 +762,13 @@ export default function CrimeVisitForm({
     return () => { cancelled = true; };
   }, []);
 
+  /* Other Offence Type text box disabled — state commented out
   const [offenceTypeOther, setOffenceTypeOther] = useState<string>(() => {
     const defaults = initialData ?? defaultFormData();
     const value = defaults.sectionA?.offenceType ?? "";
     return defaults.sectionA?.offenceTypeOther ?? (OFFENCE_TYPE_PRESETS.includes(value) ? "" : value);
   });
+  */
   /* Initiate Visit: support officers — uncomment with SupportOfficersEditor + types/helpers above
   const [supportOtherRole, setSupportOtherRole] = useState<string>(
     () => (initialData ?? defaultFormData()).sectionB?.socoOfficers?.supportOtherRole ?? "",
@@ -829,9 +831,11 @@ export default function CrimeVisitForm({
     const offences = Array.isArray(a.offence) ? a.offence : a.offence ? [a.offence] : [];
     if (offences.length === 0) return "Please select at least one offence.";
     if (!a.offenceType) return "Please select an offence type.";
+    /* Other Offence Type validation disabled — text box removed
     if (a.offenceType === "Other" && !(a.offenceTypeOther ?? offenceTypeOther)?.trim()) {
       return "Please specify the offence type.";
     }
+    */
     if (!a.out?.date || !a.out?.time) return "Please provide the OUT date and time.";
     if (!c.vehicleNo) return "Please select a vehicle.";
     if (!c.driver?.regNo) return "Please select a driver.";
@@ -1029,7 +1033,7 @@ export default function CrimeVisitForm({
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sA.offenceType === "Other"
-                      ? sA.offenceTypeOther || offenceTypeOther || "Other"
+                      ? sA.offenceTypeOther || "Other"
                       : sA.offenceType || "—"}
                   </div>
                 ) : (
@@ -1059,6 +1063,7 @@ export default function CrimeVisitForm({
                 )}
               </FieldGroup>
 
+              {/* Other Offence Type text box disabled — uncomment to restore
               {(sA.offenceType ?? "") === "Other" && (
                 <FieldGroup
                   label="Other Offence Type"
@@ -1083,6 +1088,7 @@ export default function CrimeVisitForm({
                   />
                 </FieldGroup>
               )}
+              */}
 
               {/* <FieldGroup
                 label="Reason"
