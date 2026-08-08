@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -371,9 +371,6 @@ export default function ViewOfficersPage() {
                             <Pencil className="w-3 h-3" />
                             Edit
                         </Link>
-                        <ActionChipButton variant="fuchsia" title="Privilege" onClick={() => { setViewingOfficer(null); setPrivilegeOfficer(row); setNewPassword(''); setConfirmPassword(''); setPrivilegeDesignationId(row.designationId || ''); setPrivilegeLocationIds([]); }}>
-                            <Shield className="w-3 h-3" /> Privilege
-                        </ActionChipButton>
                     </div>
                 ),
             },
