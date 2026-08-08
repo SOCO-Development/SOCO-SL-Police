@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useCallback, useId, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -66,6 +66,7 @@ const CATEGORY_NAME_TO_ID: Record<string, number> = {
 interface ChildRow {
     id: number;
     name: string;
+    nic: string;
     birthday: string;
     status: string;
 }
@@ -163,6 +164,7 @@ interface FormData {
     rankDesignationId: string; // Store the designation ID for API submission (NEW)
     regNo: string;
     fullName: string;
+    nicNumber: string;
     callingName: string;
     reportedDate: string;
     dob: string;
@@ -179,6 +181,7 @@ interface FormData {
     spouseDesignationOther: string;
     spouseName: string;
     spouseAddressOfInstitute: string;
+    spouseNic: string;
     children: ChildRow[];
     // Section 3
     dateJoinedPolice: string;
@@ -291,13 +294,13 @@ function formatAssignmentDuration(from: string, to: string): string {
 
 function defaultForm(): FormData {
     return {
-        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '', callingName: '',
+        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '', nicNumber: '', callingName: '',
         reportedDate: '', dob: '', dateJoinedSoco: '',
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
-        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '',
-        children: [{ id: newId(), name: '', birthday: '', status: '' }],
+        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '', spouseNic: '',
+        children: [{ id: newId(), name: '', nic: '', birthday: '', status: '' }],
         dateJoinedPolice: '', appointedRank: '', appointedRankId: '', presentRank: '', presentRankId: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
         // Education
@@ -616,6 +619,7 @@ export default function AddOfficerPage() {
                     rankDesignationId: p.RANK_ID || p.CURRENT_RANK || '',
                     regNo: p.USER_REGI_NO || '',
                     fullName: p.USER_FULL_NAME || '',
+                    nicNumber: p.NIC_NUMBER || (p as unknown as Record<string, unknown>).USER_NIC as string || (p as unknown as Record<string, unknown>).NIC_NO as string || '',
                     callingName: p.USER_CALLING_NAME || '',
                     reportedDate: '',
                     dob: p.USER_DOB || '',
@@ -632,14 +636,16 @@ export default function AddOfficerPage() {
                     spouseDesignation: data.spouse?.[0]?.SPOUSE_DESIGNATION || '',
                     spouseDesignationOther: '',
                     spouseAddressOfInstitute: data.spouse?.[0]?.SPOUSE_WORK_ADDRESS || '',
+                    spouseNic: data.spouse?.[0]?.SPOUSE_NIC || (data.spouse?.[0] as unknown as Record<string, unknown>)?.SPOUSE_NIC_NUMBER as string || '',
                     children: (data.children?.length
                         ? data.children.map((c) => ({
                             id: newId(),
                             name: c.CHILD_NAME || '',
+                            nic: c.CHILD_NIC || (c as unknown as Record<string, unknown>)?.CHILD_NIC_NUMBER as string || '',
                             birthday: c.CHILD_DOB || '',
                             status: '',
                         }))
-                        : [{ id: newId(), name: '', birthday: '', status: '' }]
+                        : [{ id: newId(), name: '', nic: '', birthday: '', status: '' }]
                     ),
                     // Section 3
                     dateJoinedPolice: '',
@@ -885,7 +891,7 @@ export default function AddOfficerPage() {
 
     // Children rows
     const addChild = () => {
-        set('children', [...form.children, { id: newId(), name: '', birthday: '', status: '' }]);
+        set('children', [...form.children, { id: newId(), name: '', nic: '', birthday: '', status: '' }]);
     };
     const updateChild = (id: number, patch: Partial<ChildRow>) =>
         set('children', form.children.map((c) => c.id === id ? { ...c, ...patch } : c));
@@ -1054,6 +1060,7 @@ export default function AddOfficerPage() {
             .filter((c) => c.name.trim())
             .map((c) => ({
                 childName: c.name,
+                childNic: c.nic,
                 childDob: toApiDate(c.birthday),
                 childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                 childStatusId: 2,
@@ -1065,6 +1072,7 @@ export default function AddOfficerPage() {
             username: form.regNo,
             userFullName: form.fullName,
             userCallingName: form.callingName || form.fullName.split(' ')[0],
+            nicNumber: form.nicNumber,
             locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
             userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
             userDob: toApiDate(form.dob),
@@ -1083,6 +1091,7 @@ export default function AddOfficerPage() {
                     spouseName: form.spouseName,
                     spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                     spouseWorkAddress: form.spouseAddressOfInstitute,
+                    spouseNic: form.spouseNic,
                 },
                 children: childrenData.length > 0 ? childrenData : [],
             }),
@@ -1592,6 +1601,7 @@ if (regiNoCheck.isAvailable) {
                 .filter((c) => c.name.trim()) // Only include non-empty children
                 .map((c) => ({
                     childName: c.name,
+                    childNic: c.nic,
                     childDob: toApiDate(c.birthday),
                     childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                     childStatusId: 2, // Default status ID
@@ -1602,6 +1612,7 @@ if (regiNoCheck.isAvailable) {
                 username: form.regNo, // Using regNo as username
                 userFullName: form.fullName,
                 userCallingName: form.callingName || form.fullName.split(' ')[0], // Use first name as calling name
+                nicNumber: form.nicNumber,
                 locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
                 userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
                 userDob: toApiDate(form.dob),
@@ -1620,6 +1631,7 @@ if (regiNoCheck.isAvailable) {
                         spouseName: form.spouseName,
                         spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                         spouseWorkAddress: form.spouseAddressOfInstitute,
+                        spouseNic: form.spouseNic,
                     },
                     children: childrenData.length > 0 ? childrenData : [],
                 }),
@@ -1732,11 +1744,18 @@ if (regiNoCheck.isAvailable) {
                                              </div>
 
                                             {/* Full Name */}
-                                            <div className="md:col-span-2 xl:col-span-3">
+                                            <div className="md:col-span-2 xl:col-span-2">
                                                 <FieldLabel label="Full Name" si="සම්පූර්ණ නම (max 50)" />
                                                 <GInput value={form.fullName} onChange={(v) => set('fullName', v)}
                                                     placeholder="Full name" maxLength={50} />
                                                 <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
+                                            </div>
+
+                                            {/* NIC Number */}
+                                            <div className="md:col-span-1 xl:col-span-1">
+                                                <FieldLabel label="NIC Number" si="ජාතික හැඳුනුම්පත් අංකය" />
+                                                <GInput value={form.nicNumber} onChange={(v) => set('nicNumber', v)}
+                                                    placeholder="NIC Number" maxLength={12} />
                                             </div>
 
                                             {/* Calling Name */}
@@ -1880,11 +1899,14 @@ if (regiNoCheck.isAvailable) {
                                                                     civilStatus: 'Unmarried',
                                                                     spouseDesignation: '',
                                                                     spouseDesignationOther: '',
-                                                                    spouseNameAddress: '',
+                                                                    spouseName: '',
+                                                                    spouseAddressOfInstitute: '',
+                                                                    spouseNic: '',
                                                                     children: [
                                                                         {
                                                                             id: newId(),
                                                                             name: '',
+                                                                            nic: '',
                                                                             birthday: '',
                                                                             status: '',
                                                                         },
@@ -1933,7 +1955,7 @@ if (regiNoCheck.isAvailable) {
                                                     </>
                                                 ) : null}
                                             </div>
-                                            <div className="md:col-span-3 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="md:col-span-3 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
                                                     <FieldLabel label="Spouse Name / කලත්‍රයාගේ නම" />
                                                     <GInput
@@ -1950,6 +1972,15 @@ if (regiNoCheck.isAvailable) {
                                                         placeholder="Spouse's workplace address"
                                                     />
                                                 </div>
+                                                <div>
+                                                    <FieldLabel label="NIC Number / ජාතික හැඳුනුම්පත් අංකය" />
+                                                    <GInput
+                                                        value={form.spouseNic}
+                                                        onChange={(v) => set('spouseNic', v)}
+                                                        placeholder="Spouse's NIC Number"
+                                                        maxLength={12}
+                                                    />
+                                                </div>
                                             </div>
                                         </>
                                     ) : null}
@@ -1964,7 +1995,8 @@ if (regiNoCheck.isAvailable) {
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Name of the Child / දරුවාගේ නම</th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48 font-noto-sinhala">Birthday / උපන්දිනය</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-44 font-noto-sinhala">NIC Number / ජා.හැ. අංකය</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-44 font-noto-sinhala">Birthday / උපන්දිනය</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Status / තත්වය</th>
                                                     <th className="px-2 py-2.5 text-right w-px whitespace-nowrap">
                                                         <span className="sr-only">Actions</span>
@@ -1976,6 +2008,9 @@ if (regiNoCheck.isAvailable) {
                                                     <tr key={child.id} className="border-b border-gray-100 last:border-0">
                                                         <td className="px-2 py-1.5">
                                                             <GInput value={child.name} onChange={(v) => updateChild(child.id, { name: v })} placeholder="Child name" />
+                                                        </td>
+                                                        <td className="px-2 py-1.5">
+                                                            <GInput value={child.nic} onChange={(v) => updateChild(child.id, { nic: v })} placeholder="NIC Number" maxLength={12} />
                                                         </td>
                                                         <td className="px-2 py-1.5">
                                                             <DatePicker
