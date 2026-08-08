@@ -57,17 +57,6 @@ export function validateFullName(value: string): string | null {
   return null;
 }
 
-export function validateNIC(value: string): string | null {
-  if (!value.trim()) return null;
-  const trimmed = value.trim();
-  const oldNicRegex = /^[0-9]{9}[vVxX]$/;
-  const newNicRegex = /^[0-9]{12}$/;
-  if (!oldNicRegex.test(trimmed) && !newNicRegex.test(trimmed)) {
-    return 'Invalid NIC number (e.g. 901234567V or 199012345678)';
-  }
-  return null;
-}
-
 export function validateRequired(value: string, label: string): string | null {
   if (!value.trim()) return `${label} is required`;
   return null;

@@ -1,12 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useCallback, useId, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Trash2, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
-import MultiSelect from '@/components/forms/MultiSelect';
 import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
@@ -67,7 +66,6 @@ const CATEGORY_NAME_TO_ID: Record<string, number> = {
 interface ChildRow {
     id: number;
     name: string;
-    nic: string;
     birthday: string;
     status: string;
 }
@@ -165,7 +163,6 @@ interface FormData {
     rankDesignationId: string; // Store the designation ID for API submission (NEW)
     regNo: string;
     fullName: string;
-    nicNumber: string;
     callingName: string;
     reportedDate: string;
     dob: string;
@@ -177,15 +174,11 @@ interface FormData {
     telMobile: string;
     photoUrl: string;
     // Section 2
-    password: string;
-    confirmPassword: string;
-    systemAccessLocations: string[];
     civilStatus: string;
     spouseDesignation: string;
     spouseDesignationOther: string;
     spouseName: string;
     spouseAddressOfInstitute: string;
-    spouseNic: string;
     children: ChildRow[];
     // Section 3
     dateJoinedPolice: string;
@@ -298,14 +291,13 @@ function formatAssignmentDuration(from: string, to: string): string {
 
 function defaultForm(): FormData {
     return {
-        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '', nicNumber: '', callingName: '',
+        socoLab: '', socoLabId: '', rankDropdown: '', rankDesignationId: '', regNo: '', fullName: '', callingName: '',
         reportedDate: '', dob: '', dateJoinedSoco: '',
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
-        password: '', confirmPassword: '', systemAccessLocations: [],
-        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '', spouseNic: '',
-        children: [{ id: newId(), name: '', nic: '', birthday: '', status: '' }],
+        civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '',
+        children: [{ id: newId(), name: '', birthday: '', status: '' }],
         dateJoinedPolice: '', appointedRank: '', appointedRankId: '', presentRank: '', presentRankId: '',
         promotions: [{ id: newId(), rank: '', date: '' }],
         // Education
@@ -557,11 +549,8 @@ export default function AddOfficerPage() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
+        const [loading, setLoading] = useState(false);
     const [personalFamilyEditing, setPersonalFamilyEditing] = useState(!isEditing);
-    const [systemAccessEditing, setSystemAccessEditing] = useState(!isEditing);
     const [sectionSaving, setSectionSaving] = useState<string | null>(null);
     const civilStatusRadioName = useId();
     const showSpouseAndChildren = form.civilStatus === 'Married';
@@ -627,7 +616,6 @@ export default function AddOfficerPage() {
                     rankDesignationId: p.RANK_ID || p.CURRENT_RANK || '',
                     regNo: p.USER_REGI_NO || '',
                     fullName: p.USER_FULL_NAME || '',
-                    nicNumber: p.NIC_NUMBER || (p as unknown as Record<string, unknown>).USER_NIC as string || (p as unknown as Record<string, unknown>).NIC_NO as string || '',
                     callingName: p.USER_CALLING_NAME || '',
                     reportedDate: '',
                     dob: p.USER_DOB || '',
@@ -644,16 +632,14 @@ export default function AddOfficerPage() {
                     spouseDesignation: data.spouse?.[0]?.SPOUSE_DESIGNATION || '',
                     spouseDesignationOther: '',
                     spouseAddressOfInstitute: data.spouse?.[0]?.SPOUSE_WORK_ADDRESS || '',
-                    spouseNic: data.spouse?.[0]?.SPOUSE_NIC || (data.spouse?.[0] as unknown as Record<string, unknown>)?.SPOUSE_NIC_NUMBER as string || '',
                     children: (data.children?.length
                         ? data.children.map((c) => ({
                             id: newId(),
                             name: c.CHILD_NAME || '',
-                            nic: c.CHILD_NIC || (c as unknown as Record<string, unknown>)?.CHILD_NIC_NUMBER as string || '',
                             birthday: c.CHILD_DOB || '',
                             status: '',
                         }))
-                        : [{ id: newId(), name: '', nic: '', birthday: '', status: '' }]
+                        : [{ id: newId(), name: '', birthday: '', status: '' }]
                     ),
                     // Section 3
                     dateJoinedPolice: '',
@@ -899,7 +885,7 @@ export default function AddOfficerPage() {
 
     // Children rows
     const addChild = () => {
-        set('children', [...form.children, { id: newId(), name: '', nic: '', birthday: '', status: '' }]);
+        set('children', [...form.children, { id: newId(), name: '', birthday: '', status: '' }]);
     };
     const updateChild = (id: number, patch: Partial<ChildRow>) =>
         set('children', form.children.map((c) => c.id === id ? { ...c, ...patch } : c));
@@ -1068,7 +1054,6 @@ export default function AddOfficerPage() {
             .filter((c) => c.name.trim())
             .map((c) => ({
                 childName: c.name,
-                childNic: c.nic,
                 childDob: toApiDate(c.birthday),
                 childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                 childStatusId: 2,
@@ -1080,7 +1065,6 @@ export default function AddOfficerPage() {
             username: form.regNo,
             userFullName: form.fullName,
             userCallingName: form.callingName || form.fullName.split(' ')[0],
-            nicNumber: form.nicNumber,
             locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1,
             userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
             userDob: toApiDate(form.dob),
@@ -1099,7 +1083,6 @@ export default function AddOfficerPage() {
                     spouseName: form.spouseName,
                     spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                     spouseWorkAddress: form.spouseAddressOfInstitute,
-                    spouseNic: form.spouseNic,
                 },
                 children: childrenData.length > 0 ? childrenData : [],
             }),
@@ -1114,13 +1097,6 @@ export default function AddOfficerPage() {
         const mobileErr = validatePhone(form.telMobile);
         const officeErr = form.telOffice.trim() ? validatePhone(form.telOffice) : null;
         const residenceErr = form.telResidence.trim() ? validatePhone(form.telResidence) : null;
-
-        if (form.password || form.confirmPassword) {
-            if (form.password !== form.confirmPassword) {
-                showErrorAlert('Error', 'Passwords do not match. Please ensure both password fields match.');
-                return;
-            }
-        }
 
         const firstErr = regNoErr || nameErr || dobErr || mobileErr || officeErr || residenceErr;
         if (firstErr) {
@@ -1198,48 +1174,6 @@ if (regiNoCheck.isAvailable) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save personal and family details');
             showErrorAlert('Error', apiError.message || 'An error occurred while saving.');
             console.error('Save personal/family error:', err);
-        } finally {
-            setSectionSaving(null);
-        }
-    };
-
-    const saveSystemAccessSection = async () => {
-        if (form.password || form.confirmPassword) {
-            if (form.password !== form.confirmPassword) {
-                showErrorAlert('Error', 'Passwords do not match. Please ensure Password and Re-enter Password match.');
-                return;
-            }
-        }
-
-        if (!editId) {
-            showErrorAlert('Notice', 'Please save the officer personal details first before updating system access privileges.');
-            return;
-        }
-
-        setSectionSaving('system-access');
-        try {
-            const systemUserId = parseInt(editId, 10);
-            const locationIds = form.systemAccessLocations
-                .map((locName) => {
-                    const idStr = locationNameToId.get(locName);
-                    return idStr ? parseInt(idStr, 10) : NaN;
-                })
-                .filter((id) => !isNaN(id));
-
-            await officerService.grantLoginAccess({
-                systemUserId,
-                userKey: form.password.trim(),
-                designationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : undefined,
-                locationIds,
-            });
-
-            showSuccessAlert('System Access Saved', 'Login access and system privileges updated successfully.');
-            setForm((f) => ({ ...f, password: '', confirmPassword: '' }));
-            setSystemAccessEditing(false);
-        } catch (err) {
-            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save system access');
-            showErrorAlert('Error', apiError.message || 'An error occurred while saving system access privileges.');
-            console.error('Save system access error:', err);
         } finally {
             setSectionSaving(null);
         }
@@ -1630,13 +1564,6 @@ if (regiNoCheck.isAvailable) {
         const mobileErr = form.telMobile.trim() ? validatePhone(form.telMobile) : null;
         const firstErr = regNoErr || nameErr || dobErr || mobileErr;
         if (firstErr) { showErrorAlert('Error', firstErr); return; }
-
-        if (form.password || form.confirmPassword) {
-            if (form.password !== form.confirmPassword) {
-                showErrorAlert('Error', 'Passwords do not match. Please ensure both password fields match.');
-                return;
-            }
-        }
         setLoading(true);
 
         try {
@@ -1665,7 +1592,6 @@ if (regiNoCheck.isAvailable) {
                 .filter((c) => c.name.trim()) // Only include non-empty children
                 .map((c) => ({
                     childName: c.name,
-                    childNic: c.nic,
                     childDob: toApiDate(c.birthday),
                     childAge: c.birthday ? new Date().getFullYear() - new Date(c.birthday.split('-').reverse().join('-')).getFullYear() : 0,
                     childStatusId: 2, // Default status ID
@@ -1676,7 +1602,6 @@ if (regiNoCheck.isAvailable) {
                 username: form.regNo, // Using regNo as username
                 userFullName: form.fullName,
                 userCallingName: form.callingName || form.fullName.split(' ')[0], // Use first name as calling name
-                nicNumber: form.nicNumber,
                 locationId: form.socoLabId ? parseInt(form.socoLabId, 10) : 1, // Use mapped location ID
                 userDesignationId: 1, // Safe fallback — API designations differ from rank IDs
                 userDob: toApiDate(form.dob),
@@ -1695,7 +1620,6 @@ if (regiNoCheck.isAvailable) {
                         spouseName: form.spouseName,
                         spouseDesignation: form.spouseDesignation === 'Other' ? form.spouseDesignationOther : form.spouseDesignation,
                         spouseWorkAddress: form.spouseAddressOfInstitute,
-                        spouseNic: form.spouseNic,
                     },
                     children: childrenData.length > 0 ? childrenData : [],
                 }),
@@ -1747,6 +1671,14 @@ if (regiNoCheck.isAvailable) {
             /> } 
             <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+                            <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/80 flex items-center gap-3">
+                                <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Username:</span>
+                                <span className="text-sm font-mono text-blue-900 font-bold select-all bg-white px-2 py-1 rounded border border-blue-100">
+                                    {form.regNo || '—'}
+                                </span>
+                                <span className="text-xs text-blue-500">(Registration number used as login username)</span>
+                            </div>
 
                             {/* ─── SECTION 1: Personal & Family Details ───────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
@@ -1800,18 +1732,11 @@ if (regiNoCheck.isAvailable) {
                                              </div>
 
                                             {/* Full Name */}
-                                            <div className="md:col-span-2 xl:col-span-2">
+                                            <div className="md:col-span-2 xl:col-span-3">
                                                 <FieldLabel label="Full Name" si="සම්පූර්ණ නම (max 50)" />
                                                 <GInput value={form.fullName} onChange={(v) => set('fullName', v)}
                                                     placeholder="Full name" maxLength={50} />
                                                 <p className="text-xs text-gray-400 mt-1">{form.fullName.length}/50</p>
-                                            </div>
-
-                                            {/* NIC Number */}
-                                            <div className="md:col-span-1 xl:col-span-1">
-                                                <FieldLabel label="NIC Number" si="ජාතික හැඳුනුම්පත් අංකය" />
-                                                <GInput value={form.nicNumber} onChange={(v) => set('nicNumber', v)}
-                                                    placeholder="NIC Number" maxLength={12} />
                                             </div>
 
                                             {/* Calling Name */}
@@ -1955,14 +1880,11 @@ if (regiNoCheck.isAvailable) {
                                                                     civilStatus: 'Unmarried',
                                                                     spouseDesignation: '',
                                                                     spouseDesignationOther: '',
-                                                                    spouseName: '',
-                                                                    spouseAddressOfInstitute: '',
-                                                                    spouseNic: '',
+                                                                    spouseNameAddress: '',
                                                                     children: [
                                                                         {
                                                                             id: newId(),
                                                                             name: '',
-                                                                            nic: '',
                                                                             birthday: '',
                                                                             status: '',
                                                                         },
@@ -2011,7 +1933,7 @@ if (regiNoCheck.isAvailable) {
                                                     </>
                                                 ) : null}
                                             </div>
-                                            <div className="md:col-span-3 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="md:col-span-3 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <FieldLabel label="Spouse Name / කලත්‍රයාගේ නම" />
                                                     <GInput
@@ -2028,15 +1950,6 @@ if (regiNoCheck.isAvailable) {
                                                         placeholder="Spouse's workplace address"
                                                     />
                                                 </div>
-                                                <div>
-                                                    <FieldLabel label="NIC Number / ජාතික හැඳුනුම්පත් අංකය" />
-                                                    <GInput
-                                                        value={form.spouseNic}
-                                                        onChange={(v) => set('spouseNic', v)}
-                                                        placeholder="Spouse's NIC Number"
-                                                        maxLength={12}
-                                                    />
-                                                </div>
                                             </div>
                                         </>
                                     ) : null}
@@ -2051,8 +1964,7 @@ if (regiNoCheck.isAvailable) {
                                             <thead>
                                                 <tr className="bg-gray-50 border-b border-gray-200">
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Name of the Child / දරුවාගේ නම</th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-44 font-noto-sinhala">NIC Number / ජා.හැ. අංකය</th>
-                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-44 font-noto-sinhala">Birthday / උපන්දිනය</th>
+                                                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48 font-noto-sinhala">Birthday / උපන්දිනය</th>
                                                     <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide font-noto-sinhala">Status / තත්වය</th>
                                                     <th className="px-2 py-2.5 text-right w-px whitespace-nowrap">
                                                         <span className="sr-only">Actions</span>
@@ -2064,9 +1976,6 @@ if (regiNoCheck.isAvailable) {
                                                     <tr key={child.id} className="border-b border-gray-100 last:border-0">
                                                         <td className="px-2 py-1.5">
                                                             <GInput value={child.name} onChange={(v) => updateChild(child.id, { name: v })} placeholder="Child name" />
-                                                        </td>
-                                                        <td className="px-2 py-1.5">
-                                                            <GInput value={child.nic} onChange={(v) => updateChild(child.id, { nic: v })} placeholder="NIC Number" maxLength={12} />
                                                         </td>
                                                         <td className="px-2 py-1.5">
                                                             <DatePicker
@@ -2107,103 +2016,9 @@ if (regiNoCheck.isAvailable) {
                                 /> }
                             </div>
 
-                            {/* ─── SECTION 2: System Access ─────────────────────────────────── */}
-                            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
-                                <SectionHeader
-                                    sectionNo={2}
-                                    title="System Access"
-                                    titleSi="පද්ධති ප්‍රවේශය"
-                                />
-                                <fieldset disabled={!systemAccessEditing} className="min-w-0 border-0 p-0 m-0 disabled:opacity-90">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <FieldLabel label="Username" si="පරිශීලක නාමය" />
-                                            <GInput
-                                                value={form.regNo || ''}
-                                                onChange={() => {}}
-                                                readOnly
-                                                disabled
-                                                placeholder="Registration Number"
-                                            />
-                                            <p className="text-xs text-blue-500 mt-1">(Registration number used as login username)</p>
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel label="System Access Location" si="පද්ධති ප්‍රවේශ සේවාස්ථානය" />
-                                            <MultiSelect
-                                                value={form.systemAccessLocations}
-                                                onChange={(selected) => set('systemAccessLocations', selected)}
-                                                options={SOCO_LABS_OPTIONS}
-                                                placeholder={locationsLoading ? 'Loading locations...' : 'Select access location(s)'}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel label="Password" si="මුරපදය" />
-                                            <div className="relative">
-                                                <GInput
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    value={form.password}
-                                                    onChange={(v) => set('password', v)}
-                                                    placeholder="Enter password"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                                >
-                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel label="Re-enter Password" si="මුරපදය නැවත ඇතුළත් කරන්න" />
-                                            <div className="relative">
-                                                <GInput
-                                                    type={showConfirmPassword ? 'text' : 'password'}
-                                                    value={form.confirmPassword}
-                                                    onChange={(v) => set('confirmPassword', v)}
-                                                    placeholder="Re-enter password"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                                >
-                                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
-                                            {form.confirmPassword ? (
-                                                form.password === form.confirmPassword ? (
-                                                    <p className="text-xs font-medium text-emerald-600 mt-1.5 flex items-center gap-1">
-                                                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Passwords match
-                                                    </p>
-                                                ) : (
-                                                    <p className="text-xs font-medium text-red-600 mt-1.5 flex items-center gap-1">
-                                                        <XCircle className="w-3.5 h-3.5 shrink-0" /> Passwords do not match
-                                                    </p>
-                                                )
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                </fieldset>
-
-                                {isEditing && (
-                                    <SectionActions
-                                        showEdit
-                                        isEditingSection={systemAccessEditing}
-                                        onEdit={() => setSystemAccessEditing(true)}
-                                        onSave={saveSystemAccessSection}
-                                        saving={sectionSaving === 'system-access'}
-                                        saveLabel="Save"
-                                    />
-                                )}
-                            </div>
-
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
-                                <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
+                                <SectionHeader sectionNo={2} title="Promotions  " titleSi="උසස්වීම්" />
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
@@ -2286,7 +2101,7 @@ if (regiNoCheck.isAvailable) {
 
                             {/* ─── SECTION 4: Education ────────────────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
-                                <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
+                                <SectionHeader sectionNo={3} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
                                 {/* ── O/L Results ─────────────────────────────────────────── */}
                                 <div className="mb-6">
