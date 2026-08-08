@@ -155,10 +155,13 @@ function defaultFormData(): CrimeVisitFormData {
       experts: Array.from({ length: 5 }, emptyExpert),
     },
     sectionC: {
+      entryMode: "DATABASE",
       vehicleNo: "",
       vehicleId: "",
       driver: emptyOfficer(),
       driverId: "",
+      manualVehicleNo: "",
+      manualDriver: emptyOfficer(),
       examinedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
       reExaminedBySocoOfficers: { date: "", timeIn: "", timeOut: "" },
       investigationOfficer: emptyOfficer(),
@@ -762,11 +765,13 @@ export default function CrimeVisitForm({
     return () => { cancelled = true; };
   }, []);
 
+  /* Other Offence Type text box disabled — state commented out
   const [offenceTypeOther, setOffenceTypeOther] = useState<string>(() => {
     const defaults = initialData ?? defaultFormData();
     const value = defaults.sectionA?.offenceType ?? "";
     return defaults.sectionA?.offenceTypeOther ?? (OFFENCE_TYPE_PRESETS.includes(value) ? "" : value);
   });
+  */
   /* Initiate Visit: support officers — uncomment with SupportOfficersEditor + types/helpers above
   const [supportOtherRole, setSupportOtherRole] = useState<string>(
     () => (initialData ?? defaultFormData()).sectionB?.socoOfficers?.supportOtherRole ?? "",
@@ -829,12 +834,19 @@ export default function CrimeVisitForm({
     const offences = Array.isArray(a.offence) ? a.offence : a.offence ? [a.offence] : [];
     if (offences.length === 0) return "Please select at least one offence.";
     if (!a.offenceType) return "Please select an offence type.";
+    /* Other Offence Type validation disabled — text box removed
     if (a.offenceType === "Other" && !(a.offenceTypeOther ?? offenceTypeOther)?.trim()) {
       return "Please specify the offence type.";
     }
+    */
     if (!a.out?.date || !a.out?.time) return "Please provide the OUT date and time.";
-    if (!c.vehicleNo) return "Please select a vehicle.";
-    if (!c.driver?.regNo) return "Please select a driver.";
+    if (c.entryMode === "MANUAL") {
+      if (!c.manualVehicleNo?.trim()) return "Please enter the vehicle number.";
+      if (!c.manualDriver?.name?.trim()) return "Please enter the driver name.";
+    } else {
+      if (!c.vehicleNo) return "Please select a vehicle.";
+      if (!c.driver?.regNo) return "Please select a driver.";
+    }
     return "";
   }
 
@@ -1029,7 +1041,7 @@ export default function CrimeVisitForm({
                 {locked ? (
                   <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
                     {sA.offenceType === "Other"
-                      ? sA.offenceTypeOther || offenceTypeOther || "Other"
+                      ? sA.offenceTypeOther || "Other"
                       : sA.offenceType || "—"}
                   </div>
                 ) : (
@@ -1059,6 +1071,7 @@ export default function CrimeVisitForm({
                 )}
               </FieldGroup>
 
+              {/* Other Offence Type text box disabled — uncomment to restore
               {(sA.offenceType ?? "") === "Other" && (
                 <FieldGroup
                   label="Other Offence Type"
@@ -1083,6 +1096,7 @@ export default function CrimeVisitForm({
                   />
                 </FieldGroup>
               )}
+              */}
 
               {/* <FieldGroup
                 label="Reason"
@@ -1125,58 +1139,122 @@ export default function CrimeVisitForm({
           </SectionCard>
 
           <SectionCard title="Vehicle & Driver Details" accent={{ border: "border-l-emerald-500", dot: "text-emerald-600", bg: "bg-emerald-50" }} icon={Car}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-              <FieldGroup label="Vehicle Number" required>
-                {ro ? (
-                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
-                    {sC.vehicleNo || "—"}
-                  </div>
-                ) : (
-                  <CustomSelect
-                    value={sC.vehicleNo ?? ""}
-                    onChange={(val) => {
-                      const vId = vehicleMap.get(val) ?? "";
-                      updateC({ vehicleNo: val, vehicleId: vId });
-                    }}
-                    options={vehicleOptions}
-                    placeholder="Select vehicle"
+            {!ro && (
+              <div className="flex items-center gap-2 pb-1">
+                <SegmentedOption
+                  name="vehicleDriverEntryMode"
+                  label="Database Selection"
+                  checked={(sC.entryMode ?? "DATABASE") === "DATABASE"}
+                  onChange={() =>
+                    updateC({
+                      entryMode: "DATABASE",
+                      manualVehicleNo: "",
+                      manualDriver: emptyOfficer(),
+                    })
+                  }
+                />
+                <SegmentedOption
+                  name="vehicleDriverEntryMode"
+                  label="Manual Entry"
+                  checked={sC.entryMode === "MANUAL"}
+                  onChange={() =>
+                    updateC({
+                      entryMode: "MANUAL",
+                      vehicleNo: "",
+                      vehicleId: "",
+                      driver: emptyOfficer(),
+                      driverId: "",
+                    })
+                  }
+                />
+              </div>
+            )}
+
+            {sC.entryMode === "MANUAL" && !ro ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                <FieldGroup label="Vehicle Number" required>
+                  <TextInput
+                    value={sC.manualVehicleNo ?? ""}
+                    onChange={(e) => updateC({ manualVehicleNo: e.target.value })}
+                    placeholder="Vehicle number"
                   />
-                )}
-              </FieldGroup>
-              <FieldGroup label="Select Driver" required>
-                {ro ? (
-                  <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
-                    {sC.driver?.name ? `${sC.driver.name} (${sC.driver.regNo})` : "—"}
-                  </div>
-                ) : (
-                  <CustomSelect
+                </FieldGroup>
+                <FieldGroup label="Driver Name" required>
+                  <TextInput
+                    value={sC.manualDriver?.name ?? ""}
+                    onChange={(e) => updateC({ manualDriver: { ...sC.manualDriver, name: e.target.value } })}
+                    placeholder="Full name"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Driver Reg. Number">
+                  <TextInput
+                    value={sC.manualDriver?.regNo ?? ""}
+                    onChange={(e) => updateC({ manualDriver: { ...sC.manualDriver, regNo: e.target.value } })}
+                    placeholder="Reg. Number"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Driver Rank">
+                  <TextInput
+                    value={sC.manualDriver?.rank ?? ""}
+                    onChange={(e) => updateC({ manualDriver: { ...sC.manualDriver, rank: e.target.value } })}
+                    placeholder="Rank"
+                  />
+                </FieldGroup>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                <FieldGroup label="Vehicle Number" required>
+                  {ro ? (
+                    <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
+                      {sC.vehicleNo || "—"}
+                    </div>
+                  ) : (
+                    <CustomSelect
+                      value={sC.vehicleNo ?? ""}
+                      onChange={(val) => {
+                        const vId = vehicleMap.get(val) ?? "";
+                        updateC({ vehicleNo: val, vehicleId: vId });
+                      }}
+                      options={vehicleOptions}
+                      placeholder="Select vehicle"
+                    />
+                  )}
+                </FieldGroup>
+                <FieldGroup label="Select Driver" required>
+                  {ro ? (
+                    <div className="px-3 py-2 text-sm rounded-lg border bg-gray-50 border-gray-200 text-gray-500">
+                      {sC.driver?.name ? `${sC.driver.name} (${sC.driver.regNo})` : "—"}
+                    </div>
+                  ) : (
+                    <CustomSelect
+                      value={sC.driver?.regNo ?? ""}
+                      onChange={(val) => {
+                        const info = driverMapping.get(val) ?? { name: '', regNo: '', rank: '', userId: '' };
+                        updateC({ driver: { name: info.name, regNo: info.regNo, rank: info.rank }, driverId: info.userId });
+                      }}
+                      options={driverOptions}
+                      placeholder="Select driver"
+                      searchable
+                      searchPlaceholder="Search officer..."
+                    />
+                  )}
+                </FieldGroup>
+                <FieldGroup label="Driver Reg. Number">
+                  <TextInput
+                    isReadOnly
                     value={sC.driver?.regNo ?? ""}
-                    onChange={(val) => {
-                      const info = driverMapping.get(val) ?? { name: '', regNo: '', rank: '', userId: '' };
-                      updateC({ driver: { name: info.name, regNo: info.regNo, rank: info.rank }, driverId: info.userId });
-                    }}
-                    options={driverOptions}
-                    placeholder="Select driver"
-                    searchable
-                    searchPlaceholder="Search officer..."
+                    placeholder="Reg. Number"
                   />
-                )}
-              </FieldGroup>
-              <FieldGroup label="Driver Reg. Number">
-                <TextInput
-                  isReadOnly
-                  value={sC.driver?.regNo ?? ""}
-                  placeholder="Reg. Number"
-                />
-              </FieldGroup>
-              <FieldGroup label="Driver Rank">
-                <TextInput
-                  isReadOnly
-                  value={sC.driver?.rank ?? ""}
-                  placeholder="Rank"
-                />
-              </FieldGroup>
-            </div>
+                </FieldGroup>
+                <FieldGroup label="Driver Rank">
+                  <TextInput
+                    isReadOnly
+                    value={sC.driver?.rank ?? ""}
+                    placeholder="Rank"
+                  />
+                </FieldGroup>
+              </div>
+            )}
           </SectionCard>
 
           {/* Initiate Visit: Support Officers section — uncomment with state + SupportOfficersEditor above
