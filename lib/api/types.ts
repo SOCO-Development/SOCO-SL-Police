@@ -93,10 +93,12 @@ export interface SpouseData {
   spouseName: string;
   spouseDesignation: string;
   spouseWorkAddress: string;
+  spouseNic?: string;
 }
 
 export interface ChildData {
   childName: string;
+  childNic?: string;
   childDob: string;
   childAge: number;
   childStatusId: number;
@@ -106,6 +108,7 @@ export interface InsertNewOfficerRequest {
   username: string;
   userFullName: string;
   userCallingName: string;
+  nicNumber?: string;
   locationId: number;
   userDesignationId: number;
   userDob: string;
@@ -372,6 +375,7 @@ export interface PersonalInfo {
   USER_FULL_NAME: string;
   USER_CALLING_NAME: string;
   USER_REGI_NO: string;
+  NIC_NUMBER?: string;
   USERNAME: string;
   STATUS: string;
   LOCATION_ID: string;
@@ -395,12 +399,14 @@ export interface SpouseInfo {
   SPOUSE_NAME: string;
   SPOUSE_DESIGNATION: string;
   SPOUSE_WORK_ADDRESS: string;
+  SPOUSE_NIC?: string;
 }
 
 export interface ChildInfo {
   CHILD_ID: string;
   SYSTEM_USER_ID: string;
   CHILD_NAME: string;
+  CHILD_NIC?: string;
   CHILD_DOB: string;
   CHILD_AGE: string;
   CHILD_STATUS_ID: string;
