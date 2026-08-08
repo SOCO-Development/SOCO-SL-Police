@@ -49,10 +49,16 @@ export interface SectionB {
 }
 
 export interface SectionC {
+  /** Whether vehicle/driver details come from a selected DB record or manual entry. Defaults to 'DATABASE'. */
+  entryMode?: 'DATABASE' | 'MANUAL';
   vehicleNo?: string;
   vehicleId?: string;
   driver?: OfficerInfo;
   driverId?: string;
+  /** Manually entered vehicle number — kept separate from the DB-selected vehicleNo. */
+  manualVehicleNo?: string;
+  /** Manually entered driver details — kept separate from the DB-selected driver. */
+  manualDriver?: OfficerInfo;
   examinedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };
   reExaminedBySocoOfficers?: { date?: string; timeIn?: string; timeOut?: string };
   investigationOfficer?: OfficerInfo;

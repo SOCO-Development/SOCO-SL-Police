@@ -725,6 +725,13 @@ export interface InitiateVisitRequest {
   outPara: number;
   vehicleId: number;
   driverId: number;
+  /** Indicates whether vehicle/driver data came from a DB selection or manual entry. Optional for backward compatibility. */
+  vehicleEntryMode?: 'DATABASE' | 'MANUAL';
+  driverEntryMode?: 'DATABASE' | 'MANUAL';
+  manualVehicleNo?: string;
+  manualDriverName?: string;
+  manualDriverRegNo?: string;
+  manualDriverRank?: string;
   [key: string]: unknown;
 }
 

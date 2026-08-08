@@ -34,6 +34,7 @@ export default function InitiateCrimeVisitPage() {
       const sA = data.sectionA ?? {};
       const sC = data.sectionC ?? {};
       const out = sA.out ?? {};
+      const isManual = sC.entryMode === 'MANUAL';
 
       const payload = {
         locationId: Number(sA.locationId) || 0,
@@ -44,8 +45,18 @@ export default function InitiateCrimeVisitPage() {
         outTime: toApiTime(out.time ?? ''),
         outPage: Number(out.page) || 0,
         outPara: Number(out.para) || 0,
-        vehicleId: Number(sC.vehicleId) || 0,
-        driverId: Number(sC.driverId) || 0,
+        vehicleId: isManual ? 0 : Number(sC.vehicleId) || 0,
+        driverId: isManual ? 0 : Number(sC.driverId) || 0,
+        vehicleEntryMode: (isManual ? 'MANUAL' : 'DATABASE') as 'MANUAL' | 'DATABASE',
+        driverEntryMode: (isManual ? 'MANUAL' : 'DATABASE') as 'MANUAL' | 'DATABASE',
+        ...(isManual
+          ? {
+              manualVehicleNo: sC.manualVehicleNo || '',
+              manualDriverName: sC.manualDriver?.name || '',
+              manualDriverRegNo: sC.manualDriver?.regNo || '',
+              manualDriverRank: sC.manualDriver?.rank || '',
+            }
+          : {}),
       };
 
       const response = await crimeService.initiateVisit(payload);
