@@ -2,10 +2,11 @@
 
 import { useState, useRef, useCallback, useId, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
 import { AddRowButton, RemoveRowButton, PageHeader, PageLayout, Button, FileUploadButton, ToggleChip } from '@/components/ui';
 import CustomSelect from '@/components/forms/CustomSelect';
 import DatePicker from '@/components/forms/DatePicker';
+import MultiSelect from '@/components/forms/MultiSelect';
 import { officerService, userService, ApiError } from '@/lib/api';
 import { useLocationData } from '@/lib/hooks/useLocationData';
 import { useUserData } from '@/lib/hooks/useUserData';
@@ -176,6 +177,9 @@ interface FormData {
     telMobile: string;
     photoUrl: string;
     // Section 2
+    password: string;
+    confirmPassword: string;
+    systemAccessLocations: string[];
     civilStatus: string;
     spouseDesignation: string;
     spouseDesignationOther: string;
@@ -299,6 +303,7 @@ function defaultForm(): FormData {
         socoCourseNo: '', socoService: '',
         telOffice: '', telResidence: '', telMobile: '',
         photoUrl: '',
+        password: '', confirmPassword: '', systemAccessLocations: [],
         civilStatus: '', spouseDesignation: '', spouseDesignationOther: '', spouseName: '', spouseAddressOfInstitute: '', spouseNic: '',
         children: [{ id: newId(), name: '', nic: '', birthday: '', status: '' }],
         dateJoinedPolice: '', appointedRank: '', appointedRankId: '', presentRank: '', presentRankId: '',
@@ -552,7 +557,9 @@ export default function AddOfficerPage() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
-        const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [personalFamilyEditing, setPersonalFamilyEditing] = useState(!isEditing);
     const [sectionSaving, setSectionSaving] = useState<string | null>(null);
     const civilStatusRadioName = useId();
@@ -1107,6 +1114,13 @@ export default function AddOfficerPage() {
         const officeErr = form.telOffice.trim() ? validatePhone(form.telOffice) : null;
         const residenceErr = form.telResidence.trim() ? validatePhone(form.telResidence) : null;
 
+        if (form.password || form.confirmPassword) {
+            if (form.password !== form.confirmPassword) {
+                showErrorAlert('Error', 'Passwords do not match. Please ensure both password fields match.');
+                return;
+            }
+        }
+
         const firstErr = regNoErr || nameErr || dobErr || mobileErr || officeErr || residenceErr;
         if (firstErr) {
             showErrorAlert('Error', firstErr);
@@ -1183,6 +1197,47 @@ if (regiNoCheck.isAvailable) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save personal and family details');
             showErrorAlert('Error', apiError.message || 'An error occurred while saving.');
             console.error('Save personal/family error:', err);
+        } finally {
+            setSectionSaving(null);
+        }
+    };
+
+    const saveSystemAccessSection = async () => {
+        if (form.password || form.confirmPassword) {
+            if (form.password !== form.confirmPassword) {
+                showErrorAlert('Error', 'Passwords do not match. Please ensure Password and Re-enter Password match.');
+                return;
+            }
+        }
+
+        if (!editId) {
+            showErrorAlert('Notice', 'Please save the officer personal details first before updating system access privileges.');
+            return;
+        }
+
+        setSectionSaving('system-access');
+        try {
+            const systemUserId = parseInt(editId, 10);
+            const locationIds = form.systemAccessLocations
+                .map((locName) => {
+                    const idStr = locationNameToId.get(locName);
+                    return idStr ? parseInt(idStr, 10) : NaN;
+                })
+                .filter((id) => !isNaN(id));
+
+            await officerService.grantLoginAccess({
+                systemUserId,
+                userKey: form.password.trim(),
+                designationId: form.rankDesignationId ? parseInt(form.rankDesignationId, 10) : undefined,
+                locationIds,
+            });
+
+            showSuccessAlert('System Access Saved', 'Login access and system privileges updated successfully.');
+            setForm((f) => ({ ...f, password: '', confirmPassword: '' }));
+        } catch (err) {
+            const apiError = err instanceof ApiError ? err : new ApiError('Failed to save system access');
+            showErrorAlert('Error', apiError.message || 'An error occurred while saving system access privileges.');
+            console.error('Save system access error:', err);
         } finally {
             setSectionSaving(null);
         }
@@ -1573,6 +1628,13 @@ if (regiNoCheck.isAvailable) {
         const mobileErr = form.telMobile.trim() ? validatePhone(form.telMobile) : null;
         const firstErr = regNoErr || nameErr || dobErr || mobileErr;
         if (firstErr) { showErrorAlert('Error', firstErr); return; }
+
+        if (form.password || form.confirmPassword) {
+            if (form.password !== form.confirmPassword) {
+                showErrorAlert('Error', 'Passwords do not match. Please ensure both password fields match.');
+                return;
+            }
+        }
         setLoading(true);
 
         try {
@@ -1683,14 +1745,6 @@ if (regiNoCheck.isAvailable) {
             /> } 
             <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden animate-fade-in" style={{ minHeight: '400px' }}>
                             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-
-                            <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/80 flex items-center gap-3">
-                                <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Username:</span>
-                                <span className="text-sm font-mono text-blue-900 font-bold select-all bg-white px-2 py-1 rounded border border-blue-100">
-                                    {form.regNo || '—'}
-                                </span>
-                                <span className="text-xs text-blue-500">(Registration number used as login username)</span>
-                            </div>
 
                             {/* ─── SECTION 1: Personal & Family Details ───────────────────── */}
                             <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
@@ -2051,9 +2105,97 @@ if (regiNoCheck.isAvailable) {
                                 /> }
                             </div>
 
+                            {/* ─── SECTION 2: System Access ─────────────────────────────────── */}
+                            <div className="p-4 sm:p-5 rounded-xl border border-sky-200 bg-sky-50/80">
+                                <SectionHeader
+                                    sectionNo={2}
+                                    title="System Access"
+                                    titleSi="පද්ධති ප්‍රවේශය"
+                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <FieldLabel label="Username" si="පරිශීලක නාමය" />
+                                        <GInput
+                                            value={form.regNo || ''}
+                                            onChange={() => {}}
+                                            readOnly
+                                            disabled
+                                            placeholder="Registration Number"
+                                        />
+                                        <p className="text-xs text-blue-500 mt-1">(Registration number used as login username)</p>
+                                    </div>
+
+                                    <div>
+                                        <FieldLabel label="System Access Location" si="පද්ධති ප්‍රවේශ සේවාස්ථානය" />
+                                        <MultiSelect
+                                            value={form.systemAccessLocations}
+                                            onChange={(selected) => set('systemAccessLocations', selected)}
+                                            options={SOCO_LABS_OPTIONS}
+                                            placeholder={locationsLoading ? 'Loading locations...' : 'Select access location(s)'}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <FieldLabel label="Password" si="මුරපදය" />
+                                        <div className="relative">
+                                            <GInput
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={form.password}
+                                                onChange={(v) => set('password', v)}
+                                                placeholder="Enter password"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            >
+                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <FieldLabel label="Re-enter Password" si="මුරපදය නැවත ඇතුළත් කරන්න" />
+                                        <div className="relative">
+                                            <GInput
+                                                type={showConfirmPassword ? 'text' : 'password'}
+                                                value={form.confirmPassword}
+                                                onChange={(v) => set('confirmPassword', v)}
+                                                placeholder="Re-enter password"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            >
+                                                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                        {form.confirmPassword ? (
+                                            form.password === form.confirmPassword ? (
+                                                <p className="text-xs font-medium text-emerald-600 mt-1.5 flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Passwords match
+                                                </p>
+                                            ) : (
+                                                <p className="text-xs font-medium text-red-600 mt-1.5 flex items-center gap-1">
+                                                    <XCircle className="w-3.5 h-3.5 shrink-0" /> Passwords do not match
+                                                </p>
+                                            )
+                                        ) : null}
+                                    </div>
+                                </div>
+
+                                <SectionActions
+                                    isEditingSection
+                                    onSave={saveSystemAccessSection}
+                                    saving={sectionSaving === 'system-access'}
+                                    saveLabel="Save System Access"
+                                />
+                            </div>
+
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-indigo-200 bg-indigo-50/65">
-                                <SectionHeader sectionNo={2} title="Promotions  " titleSi="උසස්වීම්" />
+                                <SectionHeader sectionNo={3} title="Promotions  " titleSi="උසස්වීම්" />
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <div>
@@ -2136,7 +2278,7 @@ if (regiNoCheck.isAvailable) {
 
                             {/* ─── SECTION 4: Education ────────────────────────────────────── */}
                             {isEditing && <div className="p-4 sm:p-5 rounded-xl border border-violet-200 bg-violet-50/60">
-                                <SectionHeader sectionNo={3} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
+                                <SectionHeader sectionNo={4} title="Education" titleSi="අධ්‍යාපන සුදුසුකම්" />
 
                                 {/* ── O/L Results ─────────────────────────────────────────── */}
                                 <div className="mb-6">
