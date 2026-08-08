@@ -561,6 +561,7 @@ export default function AddOfficerPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [personalFamilyEditing, setPersonalFamilyEditing] = useState(!isEditing);
+    const [systemAccessEditing, setSystemAccessEditing] = useState(!isEditing);
     const [sectionSaving, setSectionSaving] = useState<string | null>(null);
     const civilStatusRadioName = useId();
     const showSpouseAndChildren = form.civilStatus === 'Married';
@@ -1234,6 +1235,7 @@ if (regiNoCheck.isAvailable) {
 
             showSuccessAlert('System Access Saved', 'Login access and system privileges updated successfully.');
             setForm((f) => ({ ...f, password: '', confirmPassword: '' }));
+            setSystemAccessEditing(false);
         } catch (err) {
             const apiError = err instanceof ApiError ? err : new ApiError('Failed to save system access');
             showErrorAlert('Error', apiError.message || 'An error occurred while saving system access privileges.');
@@ -2112,85 +2114,91 @@ if (regiNoCheck.isAvailable) {
                                     title="System Access"
                                     titleSi="පද්ධති ප්‍රවේශය"
                                 />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <FieldLabel label="Username" si="පරිශීලක නාමය" />
-                                        <GInput
-                                            value={form.regNo || ''}
-                                            onChange={() => {}}
-                                            readOnly
-                                            disabled
-                                            placeholder="Registration Number"
-                                        />
-                                        <p className="text-xs text-blue-500 mt-1">(Registration number used as login username)</p>
-                                    </div>
-
-                                    <div>
-                                        <FieldLabel label="System Access Location" si="පද්ධති ප්‍රවේශ සේවාස්ථානය" />
-                                        <MultiSelect
-                                            value={form.systemAccessLocations}
-                                            onChange={(selected) => set('systemAccessLocations', selected)}
-                                            options={SOCO_LABS_OPTIONS}
-                                            placeholder={locationsLoading ? 'Loading locations...' : 'Select access location(s)'}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <FieldLabel label="Password" si="මුරපදය" />
-                                        <div className="relative">
+                                <fieldset disabled={!systemAccessEditing} className="min-w-0 border-0 p-0 m-0 disabled:opacity-90">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <FieldLabel label="Username" si="පරිශීලක නාමය" />
                                             <GInput
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={form.password}
-                                                onChange={(v) => set('password', v)}
-                                                placeholder="Enter password"
+                                                value={form.regNo || ''}
+                                                onChange={() => {}}
+                                                readOnly
+                                                disabled
+                                                placeholder="Registration Number"
                                             />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                            >
-                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                            </button>
+                                            <p className="text-xs text-blue-500 mt-1">(Registration number used as login username)</p>
+                                        </div>
+
+                                        <div>
+                                            <FieldLabel label="System Access Location" si="පද්ධති ප්‍රවේශ සේවාස්ථානය" />
+                                            <MultiSelect
+                                                value={form.systemAccessLocations}
+                                                onChange={(selected) => set('systemAccessLocations', selected)}
+                                                options={SOCO_LABS_OPTIONS}
+                                                placeholder={locationsLoading ? 'Loading locations...' : 'Select access location(s)'}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <FieldLabel label="Password" si="මුරපදය" />
+                                            <div className="relative">
+                                                <GInput
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    value={form.password}
+                                                    onChange={(v) => set('password', v)}
+                                                    placeholder="Enter password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                                >
+                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <FieldLabel label="Re-enter Password" si="මුරපදය නැවත ඇතුළත් කරන්න" />
+                                            <div className="relative">
+                                                <GInput
+                                                    type={showConfirmPassword ? 'text' : 'password'}
+                                                    value={form.confirmPassword}
+                                                    onChange={(v) => set('confirmPassword', v)}
+                                                    placeholder="Re-enter password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                                >
+                                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                            {form.confirmPassword ? (
+                                                form.password === form.confirmPassword ? (
+                                                    <p className="text-xs font-medium text-emerald-600 mt-1.5 flex items-center gap-1">
+                                                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Passwords match
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-xs font-medium text-red-600 mt-1.5 flex items-center gap-1">
+                                                        <XCircle className="w-3.5 h-3.5 shrink-0" /> Passwords do not match
+                                                    </p>
+                                                )
+                                            ) : null}
                                         </div>
                                     </div>
+                                </fieldset>
 
-                                    <div>
-                                        <FieldLabel label="Re-enter Password" si="මුරපදය නැවත ඇතුළත් කරන්න" />
-                                        <div className="relative">
-                                            <GInput
-                                                type={showConfirmPassword ? 'text' : 'password'}
-                                                value={form.confirmPassword}
-                                                onChange={(v) => set('confirmPassword', v)}
-                                                placeholder="Re-enter password"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                            >
-                                                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                            </button>
-                                        </div>
-                                        {form.confirmPassword ? (
-                                            form.password === form.confirmPassword ? (
-                                                <p className="text-xs font-medium text-emerald-600 mt-1.5 flex items-center gap-1">
-                                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Passwords match
-                                                </p>
-                                            ) : (
-                                                <p className="text-xs font-medium text-red-600 mt-1.5 flex items-center gap-1">
-                                                    <XCircle className="w-3.5 h-3.5 shrink-0" /> Passwords do not match
-                                                </p>
-                                            )
-                                        ) : null}
-                                    </div>
-                                </div>
-
-                                <SectionActions
-                                    isEditingSection
-                                    onSave={saveSystemAccessSection}
-                                    saving={sectionSaving === 'system-access'}
-                                    saveLabel="Save System Access"
-                                />
+                                {isEditing && (
+                                    <SectionActions
+                                        showEdit
+                                        isEditingSection={systemAccessEditing}
+                                        onEdit={() => setSystemAccessEditing(true)}
+                                        onSave={saveSystemAccessSection}
+                                        saving={sectionSaving === 'system-access'}
+                                        saveLabel="Save"
+                                    />
+                                )}
                             </div>
 
                             {/* ─── SECTION 3: Official Information ─────────────────────────── */}
