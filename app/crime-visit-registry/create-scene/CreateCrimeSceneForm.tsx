@@ -1882,9 +1882,10 @@ export default function CreateCrimeSceneForm({
                       />
                     </FieldGroup>
                     <FieldGroup label="Rank" className="mb-0 flex-1">
-                      <TextInput
+                      <CustomSelect
                         value={guard.rank ?? ''}
-                        onChange={(e) => updateSceneGuard(index, { rank: e.target.value })}
+                        onChange={(value) => updateSceneGuard(index, { rank: value })}
+                        options={rankOptions}
                         placeholder="Rank"
                       />
                     </FieldGroup>
