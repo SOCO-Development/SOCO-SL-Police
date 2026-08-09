@@ -90,8 +90,8 @@ function TextInput({ isReadOnly, className = '', ...props }: TextInputProps) {
       {...props}
       readOnly={isReadOnly}
       className={`w-full min-h-10 px-3 py-2 text-sm rounded-lg border ${isReadOnly
-          ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
-          : 'bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400'
+        ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
+        : 'bg-white border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400'
         } transition-colors ${className}`}
     />
   );
@@ -168,8 +168,8 @@ function SegmentedOption({ name, label, checked, onChange }: SegmentedOptionProp
   return (
     <label
       className={`inline-flex items-center justify-center gap-1.5 min-w-0 px-3 py-1.5 rounded-lg border text-sm font-semibold cursor-pointer select-none transition-colors ${checked
-          ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm'
-          : 'border-gray-300 bg-white text-gray-700 hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/5'
+        ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm'
+        : 'border-gray-300 bg-white text-gray-700 hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/5'
         }`}
     >
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
@@ -1377,14 +1377,14 @@ export default function CreateCrimeSceneForm({
                     </button>
                   )}
                 </div>
-                {(form.offenceType ?? '') === 'Other' && (
+                {/* {(form.offenceType ?? '') === 'Other' && (
                   <TextInput
                     className="md:col-span-2"
                     value={form.offenceTypeOther ?? ''}
                     onChange={(e) => setForm((prev) => ({ ...prev, offenceTypeOther: e.target.value }))}
                     placeholder="Specify offence type"
                   />
-                )}
+                )} */}
               </div>
             </FieldGroup>
 
