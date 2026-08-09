@@ -342,6 +342,21 @@ export default function CreateCrimeSceneForm({
   const [existingCvrs, setExistingCvrs] = useState<{ cvrNo: string; initiateCvrId: string }[]>([]);
   const [selectedInitiateCvrId, setSelectedInitiateCvrId] = useState<string>('');
   const [error, setError] = useState('');
+  const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
+
+  const validateFileExtension = (fileName: string, field: 'photoZipName' | 'sketchFileName' | 'reportFileName'): { isValid: boolean; errorMsg: string } => {
+    if (!fileName) return { isValid: true, errorMsg: '' };
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+    if (field === 'photoZipName') {
+      if (ext !== 'zip') return { isValid: false, errorMsg: 'Invalid file type. Only .zip files are allowed.' };
+    } else if (field === 'sketchFileName') {
+      if (!['doc', 'docx', 'xls', 'xlsx', 'pdf'].includes(ext))
+        return { isValid: false, errorMsg: 'Invalid file type. Only .doc, .docx, .xls, .xlsx, or .pdf files are allowed.' };
+    } else if (field === 'reportFileName') {
+      if (ext !== 'pdf') return { isValid: false, errorMsg: 'Invalid file type. Only .pdf files are allowed.' };
+    }
+    return { isValid: true, errorMsg: '' };
+  };
   const [visitInTime, setVisitInTime] = useState<DateTimeEntry>({ date: '', time: '', page: '', para: '' });
   const [visitInTimeSaved, setVisitInTimeSaved] = useState(false);
   const [visitsLoading, setVisitsLoading] = useState(false);
@@ -838,6 +853,14 @@ export default function CreateCrimeSceneForm({
     }
 
     if (!form.inChargeOfficer.name.trim()) return 'Please enter the in-charge officer.';
+
+    const photoVal = validateFileExtension(form.photoZipName ?? '', 'photoZipName');
+    if (!photoVal.isValid) return `Photo / GIF: ${photoVal.errorMsg}`;
+    const sketchVal = validateFileExtension(form.sketchFileName ?? '', 'sketchFileName');
+    if (!sketchVal.isValid) return `Sketch: ${sketchVal.errorMsg}`;
+    const reportVal = validateFileExtension(form.reportFileName ?? '', 'reportFileName');
+    if (!reportVal.isValid) return `Report: ${reportVal.errorMsg}`;
+
     return '';
   };
 
@@ -2537,26 +2560,64 @@ export default function CreateCrimeSceneForm({
           {/* ── Attachments ── */}
           <SectionCard id="attachments" title="Attachments" accent={{ border: 'border-l-rose-500', dot: 'text-rose-600', bg: 'bg-rose-50' }} icon={Paperclip}>
             <div className="divide-y divide-[var(--border-subtle)]">
-              {(['photoZipName', 'sketchFileName', 'reportFileName'] as const).map((field, i) => (
+              {(
+                [
+                  {
+                    field: 'photoZipName',
+                    label: 'Photo / GIF',
+                    accept: '.zip,application/zip,application/x-zip-compressed',
+                    hint: '(Accepts .zip containing .jpg, .jpeg, .png, .gif only)',
+                  },
+                  {
+                    field: 'sketchFileName',
+                    label: 'Sketch',
+                    accept: '.doc,.docx,.xls,.xlsx,.pdf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    hint: '(Accepts .doc, .docx, .xls, .xlsx, and .pdf only)',
+                  },
+                  {
+                    field: 'reportFileName',
+                    label: 'Report',
+                    accept: '.pdf,application/pdf',
+                    hint: '(Accepts .pdf only)',
+                  },
+                ] as const
+              ).map(({ field, label, accept, hint }) => (
                 <div key={field} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <label className="w-28 flex-shrink-0 text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    {['Photo / GIF', 'Sketch', 'Report'][i]}
+                    {label}
                   </label>
                   <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                     <Paperclip size={13} />
                     Choose File
                     <input
                       type="file"
-                      accept={field === 'photoZipName' ? '.zip,application/zip' : undefined}
+                      accept={accept}
                       onChange={(e) => {
-                        const fileName = e.target.files?.[0]?.name ?? '';
-                        setForm((prev) => ({ ...prev, [field]: fileName }));
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const validation = validateFileExtension(file.name, field);
+                          if (!validation.isValid) {
+                            setFileErrors((prev) => ({ ...prev, [field]: validation.errorMsg }));
+                            setForm((prev) => ({ ...prev, [field]: '' }));
+                          } else {
+                            setFileErrors((prev) => ({ ...prev, [field]: '' }));
+                            setForm((prev) => ({ ...prev, [field]: file.name }));
+                          }
+                        }
                       }}
                       className="sr-only"
                     />
                   </label>
                   <span className="text-xs italic text-gray-500">
                     {form[field] ? form[field] : 'No file chosen'}
+                  </span>
+                  {fileErrors[field] && (
+                    <span className="text-xs text-red-600 font-medium w-full pl-[7.5rem] mt-0.5 block">
+                      {fileErrors[field]}
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-400 w-full pl-[7.5rem] mt-0.5 block">
+                    {hint}
                   </span>
                 </div>
               ))}
