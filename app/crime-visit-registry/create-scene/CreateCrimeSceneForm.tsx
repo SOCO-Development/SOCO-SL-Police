@@ -37,6 +37,7 @@ import {
   validateIncidentTimingSection,
 } from '@/lib/crimeSceneFormMapping';
 import { getLocationRegistry } from '@/lib/api/locationService';
+import { useUserData } from '@/lib/hooks/useUserData';
 import {
   ANALYSIS_INSTITUTION_OPTIONS,
   analysisInstitutionIsOthers,
@@ -324,6 +325,11 @@ export default function CreateCrimeSceneForm({
   amendmentMode = false,
   focusSection,
 }: CreateCrimeSceneFormProps) {
+  const { ranks } = useUserData();
+  const rankOptions = useMemo(() => {
+    return ranks.map((r) => ({ value: r.name, label: r.name }));
+  }, [ranks]);
+
   const [form, setForm] = useState<CrimeSceneFormData>(defaultForm());
   const [divisions, setDivisions] = useState<{ value: string; label: string }[]>(FALLBACK_DIVISIONS);
   const [allLabs, setAllLabs] = useState<any[]>([]);
@@ -1818,9 +1824,10 @@ export default function CreateCrimeSceneForm({
                       />
                     </FieldGroup>
                     <FieldGroup label="Rank" className="mb-0 flex-1">
-                      <TextInput
+                      <CustomSelect
                         value={officer.rank ?? ''}
-                        onChange={(e) => updateInvestigationOfficer(index, { rank: e.target.value })}
+                        onChange={(value) => updateInvestigationOfficer(index, { rank: value })}
+                        options={rankOptions}
                         placeholder="Rank"
                       />
                     </FieldGroup>
