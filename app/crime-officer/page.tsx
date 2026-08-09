@@ -2,7 +2,7 @@
 
 import FeatureCard from '@/components/cards/FeatureCard';
 import { PageHeader, PageLayout } from '@/components/ui';
-import { UserPlus, Users, Gear, MapPinLine } from 'phosphor-react';
+import { UserPlus, Users, Gear, MapPinLine, CheckCircle } from 'phosphor-react';
 
 export default function CrimeOfficerPage() {
     const cards = [
@@ -34,6 +34,13 @@ export default function CrimeOfficerPage() {
             description: 'Manage location-based access privileges for users.',
             href: '/crime-officer/user-privilege-locations',
             icon: <MapPinLine className="w-12 h-12" weight="fill" style={{ color: '#ef4444' }} />,
+        },
+        {
+            title: 'Approve Officer',
+            subtitle: 'නිලධාරි අනුමත කරන්න',
+            description: 'Review and approve or reject pending officer registrations.',
+            href: '/crime-officer/approve-officer',
+            icon: <CheckCircle className="w-12 h-12" weight="fill" style={{ color: '#8b5cf6' }} />,
         },
     ];
 
