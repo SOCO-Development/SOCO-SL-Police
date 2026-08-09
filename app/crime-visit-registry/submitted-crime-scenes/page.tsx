@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
 import CvrVisitsExpandPanel from './CvrVisitsExpandPanel';
+import { fullCvrVisitItemToCrimeScene } from '@/lib/crimeSceneFormMapping';
 import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { crimeService, locationService, officerService } from '@/lib/api';
@@ -809,6 +810,52 @@ export default function SubmittedCrimeScenesPage() {
     return (first.cvrNo ?? '').trim() || first.id;
   }, [relatedScenesForDetail]);
 
+  // Live CVR detail data (station/division names, team leader, investigation
+  // officers, production details, etc.) — sourced from the same backend API
+  // as the expand panel, instead of the stale localStorage-merged `scenes`.
+  const initiateCvrIdForDetail = relatedScenesForDetail[0]?.initiateCvrId;
+  const [liveDetailScenes, setLiveDetailScenes] = useState<CrimeScene[] | null>(null);
+  const [liveDetailLoading, setLiveDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (!initiateCvrIdForDetail) {
+      setLiveDetailScenes(null);
+      return;
+    }
+    let cancelled = false;
+    setLiveDetailLoading(true);
+    crimeService
+      .getFullCvrDetailsByInitiateCvrId(initiateCvrIdForDetail)
+      .then((result) => {
+        if (cancelled) return;
+        const mapped = result.visits.map((v) =>
+          fullCvrVisitItemToCrimeScene(v, result.cvrNo, stationDivisionLookup),
+        );
+        setLiveDetailScenes(mapped);
+      })
+      .catch((err) => {
+        console.error('Failed to load live full CVR details for detail view', err);
+        if (!cancelled) setLiveDetailScenes(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLiveDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initiateCvrIdForDetail]);
+
+  // Prefer live backend data; fall back to the localStorage-merged list when
+  // no initiateCvrId is available (e.g. purely local/unsynced records).
+  const detailScenesToRender = useMemo(() => {
+    if (liveDetailScenes) {
+      return visitCvrIdParam
+        ? liveDetailScenes.filter((s) => String(s.cvrId ?? '') === visitCvrIdParam)
+        : liveDetailScenes;
+    }
+    return relatedScenesForDetail;
+  }, [liveDetailScenes, relatedScenesForDetail, visitCvrIdParam]);
 
   async function handleApproveCvr() {
     if (relatedScenesForDetail.length === 0) return;
@@ -898,17 +945,30 @@ export default function SubmittedCrimeScenesPage() {
       );
     }
 
+    if (liveDetailLoading && !liveDetailScenes) {
+      return (
+        <PageLayout>
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-gray-500">
+            <div className="animate-spin w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full" />
+            <p className="text-sm font-medium">Loading visit details…</p>
+          </div>
+        </PageLayout>
+      );
+    }
+
     return (
       <PageLayout>
         <PageHeader
           backHref="/crime-visit-registry/submitted-crime-scenes"
           title={detailTitle}
-          description="All visits for this CVR are listed below."
+          description={
+            visitCvrIdParam ? 'This visit only.' : 'All visits for this CVR are listed below.'
+          }
           actions={
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => exportToCSV(relatedScenesForDetail)}
+                onClick={() => exportToCSV(detailScenesToRender)}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Table className="w-3.5 h-3.5 text-emerald-600" />
@@ -916,7 +976,7 @@ export default function SubmittedCrimeScenesPage() {
               </button>
               <button
                 type="button"
-                onClick={() => exportToPDF(relatedScenesForDetail)}
+                onClick={() => exportToPDF(detailScenesToRender)}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <FileText className="w-3.5 h-3.5 text-red-500" />
@@ -925,7 +985,7 @@ export default function SubmittedCrimeScenesPage() {
             </div>
           }
         />
-        <CrimeSceneMultiDetailView scenes={relatedScenesForDetail} />
+        <CrimeSceneMultiDetailView scenes={detailScenesToRender} />
       </PageLayout>
     );
   }
