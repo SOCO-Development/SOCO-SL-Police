@@ -1,9 +1,10 @@
 'use client';
 import { Fragment, useEffect, useMemo, useState, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CrimeSceneMultiDetailView from './CrimeSceneMultiDetailView';
+import CvrVisitsExpandPanel from './CvrVisitsExpandPanel';
 import MultiSelect from '@/components/forms/MultiSelect';
 import { crimeSceneService } from '@/lib/crimeSceneService';
 import { crimeService, locationService, officerService } from '@/lib/api';
@@ -64,11 +65,6 @@ function isReportedToPoliceToday(scene: CrimeScene): boolean {
   return isSameLocalCalendarDay(d, new Date());
 }
 
-/** Helper to get exact creation/submission timestamp for display */
-function getVisitDisplayTimestamp(scene: CrimeScene): string {
-  return formatDateTimeDDMMYYYY(scene.createdAt || scene.updatedAt);
-}
-
 /** Visit record saved/updated today (e.g. new revisit submitted today). */
 function isVisitSubmittedToday(scene: CrimeScene): boolean {
   const d = new Date(scene.updatedAt);
@@ -115,89 +111,6 @@ function sceneSearchHaystack(scene: CrimeScene): string {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
-}
-
-function visitTypePill(scene: CrimeScene, showRevisit = false) {
-  if ((scene.visitType as string) === 'COURT_VISIT') return null;
-  if (scene.visitType === 'REVISIT' && !showRevisit) return null;
-  const isRevisit = scene.visitType === 'REVISIT';
-  const pill = isRevisit
-    ? 'bg-blue-100 text-blue-700 border-blue-200'
-    : 'bg-blue-100 text-blue-700 border-blue-200';
-  const label = isRevisit ? 'Revisit' : 'New Visit';
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${pill}`}>
-      {label}
-    </span>
-  );
-}
-
-function registryWorkflowPill(scene: CrimeScene) {
-  const entries = registryWorkflowDisplayEntries(scene);
-  if (!entries.length) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {entries.map((entry) => (
-        <span
-          key={`${entry.kind}-${entry.at}`}
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${entry.pillClass}`}
-          title={entry.title}
-        >
-          {entry.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** Expanded list row: strong left stripe + tint by visit type or workflow update so visits are easy to tell apart. */
-function visitTypeListRowClasses(scene: CrimeScene) {
-  const workflowClasses = registryWorkflowListRowClasses(scene);
-  if (workflowClasses) return workflowClasses;
-  
-  if (scene.visitType === 'REVISIT') {
-    return 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500';
-  }
-  if (scene.visitType === 'COURT_VISIT') {
-    return 'border-orange-200 bg-orange-50/80 ring-1 ring-orange-200/70 border-l-[5px] border-l-orange-500';
-  }
-  return 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500';
-}
-
-function visitTypeVisitBadgeClasses(scene: CrimeScene) {
-  const workflowClasses = registryWorkflowBadgeClasses(scene);
-  if (workflowClasses) return workflowClasses;
-  
-  if (scene.visitType === 'REVISIT') {
-    return 'bg-blue-200 text-blue-950 border-blue-400';
-  }
-  if (scene.visitType === 'COURT_VISIT') {
-    return 'bg-orange-200 text-orange-950 border-orange-400';
-  }
-  return 'bg-blue-200 text-blue-950 border-blue-400';
-}
-
-function approvalStatusBadge(status?: string) {
-  const norm = (status || 'In Progress').trim().toLowerCase();
-  if (norm === 'approved') {
-    return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-100 text-emerald-700 border-emerald-200">
-        Approved
-      </span>
-    );
-  }
-  if (norm === 'rejected') {
-    return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-red-100 text-red-700 border-red-200">
-        Rejected
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-amber-100 text-amber-700 border-amber-200">
-      In Progress
-    </span>
-  );
 }
 
 // ── Court visit synthetic rows ────────────────────────────────────────────────
@@ -549,6 +462,7 @@ function exportToPDF(scenes: CrimeScene[]) {
 
 export default function SubmittedCrimeScenesPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [scenes, setScenes] = useState<CrimeScene[]>([]);
   const [filter, setFilter] = useState<FilterTab>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -564,9 +478,16 @@ export default function SubmittedCrimeScenesPage() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loadingLabsData, setLoadingLabsData] = useState(false);
 
+  // Police Station / Division ID → name lookups (live from backend, keyed by
+  // POLICE_STATION_ID since visits only carry policeStationId, not names).
+  const [stationById, setStationById] = useState<Record<string, { name: string; divisionId: string }>>({});
+  const [divisionById, setDivisionById] = useState<Record<string, string>>({});
+
   const newlySavedLocationId = (searchParams.get('locationId') ?? '').trim();
   const sceneId = (searchParams.get('id') ?? '').trim();
   const detailCvrParam = (searchParams.get('cvrNo') ?? '').trim();
+  /** Set when "View" was clicked on a single visit row — scopes the detail page to that one visit only. */
+  const visitCvrIdParam = (searchParams.get('visitCvrId') ?? '').trim();
   const isDetailMode = Boolean(detailCvrParam || sceneId);
 
   useEffect(() => {
@@ -588,6 +509,50 @@ export default function SubmittedCrimeScenesPage() {
       setSelectedLabIds([newlySavedLocationId]);
     }
   }, [newlySavedLocationId]);
+
+  useEffect(() => {
+    // Load Division reference data once (all provinces) so DIVISION_ID → name
+    // resolves for any station, regardless of which SOCO lab is selected.
+    locationService.getAllProvinces()
+      .then(async (provinces) => {
+        const lists = await Promise.all(
+          (provinces || []).map((p) =>
+            locationService
+              .getAllDivisionsByProvince(Number(p.PROVINCE_ID))
+              .catch(() => [])
+          )
+        );
+        const map: Record<string, string> = {};
+        lists.flat().forEach((d) => {
+          map[d.DIVISION_ID] = d.DIVISION_NAME;
+        });
+        setDivisionById(map);
+      })
+      .catch((err) => console.error('Failed to load divisions', err));
+  }, []);
+
+  useEffect(() => {
+    // Load Police Station reference data for the selected SOCO labs so
+    // POLICE_STATION_ID → name/division resolves for visits in those labs.
+    if (selectedLabIds.length === 0) return;
+    Promise.all(selectedLabIds.map((id) => locationService.getPoliceStationsBySocoLab(id).catch(() => [])))
+      .then((lists) => {
+        const map: Record<string, { name: string; divisionId: string }> = {};
+        lists.flat().forEach((s) => {
+          map[s.POLICE_STATION_ID] = { name: s.POLICE_STATION_NAME, divisionId: s.DIVISION_ID };
+        });
+        setStationById((prev) => ({ ...prev, ...map }));
+      })
+      .catch((err) => console.error('Failed to load police stations', err));
+  }, [selectedLabIds]);
+
+  const stationDivisionLookup = useMemo(() => ({
+    stationName: (policeStationId: string) => stationById[policeStationId]?.name || '',
+    divisionName: (policeStationId: string) => {
+      const divId = stationById[policeStationId]?.divisionId;
+      return divId ? divisionById[divId] || '' : '';
+    },
+  }), [stationById, divisionById]);
 
   const handleFetchForSelectedLabs = useCallback(async () => {
     if (selectedLabIds.length === 0) return;
@@ -618,6 +583,7 @@ export default function SubmittedCrimeScenesPage() {
           id: `backend_visit_${visitKey}_${item.CVR_NO || index}`,
           cvrNo: item.CVR_NO,
           cvrId: Number(item.CVR_ID),
+          initiateCvrId: item.INITIATE_CVR_ID ? Number(item.INITIATE_CVR_ID) : undefined,
           visitId: item.VISIT_ID,
           visitType: item.VISIT_TYPE_ID === '1' ? ('NEW_VISIT' as const) : ('REVISIT' as const),
           policeStation: localMatch?.policeStation || '',
@@ -828,8 +794,14 @@ export default function SubmittedCrimeScenesPage() {
       unique.push(item);
     }
 
-    return unique.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }, [detailCvrParam, sceneId, scenes]);
+    const sorted = unique.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    // Per-visit "View" scopes the page to that single visit's data only.
+    if (visitCvrIdParam) {
+      return sorted.filter((s) => String(s.cvrId ?? '') === visitCvrIdParam);
+    }
+    return sorted;
+  }, [detailCvrParam, sceneId, scenes, visitCvrIdParam]);
 
   const detailTitle = useMemo(() => {
     if (relatedScenesForDetail.length === 0) return '';
@@ -966,6 +938,12 @@ export default function SubmittedCrimeScenesPage() {
     return `/crime-visit-registry/submitted-crime-scenes?id=${encodeURIComponent(group.primary.id)}`;
   };
 
+  /** Per-visit "View" — scopes the detail page to just this one visit (by backend cvrId). */
+  const viewHrefForVisit = (group: CrimeSceneCvrGroup, visitCvrId: number) => {
+    const base = viewHrefForGroup(group);
+    return `${base}&visitCvrId=${encodeURIComponent(visitCvrId)}`;
+  };
+
   return (
     <PageLayout>
       <PageHeader
@@ -1036,24 +1014,7 @@ export default function SubmittedCrimeScenesPage() {
                 <th className={appTableClasses.th}>
                   <TableSortButton onClick={() => handleSort('cvrNo')}>CVR No.</TableSortButton>
                 </th>
-                <th className={appTableClasses.th}>
-                  <TableSortButton onClick={() => handleSort('visitType')}>Visit Type</TableSortButton>
-                </th>
-                <th className={appTableClasses.th}>
-                  <TableSortButton onClick={() => handleSort('policeStation')}>Police Station</TableSortButton>
-                </th>
-                <th className={appTableClasses.th}>
-                  <TableSortButton onClick={() => handleSort('division')}>Division</TableSortButton>
-                </th>
-                <th className={appTableClasses.th}>
-                  <TableSortButton onClick={() => handleSort('placeOfCrimeScene')}>Crime Scene</TableSortButton>
-                </th>
-                <th className={appTableClasses.th}>
-                  <TableSortButton onClick={() => handleSort('updatedAt')}>Submitted</TableSortButton>
-                </th>
-                <th className={appTableClasses.th}>
-                  <TableSortButton onClick={() => handleSort('approval_status')}>Progress</TableSortButton>
-                </th>
+                <th className={appTableClasses.th}>Visits</th>
                 <th className={appTableClasses.thRight}>Actions</th>
               </tr>
             </thead>
@@ -1061,14 +1022,11 @@ export default function SubmittedCrimeScenesPage() {
               {sortedGroups.map((group) => {
                 const { primary, children, groupKey } = group;
                 const nonCourtChildren = children.filter((s) => s.visitType !== 'COURT_VISIT');
-                const hasChildren = nonCourtChildren.length > 0;
-                const open = expandedKeys.has(groupKey);
                 const chron = flattenGroupChronological(group).filter((s) => s.visitType !== 'COURT_VISIT');
-                const primaryVisitNo = chron.length
-                  ? chron.findIndex((c) => c.id === primary.id) + 1
-                  : 1;
-                const totalExtra = nonCourtChildren.length;
                 const hasExpanded = chron.length > 0;
+                const open = expandedKeys.has(groupKey);
+                const initiateCvrId = primary.initiateCvrId ?? Number(primary.cvrId);
+
                 return (
                   <Fragment key={groupKey}>
                     <tr
@@ -1087,43 +1045,25 @@ export default function SubmittedCrimeScenesPage() {
                         )}
                       </td>
                       <td className={appTableClasses.td}>
-                        <span className="font-mono text-xs text-blue-700 font-semibold">
+                        <Link
+                          href={viewHrefForGroup(group)}
+                          className="font-mono text-sm text-blue-700 font-bold hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {group.displayCvr}
-                        </span>
+                        </Link>
                       </td>
                       <td className={appTableClasses.td}>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span
-                            className={`inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md border text-[10px] font-bold tabular-nums ${visitTypeVisitBadgeClasses(primary)}`}
-                            title="Visit order (by created date) for this CVR"
-                          >
-                            {primaryVisitNo}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EEF2FF] text-[#3B5BDB]">
+                            New Visit
                           </span>
-                          {visitTypePill(primary)}
-                          {registryWorkflowPill(primary)}
-                          {totalExtra > 0 ? (
-                            <span className="text-[10px] font-medium text-gray-500">
-                              +{totalExtra} more
+                          {nonCourtChildren.length > 0 ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#CCFBF1] text-[#0F766E]">
+                              {nonCourtChildren.length} Revisit{nonCourtChildren.length > 1 ? 's' : ''}
                             </span>
                           ) : null}
                         </div>
-                      </td>
-                      <td className={appTableClasses.td}>
-                        {primary.policeStation || <span className="text-gray-500">—</span>}
-                      </td>
-                      <td className={appTableClasses.td}>
-                        {primary.division || <span className="text-gray-500">—</span>}
-                      </td>
-                      <td className={appTableClasses.td}>
-                        {primary.placeOfCrimeScene || <span className="text-gray-500">—</span>}
-                      </td>
-                      <td className={appTableClasses.td}>
-                        <span className="text-gray-700 text-xs">
-                          {getVisitDisplayTimestamp(primary)}
-                        </span>
-                      </td>
-                      <td className={appTableClasses.td}>
-                        {approvalStatusBadge(primary.approval_status)}
                       </td>
                       <td className={`${appTableClasses.td} text-right`} onClick={(e) => e.stopPropagation()}>
                         <Link
@@ -1131,58 +1071,25 @@ export default function SubmittedCrimeScenesPage() {
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all"
                         >
                           <ExternalLink className="w-3 h-3" />
-                          View
+                          View all
                         </Link>
                       </td>
                     </tr>
                     {open && hasExpanded ? (
-                      <tr className="bg-slate-50/95 border-b border-slate-200">
-                        <td colSpan={9} className="px-4 py-4">
-                          <div className="space-y-3">
-                            <ul className="space-y-2.5">
-                              {chron.map((child) => {
-                                const visitNo = chron.findIndex((c) => c.id === child.id) + 1;
-                                const isRevisit = child.visitType === 'REVISIT';
-                                const rowClass = isRevisit
-                                  ? 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500'
-                                  : 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-200/70 border-l-[5px] border-l-blue-500';
-                                const badgeClass = isRevisit
-                                  ? 'bg-blue-200 text-blue-950 border-blue-400'
-                                  : 'bg-blue-200 text-blue-950 border-blue-400';
-                                return (
-                                  <li
-                                    key={child.id}
-                                    className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm shadow-sm ${rowClass}`}
-                                  >
-                                    <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                      <span
-                                        className={`inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border text-[11px] font-bold tabular-nums shrink-0 ${badgeClass}`}
-                                        title="Visit order for this CVR"
-                                      >
-                                        {visitNo}
-                                      </span>
-                                      {visitTypePill(child, true)}
-                                      {registryWorkflowPill(child)}
-                                      <span className="text-xs text-gray-700 font-medium">
-                                        Submitted {getVisitDisplayTimestamp(child)}
-                                      </span>
-                                    </div>
-                                    <Link
-                                      href={viewHrefForGroup(group)}
-                                      className={`text-xs font-semibold hover:underline shrink-0 ${
-                                        isRevisit
-                                          ? 'text-blue-700 hover:text-blue-900'
-                                          : 'text-blue-700 hover:text-blue-900'
-                                      }`}
-                                    >
-                                      Open with all visits
-                                    </Link>
-                                  </li>
-                                );
-                              })}
-
-                             </ul>
-                          </div>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <td colSpan={4} className="pt-3 pb-0">
+                          {initiateCvrId ? (
+                            <CvrVisitsExpandPanel
+                              key={initiateCvrId}
+                              initiateCvrId={initiateCvrId}
+                              lookup={stationDivisionLookup}
+                              onViewVisit={(visit) => router.push(viewHrefForVisit(group, visit.cvrId))}
+                            />
+                          ) : (
+                            <div className="mx-4 mb-3 py-6 text-center text-sm text-gray-400">
+                              No backend CVR reference available for this group.
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ) : null}

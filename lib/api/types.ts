@@ -993,6 +993,7 @@ export interface FullCvrVisitItem {
   incidentToTime: string;
   locationId: string;
   policeStationId: string;
+  approvalStatus?: string;
   attachments: FullCvrVisitAttachments;
   offences: Array<{ CVR_ID: string; OFFENCE_ID: string }>;
   socoTeam: Array<{ SCENE_SOCO_TEAM_ID: string; SYSTEM_USER_ID: string; TEAM_ROLE_ID: string }>;

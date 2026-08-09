@@ -391,6 +391,8 @@ export interface CrimeScene {
   id: string;
   cvrNo: string;
   cvrId?: string | number;
+  /** Backend CVR group id (SOCO_CVR8/9 INITIATE_CVR_ID) — drives GetFullCvrDetailsByInitiateCvrId. */
+  initiateCvrId?: number;
   visitType: CrimeSceneVisitType;
   visitId?: string;
   revisitCvrNo?: string;
