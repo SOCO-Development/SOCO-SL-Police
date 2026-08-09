@@ -145,8 +145,16 @@ function VisitsTable({ visits, lookup, onViewVisit }: VisitsTableProps) {
                 <td className="px-4 py-3 align-middle">
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 border rounded-md px-3 py-1 text-xs font-semibold transition-colors"
+                    className="inline-flex items-center gap-1.5 border rounded-md px-3 py-1 text-xs font-semibold transition-colors cursor-pointer"
                     style={{ borderColor: t.accent, color: t.accent, background: t.softBg }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = t.accent;
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = t.softBg;
+                      e.currentTarget.style.color = t.accent;
+                    }}
                     onClick={() => onViewVisit(visit)}
                   >
                     <Eye size={11} /> View
