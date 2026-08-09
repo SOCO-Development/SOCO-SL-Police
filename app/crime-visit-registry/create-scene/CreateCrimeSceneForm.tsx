@@ -2212,7 +2212,7 @@ export default function CreateCrimeSceneForm({
                         </FieldGroup>
                       </div>
                       {row.sentToAnalysis === 'Yes' ? (
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-4 md:items-start">
                           <FieldGroup label="Institution" className="min-w-0">
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                               <div className="min-w-0 flex-1">
@@ -2306,6 +2306,44 @@ export default function CreateCrimeSceneForm({
                               }
                               placeholder="Reference number"
                             />
+                          </FieldGroup>
+                          <FieldGroup label="සන්දේශය/ Message">
+                            <label className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-full min-h-10">
+                              <Paperclip size={13} className="shrink-0" />
+                              <span className="truncate text-xs">
+                                {row.messageFileName ? row.messageFileName : 'Choose File'}
+                              </span>
+                              <input
+                                type="file"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const reader = new FileReader();
+                                  reader.onload = () => {
+                                    setForm((prev) => {
+                                      const rows = [...(prev.courtDetails?.sentToAnalysisRows ?? [])];
+                                      rows[index] = {
+                                        ...rows[index],
+                                        messageFileName: file.name,
+                                        messageDataUrl: reader.result as string,
+                                        messageFile: file,
+                                      };
+                                      return {
+                                        ...prev,
+                                        courtDetails: {
+                                          ...emptyCrimeSceneCourtDetails(),
+                                          ...prev.courtDetails,
+                                          sentToAnalysisRows: rows,
+                                        },
+                                      };
+                                    });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }}
+                                className="sr-only"
+                              />
+                            </label>
                           </FieldGroup>
                         </div>
                       ) : null}

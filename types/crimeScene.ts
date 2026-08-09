@@ -221,10 +221,10 @@ export function normalizeCourtVisitUpdate(
   const legacy = raw as LegacyCourtVisitUpdateDetails;
   const hasLegacy = Boolean(
     legacy.officerKey?.trim() ||
-      legacy.visitDate?.trim() ||
-      legacy.resultReceived ||
-      legacy.officerName?.trim() ||
-      legacy.resultOtherDetail?.trim(),
+    legacy.visitDate?.trim() ||
+    legacy.resultReceived ||
+    legacy.officerName?.trim() ||
+    legacy.resultOtherDetail?.trim(),
   );
   if (!hasLegacy) return { rows: [] };
   const desc = formatLegacyResultLine(legacy);
@@ -299,6 +299,12 @@ export interface SentToAnalysisRow {
   institutionOtherDetail?: string;
   date?: string;
   refNo?: string;
+  /** Attachment: සන්දේශය (Message) associated with the reference number. */
+  messageFileName?: string;
+  /** Data URL for client-side persistence of the message attachment. */
+  messageDataUrl?: string;
+  /** Actual message file object for upload. */
+  messageFile?: File;
   /** Result received from the analysis institute. */
   resultReceived?: 'Positive' | 'Negative' | '';
   /** Reason when resultReceived is Negative. */
@@ -337,6 +343,9 @@ export function emptySentToAnalysisRow(): SentToAnalysisRow {
     institutionOtherDetail: '',
     date: '',
     refNo: '',
+    messageFileName: '',
+    messageDataUrl: '',
+    messageFile: undefined,
     resultReceived: '',
     resultNegativeReason: '',
     resultNegativeOtherDetail: '',
