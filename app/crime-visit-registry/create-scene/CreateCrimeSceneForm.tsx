@@ -931,7 +931,7 @@ export default function CreateCrimeSceneForm({
       expertTeams: form.specialistTeams
         .filter(t => t.role.trim())
         .map(t => ({
-          expertTeamRole: t.role,
+          expertTeamRole: t.role === 'Others' ? (t.specialist || 'Others') : t.role,
           members: (t.members || [])
             .filter(m => m.name.trim())
             .map(m => ({
@@ -1716,11 +1716,32 @@ export default function CreateCrimeSceneForm({
                       <FieldGroup label="Expert Role">
                         <CustomSelect
                           value={team.role}
-                          onChange={(value) => updateSpecialist(index, { role: value })}
+                          onChange={(value) =>
+                            updateSpecialist(index, {
+                              role: value,
+                              specialist: value === 'Others' ? (team.specialist ?? '') : '',
+                            })
+                          }
                           options={SPECIALIST_ROLE_OPTIONS}
                           placeholder="Select expert role"
                         />
-                        {team.role && <ClearLink onClick={() => updateSpecialist(index, { role: '' })} />}
+                        {team.role && (
+                          <ClearLink
+                            onClick={() =>
+                              updateSpecialist(index, { role: '', specialist: '' })
+                            }
+                          />
+                        )}
+                        {team.role === 'Others' && (
+                          <TextInput
+                            className="mt-2"
+                            value={team.specialist ?? ''}
+                            onChange={(e) =>
+                              updateSpecialist(index, { specialist: e.target.value })
+                            }
+                            placeholder="Specify expert role"
+                          />
+                        )}
                       </FieldGroup>
                       <FieldGroup label="In Time">
                         <TimePicker
