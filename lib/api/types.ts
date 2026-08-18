@@ -993,13 +993,29 @@ export interface FullCvrVisitItem {
   incidentToTime: string;
   locationId: string;
   policeStationId: string;
+  approvalStatus?: string;
   attachments: FullCvrVisitAttachments;
   offences: Array<{ CVR_ID: string; OFFENCE_ID: string }>;
   socoTeam: Array<{ SCENE_SOCO_TEAM_ID: string; SYSTEM_USER_ID: string; TEAM_ROLE_ID: string }>;
-  expertTeams: unknown[];
-  investigationOfficers: unknown[];
-  sceneGuards: unknown[];
-  courtDetails: unknown[];
+  expertTeams: Array<{
+    SCENE_EXPERT_TEAM_ID: string;
+    EXPERT_TEAM_ROLE: string;
+    EXPERT_TEAM_MEMBER_NAME: string;
+    EXPERT_TEAM_MEMBER_ROLE: string;
+  }>;
+  investigationOfficers: Array<{
+    CVR_ID: string;
+    INVESTIGATION_OFFICER_NAME: string;
+    INVESTIGATION_OFFICER_RANK: string;
+    INVESTIGATION_OFFICER_REGINO: string;
+  }>;
+  sceneGuards: Array<{
+    CVR_ID: string;
+    SCENE_GUARD_NAME: string;
+    SCENE_GUARD_RANK: string;
+    SCENE_GUARD_REGINO: string;
+  }>;
+  courtDetails: Array<{ CVR_ID: string; COURT_ID: string; COURT_CASE_NO: string; B_NUMBER: string }>;
   productionDetails: Array<{ CVR_ID: string; PRODUCTION_STATUS: string }>;
   productionsSentAnalysis: unknown[];
   productionsSentCourt: unknown[];
